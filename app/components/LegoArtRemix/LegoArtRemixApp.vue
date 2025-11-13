@@ -3,6 +3,13 @@
     <section
       class="rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm"
     >
+      <div v-if="isPreviewFrameLoading" class="loading-bar" aria-live="polite">
+        <div class="loading-bar__track">
+          <div class="loading-bar__fill"></div>
+        </div>
+      </div>
+      <div v-else style="height: 14px;"></div>
+
       <div class="grid gap-6 lg:grid-cols-3">
         <article class=" rounded-xl border border-slate-100 bg-white/80 p-4">
           <div v-show="uploadedImage" class="text-sm text-slate-600 mb-4">
@@ -147,6 +154,16 @@
           <p v-if="step2Ready" class="text-xs text-slate-500">
             ความละเอียดปัจจุบัน {{ targetResolution.width }} ×
             {{ targetResolution.height }} Pixel (อัตราขยาย ×{{ SCALING_FACTOR
+
+
+
+
+
+
+
+
+
+
             }})
           </p>
 
@@ -233,12 +250,17 @@
         <article
           class="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4"
         >
-          <!-- <label class="text-sm text-slate-600">ชนิด stud ที่ต้องการ
+          <!-- <label class="text-sm text-slate-600"
+            >ชนิด stud ที่ต้องการ
             <select
               class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
               v-model="selectedPixelType"
             >
-              <option v-for="option in PIXEL_TYPE_OPTIONS" :key="option.number" :value="option.number">
+              <option
+                v-for="option in PIXEL_TYPE_OPTIONS"
+                :key="option.number"
+                :value="option.number"
+              >
                 {{ option.name }}
               </option>
             </select>
@@ -523,6 +545,11 @@ const hsvControls = reactive({
   contrast: 0
 });
 const selectedPixelType = ref(PIXEL_TYPE_OPTIONS[0].number);
+const isPreviewFrameLoading = computed(
+  () =>
+    step1Ready.value &&
+    (isStep2Processing.value || (step2Ready.value && !step3Ready.value && !step3Error.value))
+);
 
 const clampResolutionValue = (value: number) => {
   const rounded = Math.round(value / RESOLUTION_STEP) * RESOLUTION_STEP;
@@ -634,7 +661,7 @@ const handleCropPointerMove = (event: PointerEvent) => {
     cropRect.height = height;
     cropRect.top = clamp(centerY - height / 2, 0, 1 - height);
   }
-  scheduleStep2Processing(80);
+  // อย่าประมวลผลระหว่างลาก เพื่อลดอาการค้าง
 };
 
 const endCropInteraction = () => {
@@ -645,6 +672,7 @@ const endCropInteraction = () => {
   cropInteraction.type = null;
   window.removeEventListener('pointermove', handleCropPointerMove);
   window.removeEventListener('pointerup', endCropInteraction);
+  scheduleStep2Processing(80);
 };
 
 onBeforeUnmount(() => {
@@ -916,3 +944,50 @@ watch(selectedPixelType, () => {
   }
 });
 </script>
+
+<style scoped>
+.preview-frame {
+  position: relative;
+  border-radius: 0.75rem;
+  border: 2px solid rgba(15, 23, 42, 0.15);
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  transition: border-color 0.2s ease;
+}
+.loading-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+.loading-bar__track {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  border-radius: 9999px;
+  background: rgba(99, 102, 241, 0.15);
+  overflow: hidden;
+}
+.loading-bar__fill {
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: #4338ca;
+  border-radius: inherit;
+  animation: loading-bar-slide 1s linear infinite;
+}
+.loading-bar__text {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #4338ca;
+}
+
+@keyframes loading-bar-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+</style>
