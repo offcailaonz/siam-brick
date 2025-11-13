@@ -4,9 +4,7 @@
       class="rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm"
     >
       <div class="grid gap-6 lg:grid-cols-3">
-        <article
-          class=" rounded-xl border border-slate-100 bg-white/80 p-4"
-        >
+        <article class=" rounded-xl border border-slate-100 bg-white/80 p-4">
           <div v-show="uploadedImage" class="text-sm text-slate-600 mb-4">
             <div
               ref="cropPreviewContainer"
@@ -111,7 +109,7 @@
         <article
           class="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4"
         >
-          <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500">
+          <!-- <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500">
             <span
               v-if="isStep2Processing"
               class="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-slate-600 shadow-inner"
@@ -121,7 +119,7 @@
               ></span>
               กำลังอัปเดตพรีวิว...
             </span>
-          </div>
+          </div> -->
 
           <p v-if="step2Error" class="text-sm text-rose-600">
             {{ step2Error }}
@@ -148,7 +146,8 @@
           </div>
           <p v-if="step2Ready" class="text-xs text-slate-500">
             ความละเอียดปัจจุบัน {{ targetResolution.width }} ×
-            {{ targetResolution.height }} Pixel (อัตราขยาย ×{{ SCALING_FACTOR }})
+            {{ targetResolution.height }} Pixel (อัตราขยาย ×{{ SCALING_FACTOR
+            }})
           </p>
 
           <div class="mt-4">
@@ -265,10 +264,22 @@
                 >Step 3</span
               >
             </div>
-            <p class="text-xs text-slate-500" v-if="step3Ready">
+            <p
+              class="text-xs text-slate-500"
+              v-if="step3Ready && !isStep2Processing"
+            >
               ความละเอียด {{ targetResolution.width }} ×
               {{ targetResolution.height }} Pixel | Quantization error:
               {{ step3QuantizationError?.toFixed(3) ?? '0.000' }}
+            </p>
+            <p
+              v-else-if="step3Ready && isStep2Processing"
+              class="text-xs text-indigo-500"
+            >
+              กำลังอัปเดตผลลัพธ์…
+            </p>
+            <p v-else class="text-xs text-slate-500">
+              สร้าง Step 2 ให้เสร็จก่อนจึงจะแสดงตัวอย่าง Step 3 ได้
             </p>
 
             <div
@@ -749,8 +760,7 @@ const scheduleStep2Processing = (delay = 120) => {
   if (step2Timeout) {
     clearTimeout(step2Timeout);
   }
-  step2Ready.value = false;
-  step3Ready.value = false;
+  isStep2Processing.value = true;
   step3Error.value = null;
   step2Timeout = setTimeout(async () => {
     await nextTick();
