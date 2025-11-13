@@ -1,216 +1,13 @@
 <template>
-  <section class="space-y-8">
-    <header class="space-y-2 text-center">
-      <p class="text-sm uppercase tracking-[0.3em] text-slate-500">
-        Lego Art Remix
-      </p>
-      <h1 class="text-3xl font-semibold text-slate-900">
-        แยก logic เก่าออกเป็น component เพื่อใช้งานใน Nuxt
-      </h1>
-      <p class="text-base text-slate-600">
-        เลือกชุด Lego Art ที่มีอยู่ แล้วอัปโหลดภาพเพื่อเริ่มเตรียม workflow
-        ใหม่ใน Vue.
-      </p>
-    </header>
-
-    <!-- <div class="grid gap-6 lg:grid-cols-2">
-      <article
-        class="rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm"
-      >
-        <h2 class="text-xl font-semibold text-slate-900">เลือกชุด Lego Art</h2>
-        <p class="text-sm text-slate-500">
-          ข้อมูลทั้งหมดมาจาก stud map ดั้งเดิม
-        </p>
-        <div class="mt-4 grid gap-3 sm:grid-cols-2">
-          <button
-            v-for="(entry, id) in studMapEntries"
-            :key="id"
-            :class="[
-              'rounded-xl border px-4 py-3 text-left transition',
-              selectedSetId === id
-                ? 'border-indigo-500 bg-indigo-50/80 text-indigo-900 shadow'
-                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-            ]"
-            @click="selectedSetId = id"
-          >
-            <p class="text-sm font-medium">{{ entry.name }}</p>
-            <p class="text-xs text-slate-500">{{ entry.officialName }}</p>
-            <p class="mt-2 text-xs font-semibold text-slate-400">
-              {{ formatNumber(totalStudCount(entry.studMap)) }} ชิ้น /
-              {{ entry.sortedStuds.length }} สี
-            </p>
-          </button>
-        </div>
-      </article>
-
-      <article
-        class="rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm"
-      >
-        <h2 class="text-xl font-semibold text-slate-900">
-          อัปโหลดรูปเพื่อทดลอง pipeline
-        </h2>
-        <p class="text-sm text-slate-500">
-          ตอนนี้ component นี้ยังทำเฉพาะส่วนนำเข้า/normalization
-        </p>
-
-        <div
-          class="mt-4 flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center"
-        >
-          <input
-            ref="fileInputRef"
-            type="file"
-            accept="image/*"
-            class="hidden"
-            @change="onFileChange"
-          />
-          <button
-            class="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow"
-            @click="triggerFilePicker"
-          >
-            เลือกไฟล์ภาพ
-          </button>
-          <p class="text-xs text-slate-500">รองรับไฟล์ JPG/PNG สูงสุด ~10MB</p>
-          <p v-if="uploadError" class="text-sm text-rose-600">
-            {{ uploadError }}
-          </p>
-        </div>
-
-        <div
-          v-if="isProcessing"
-          class="mt-4 flex items-center gap-3 text-sm text-slate-500"
-        >
-          <span class="h-3 w-3 animate-ping rounded-full bg-indigo-500"></span>
-          กำลังประมวลผลภาพ...
-        </div>
-
-        <div
-          v-show="uploadedImage"
-          class="mt-4 space-y-2 text-sm text-slate-600"
-        >
-          <p>
-            แสดงตัวอย่าง (ปรับขนาดอัตโนมัติเป็น 512px เพื่อเตรียม Step ถัดไป)
-          </p>
-          <canvas
-            ref="step1Canvas"
-            class="w-full rounded-xl border border-slate-200 bg-black/5"
-          ></canvas>
-          <p v-if="imageDimensions" class="text-xs text-slate-400">
-            ขนาดเดิม {{ imageDimensions.width }} ×
-            {{ imageDimensions.height }} px
-          </p>
-        </div>
-      </article>
-    </div> -->
-
-    <!-- <article v-if="selectedSet" class="rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm">
-      <header class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 class="text-xl font-semibold text-slate-900">พาเลตสีของ {{ selectedSet.name }}</h2>
-          <p class="text-sm text-slate-500">
-            รวมทั้งหมด {{ formatNumber(totalStudCount(selectedSet.studMap)) }} ชิ้น — เตรียม data ให้อยู่ใน reactive state แล้ว
-          </p>
-        </div>
-        <span class="rounded-full bg-slate-100 px-4 py-1 text-xs font-semibold text-slate-600">
-          {{ selectedSet.sortedStuds.length }} สี
-        </span>
-      </header>
-
-      <div class="mt-4 grid gap-4 md:grid-cols-2">
-        <div class="space-y-3">
-          <div
-            v-for="hex in selectedSet.sortedStuds"
-            :key="hex"
-            class="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-2"
-          >
-            <div class="flex items-center gap-3">
-              <span class="h-8 w-8 rounded-full border border-slate-200" :style="{ backgroundColor: hex }"></span>
-              <div>
-                <p class="text-sm font-medium text-slate-800">{{ hex }}</p>
-                <p class="text-xs text-slate-500">{{ colorName(hex) ?? 'ไม่มีชื่อในฐานข้อมูล' }}</p>
-              </div>
-            </div>
-            <p class="text-sm font-semibold text-slate-600">× {{ formatNumber(selectedSet.studMap[hex] ?? 0) }}</p>
-          </div>
-        </div>
-        <div class="space-y-4 text-sm text-slate-600">
-          <p>
-            Component นี้ดึงข้อมูล stud และสีมาอยู่ใน world ของ Vue แล้ว: สามารถนำไปผูกกับ slider, canvas หรือ workflow Step 1-4 ต่อได้.
-          </p>
-          <ul class="list-disc space-y-2 pl-6">
-            <li>สามารถเข้าถึง data ผ่าน composable/state โดยไม่ต้องยุ่งกับ global script</li>
-            <li>ฟังก์ชันจากไฟล์ <code>algo.ts</code> พร้อมใช้งาน (เช่น <code>getPixelArrayFromCanvas</code>)</li>
-            <li>ภาพที่อัปโหลดถูก normalize พร้อมขั้นตอน Step 1-2 สำหรับปรับโทนและขนาดแล้ว</li>
-          </ul>
-          <p class="text-xs text-slate-400">
-            Roadmap ถัดไป: ต่อเข้ากับอัลกอริทึม Step 3/4, แสดงตาราง stud จริง และเพิ่มตัวสร้าง PDF/BrickLink export
-          </p>
-        </div>
-      </div>
-    </article> -->
-
+  <section>
     <section
-      class="space-y-6 rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm"
+      class="rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm"
     >
-      <header class="space-y-2">
-        <h2 class="text-2xl font-semibold text-slate-900">
-          ขั้นตอนที่ 1–2: เตรียมภาพและปรับแต่ง
-        </h2>
-        <p class="text-slate-600">
-          เมื่ออัปโหลดภาพแล้ว ระบบจะ normalize ให้อัตโนมัติ
-          จากนั้นคุณสามารถตั้งค่าความละเอียดและปรับโทนก่อนเข้าสู่ขั้น
-          quantization
-        </p>
-      </header>
-
       <div class="grid gap-6 lg:grid-cols-3">
         <article
-          class="space-y-4 rounded-xl border border-slate-100 bg-white/80 p-4"
+          class=" rounded-xl border border-slate-100 bg-white/80 p-4"
         >
-          <div class="flex items-center justify-between">
-            <div>
-              <h3 class="text-lg font-semibold text-slate-900">
-                Step 1 – เตรียมและครอปภาพ
-              </h3>
-              <p class="text-sm text-slate-500">
-                แปลงเป็น {{ SERIALIZE_EDGE_LENGTH }} ×
-                {{ SERIALIZE_EDGE_LENGTH }} px
-              </p>
-            </div>
-            <span
-              style="min-width: 64px;"
-              class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"
-              >Step 1</span
-            >
-          </div>
-
-          <input
-            ref="fileInputRef"
-            type="file"
-            accept="image/*"
-            class="hidden"
-            @change="onFileChange"
-          />
-          <div class="flex flex-wrap items-center gap-3">
-            <button
-              class="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow"
-              type="button"
-              @click="triggerFilePicker"
-            >
-              เลือกไฟล์ภาพ
-            </button>
-            <p class="text-xs text-slate-500">
-              รองรับไฟล์ JPG/PNG สูงสุด ~10MB (ประมวลผลบน browser เท่านั้น)
-            </p>
-          </div>
-          <p v-if="uploadError" class="text-sm text-rose-600">
-            {{ uploadError }}
-          </p>
-
-          <div v-show="uploadedImage" class="space-y-2 text-sm text-slate-600">
-            <p>
-              พรีวิวหลัง normalize ({{ SERIALIZE_EDGE_LENGTH }} ×
-              {{ SERIALIZE_EDGE_LENGTH }} px)
-            </p>
+          <div v-show="uploadedImage" class="text-sm text-slate-600 mb-4">
             <div
               ref="cropPreviewContainer"
               class="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-black/5"
@@ -241,10 +38,45 @@
               {{ imageDimensions.height }} px
             </p>
           </div>
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-semibold text-slate-900">
+                Step 1 – เตรียมและครอปภาพ
+              </h3>
+            </div>
+            <span
+              style="min-width: 64px;"
+              class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"
+              >Step 1</span
+            >
+          </div>
 
-          <div class="grid gap-3 sm:grid-cols-2">
+          <input
+            ref="fileInputRef"
+            type="file"
+            accept="image/*"
+            class="hidden"
+            @change="onFileChange"
+          />
+          <div class="gap-3 mt-4">
+            <button
+              class="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow"
+              type="button"
+              @click="triggerFilePicker"
+            >
+              เลือกไฟล์ภาพ
+            </button>
+            <p class="text-xs text-slate-500 mt-2">
+              * รองรับไฟล์ JPG/PNG สูงสุด ~10MB
+            </p>
+          </div>
+          <p v-if="uploadError" class="text-sm text-rose-600">
+            {{ uploadError }}
+          </p>
+
+          <div class="grid gap-3 sm:grid-cols-2 mt-4">
             <label class="text-sm text-slate-600"
-              >ความกว้าง (stud)
+              >ความกว้าง
               <input
                 type="range"
                 :min="RESOLUTION_MIN"
@@ -255,11 +87,11 @@
                 @input="handleResolutionInput('width', $event)"
               />
               <span class="text-xs text-slate-500"
-                >{{ targetResolution.width }} stud</span
+                >{{ targetResolution.width }} pixel</span
               >
             </label>
             <label class="text-sm text-slate-600"
-              >ความสูง (stud)
+              >ความสูง
               <input
                 type="range"
                 :min="RESOLUTION_MIN"
@@ -270,37 +102,15 @@
                 @input="handleResolutionInput('height', $event)"
               />
               <span class="text-xs text-slate-500"
-                >{{ targetResolution.height }} stud</span
+                >{{ targetResolution.height }} pixel</span
               >
             </label>
           </div>
-          <p class="text-xs text-slate-500">
-            ระบบจะครอปภาพให้อัตโนมัติด้วยอัตราส่วน
-            {{ targetResolution.width }} :
-            {{ targetResolution.height }} ก่อนนำไปสร้างโมเสก
-          </p>
         </article>
 
         <article
-          class="space-y-4 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4"
+          class="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4"
         >
-          <div class="flex items-center justify-between">
-            <div>
-              <h3 class="text-lg font-semibold text-slate-900">
-                Step 2 – ปรับโทนภาพ
-              </h3>
-              <p class="text-sm text-slate-500">
-                ตั้งค่า Hue / Saturation / Brightness / Contrast ก่อนนำไปแม็พสี
-                Lego
-              </p>
-            </div>
-            <span
-              style="min-width: 64px;"
-              class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800"
-              >Step 2</span
-            >
-          </div>
-
           <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500">
             <span
               v-if="isStep2Processing"
@@ -321,15 +131,27 @@
           <canvas
             v-show="step2Ready"
             ref="step2UpscaledCanvas"
-            class="w-full rounded-xl border border-indigo-200"
+            class="w-full rounded-xl border border-indigo-200 mb-4"
             style="image-rendering: pixelated; width: 100%; height: auto"
           ></canvas>
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-semibold text-slate-900">
+                Step 2 – ปรับโทนภาพ
+              </h3>
+            </div>
+            <span
+              style="min-width: 64px;"
+              class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800"
+              >Step 2</span
+            >
+          </div>
           <p v-if="step2Ready" class="text-xs text-slate-500">
             ความละเอียดปัจจุบัน {{ targetResolution.width }} ×
-            {{ targetResolution.height }} stud (อัตราขยาย ×{{ SCALING_FACTOR }})
+            {{ targetResolution.height }} Pixel (อัตราขยาย ×{{ SCALING_FACTOR }})
           </p>
 
-          <div class="space-y-4">
+          <div class="mt-4">
             <div class="grid gap-3 md:grid-cols-3">
               <label class="text-sm text-slate-600"
                 >Hue (°)
@@ -410,47 +232,48 @@
         </article>
 
         <article
-          class="space-y-4 rounded-xl border border-emerald-100 bg-emerald-50/60 p-4"
+          class="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4"
         >
-          <div class="flex items-center justify-between">
-            <div>
-              <h3 class="text-lg font-semibold text-slate-900">
-                Step 3 – ลดสีให้ตรงกับชุด Lego
-              </h3>
-              <p class="text-sm text-slate-500">
-                ใช้พาเลตสีทั้งหมดของ BrickLink เพื่อลดจำนวนสีและเตรียมข้อมูล stud (ไม่จำกัดสต็อก)
-              </p>
-            </div>
-            <span
-              style="min-width: 64px;"
-              class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800"
-              >Step 3</span
+          <!-- <label class="text-sm text-slate-600">ชนิด stud ที่ต้องการ
+            <select
+              class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+              v-model="selectedPixelType"
             >
-          </div>
-          <p class="text-sm text-rose-600" v-if="step3Error">
-            {{ step3Error }}
-          </p>
+              <option v-for="option in PIXEL_TYPE_OPTIONS" :key="option.number" :value="option.number">
+                {{ option.name }}
+              </option>
+            </select>
+          </label> -->
 
-          <div class="space-y-3">
+          <div>
             <canvas ref="step3Canvas" class="hidden"></canvas>
             <canvas
               ref="step3UpscaledCanvas"
-              class="w-full rounded-xl border border-emerald-200"
+              class="w-full rounded-xl border border-emerald-200 mb-4"
               style="image-rendering: pixelated; width: 100%; height: auto"
               v-show="step3Ready"
             ></canvas>
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-lg font-semibold text-slate-900">
+                  Step 3 – ตัวอย่างภาพตัวต่อ
+                </h3>
+              </div>
+              <span
+                style="min-width: 64px;"
+                class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800"
+                >Step 3</span
+              >
+            </div>
             <p class="text-xs text-slate-500" v-if="step3Ready">
               ความละเอียด {{ targetResolution.width }} ×
-              {{ targetResolution.height }} stud | Quantization error:
+              {{ targetResolution.height }} Pixel | Quantization error:
               {{ step3QuantizationError?.toFixed(3) ?? '0.000' }}
-            </p>
-            <p v-else class="text-xs text-slate-500">
-              สร้าง Step 2 ให้เสร็จและเลือกชุด Lego เพื่อคำนวณผลลดสี
             </p>
 
             <div
               v-if="step3Ready"
-              class="space-y-2 text-sm text-slate-600 max-h-48 overflow-y-auto"
+              class="text-sm text-slate-600 max-h-48 overflow-y-auto"
             >
               <p class="font-semibold text-slate-800">
                 สีที่ใช้ ({{ step3StudUsage.length }})
@@ -478,6 +301,9 @@
               </div>
             </div>
           </div>
+          <p class="text-sm text-rose-600" v-if="step3Error">
+            {{ step3Error }}
+          </p>
         </article>
       </div>
     </section>
@@ -685,6 +511,7 @@ const hsvControls = reactive({
   brightness: 0,
   contrast: 0
 });
+const selectedPixelType = ref(PIXEL_TYPE_OPTIONS[0].number);
 
 const clampResolutionValue = (value: number) => {
   const rounded = Math.round(value / RESOLUTION_STEP) * RESOLUTION_STEP;
@@ -1029,7 +856,7 @@ const runStep3Pipeline = () => {
       targetResolution.width,
       SCALING_FACTOR,
       step3Upscaled,
-      PIXEL_TYPE_OPTIONS[0].number
+      selectedPixelType.value
     );
 
     step3QuantizationError.value = getAverageQuantizationError(
@@ -1073,4 +900,9 @@ watch(
   }
 );
 
+watch(selectedPixelType, () => {
+  if (step2Ready.value) {
+    runStep3Pipeline();
+  }
+});
 </script>

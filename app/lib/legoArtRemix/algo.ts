@@ -13,6 +13,12 @@ export function rgbToHex(r, g, b) {
     return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 }
 
+function lightenHex(hex, amount) {
+    const [r, g, b] = hexToRgb(hex);
+    const adjust = (channel) => Math.round(channel + (255 - channel) * amount);
+    return rgbToHex(adjust(r), adjust(g), adjust(b));
+}
+
 export function inverseHex(hex) {
     return (
         "#" +
@@ -871,34 +877,33 @@ export function revertDarkenedImage(pixels, darkenedStudsToStuds) {
     return outputPixels;
 }
 
+const ROUND_PIXEL_NUMBERS = new Set([98138, 4073]);
+const STUDDED_PIXEL_NUMBERS = new Set([4073, 3024, 3005]);
+
 export function drawPixel(ctx, x, y, radius, pixelHex, strokeHex, pixelType) {
     ctx.beginPath();
-    if ([PIXEL_TYPE_OPTIONS[0].number, PIXEL_TYPE_OPTIONS[1].number].includes(pixelType)) {
-        // draw a circle
+    const isRound =
+        typeof pixelType === "string"
+            ? false
+            : ROUND_PIXEL_NUMBERS.has(Number(pixelType));
+    if (isRound) {
         ctx.arc(x + radius, y + radius, radius, 0, 2 * Math.PI);
     } else {
-        // draw a square
         ctx.rect(x, y, 2 * radius, 2 * radius);
     }
     ctx.fillStyle = pixelHex;
     ctx.fill();
     ctx.strokeStyle = strokeHex;
-    if (!("" + pixelType).match("^variable.*$")) {
-        // TODO: Look at perf?
-        ctx.stroke();
-    }
-    if (
-        [
-            PIXEL_TYPE_OPTIONS[1].number,
-            PIXEL_TYPE_OPTIONS[3].number,
-            PIXEL_TYPE_OPTIONS[4].number,
-            PIXEL_TYPE_OPTIONS[6].number,
-            PIXEL_TYPE_OPTIONS[7].number,
-        ].includes(pixelType)
-    ) {
-        // draw a circle on top of the piece to represent a stud
+    ctx.stroke();
+
+    const hasStud =
+        typeof pixelType === "string" ? false : STUDDED_PIXEL_NUMBERS.has(Number(pixelType));
+    if (hasStud) {
         ctx.beginPath();
-        ctx.arc(x + radius, y + radius, radius * 0.6, 0, 2 * Math.PI);
+        ctx.fillStyle = lightenHex(pixelHex, 0.2);
+        ctx.arc(x + radius, y + radius, radius * 0.45, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.strokeStyle = strokeHex;
         ctx.stroke();
     }
 }
