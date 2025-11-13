@@ -155,18 +155,7 @@
           </div>
           <p v-if="step2Ready" class="text-xs text-slate-500">
             ความละเอียดปัจจุบัน {{ targetResolution.width }} ×
-            {{ targetResolution.height }} Pixel (อัตราขยาย ×{{ SCALING_FACTOR
-
-
-
-
-
-
-
-
-
-
-            }})
+            {{ targetResolution.height }} Pixel (อัตราขยาย ×{{ SCALING_FACTOR}})
           </p>
 
           <div class="mt-4">
@@ -330,10 +319,14 @@
                       class="h-5 w-5 rounded-full border border-slate-200"
                       :style="{ backgroundColor: usage.hex }"
                     ></span>
-                    <span
-                      class="text-xs font-semibold text-slate-700"
-                      >{{ usage.hex }}</span
-                    >
+                    <div class="flex flex-col leading-tight">
+                      <span class="text-xs font-semibold text-slate-700">
+                        {{ usage.name ?? usage.hex }}
+                      </span>
+                      <span class="text-[10px] uppercase text-slate-400">
+                        {{ usage.hex }}
+                      </span>
+                    </div>
                   </div>
                   <span class="text-xs text-slate-500"
                     >× {{ usage.count }}</span
@@ -393,7 +386,7 @@ const step2Ready = ref(false);
 const step3Ready = ref(false);
 const step3Error = ref<string | null>(null);
 const step3QuantizationError = ref<number | null>(null);
-const step3StudUsage = ref<Array<{ hex: string; count: number }>>([]);
+const step3StudUsage = ref<Array<{ hex: string; name?: string; count: number }>>([]);
 const step2PixelData = ref<Uint8ClampedArray | null>(null);
 
 const SERIALIZE_EDGE_LENGTH = 512;
@@ -407,7 +400,7 @@ const totalStudCount = (studMap: Record<string, number>) =>
 
 const formatNumber = (value: number) => new Intl.NumberFormat('th-TH').format(value);
 
-const colorName = (hex: string) => HEX_TO_COLOR_NAME[hex.toLowerCase()];
+const colorName = (hex: string) => HEX_TO_COLOR_NAME[hex.toLowerCase()] ?? HEX_TO_COLOR_NAME[hex];
 
 const MIN_CROP_FRACTION = Math.max(RESOLUTION_MIN / SERIALIZE_EDGE_LENGTH, 0.05);
 
@@ -912,7 +905,7 @@ const runStep3Pipeline = () => {
     );
     const usageMap = getUsedPixelsStudMap(quantPixels);
     step3StudUsage.value = Object.entries(usageMap)
-      .map(([hex, count]) => ({ hex, count }))
+      .map(([hex, count]) => ({ hex, count, name: colorName(hex) ?? hex }))
       .sort((a, b) => b.count - a.count);
 
     step3Error.value = null;

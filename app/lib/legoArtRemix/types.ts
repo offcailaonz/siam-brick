@@ -11,5 +11,5 @@ export type StudMapCollection = Record<string, StudMapEntry>;
 export interface BricklinkColor {
   name: string;
   hex: string;
-  id: number;
+  id: string;
 }

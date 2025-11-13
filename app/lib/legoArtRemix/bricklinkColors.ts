@@ -1,475 +1,125 @@
 import type { BricklinkColor } from "./types";
 
 export const ALL_BRICKLINK_SOLID_COLORS: BricklinkColor[] = [
-    {
-        name: "White",
-        hex: "#ffffff",
-        id: 1,
-    },
-    {
-        name: "Very Light Gray",
-        hex: "#e8e8e8",
-        id: 49,
-    },
-    {
-        name: "Very Light Bluish Gray",
-        hex: "#e4e8e8",
-        id: 99,
-    },
-    {
-        name: "Light Bluish Gray",
-        hex: "#afb5c7",
-        id: 86,
-    },
-    {
-        name: "Light Gray",
-        hex: "#9c9c9c",
-        id: 9,
-    },
-    {
-        name: "Dark Gray",
-        hex: "#6b5a5a",
-        id: 10,
-    },
-    {
-        name: "Dark Bluish Gray",
-        hex: "#595d60",
-        id: 85,
-    },
-    {
-        name: "Black",
-        hex: "#212121",
-        id: 11,
-    },
-    {
-        name: "Dark Red",
-        hex: "#6a0e15",
-        id: 59,
-    },
-    {
-        name: "Red",
-        hex: "#b30006",
-        id: 5,
-    },
-    {
-        name: "Rust",
-        hex: "#b52c20",
-        id: 27,
-    },
-    {
-        name: "Coral",
-        hex: "#f88379",
-        id: 220,
-    },
-    {
-        name: "Salmon",
-        hex: "#f45c40",
-        id: 25,
-    },
-    {
-        name: "Light Salmon",
-        hex: "#ffdedc",
-        id: 26,
-    },
-    {
-        name: "Sand Red",
-        hex: "#8c6b6b",
-        id: 58,
-    },
-    {
-        name: "Reddish Brown",
-        hex: "#89351d",
-        id: 88,
-    },
-    {
-        name: "Brown",
-        hex: "#532115",
-        id: 8,
-    },
-    {
-        name: "Dark Brown",
-        hex: "#330000",
-        id: 120,
-    },
-    {
-        name: "Dark Tan",
-        hex: "#907450",
-        id: 69,
-    },
-    {
-        name: "Tan",
-        hex: "#dec69c",
-        id: 2,
-    },
-    {
-        name: "Light Nougat",
-        hex: "#feccb0",
-        id: 90,
-    },
-    {
-        name: "Nougat",
-        hex: "#ffaf7d",
-        id: 28,
-    },
-    {
-        name: "Medium Nougat",
-        hex: "#e3a05b",
-        id: 150,
-    },
-    {
-        name: "Dark Nougat",
-        hex: "#e78b3e",
-        id: 225,
-    },
-    {
-        name: "Medium Brown",
-        hex: "#a16c42",
-        id: 91,
-    },
-    {
-        name: "Fabuland Brown",
-        hex: "#b3694e",
-        id: 106,
-    },
-    {
-        name: "Fabuland Orange",
-        hex: "#ef9121",
-        id: 160,
-    },
-    {
-        name: "Earth Orange",
-        hex: "#e6881d",
-        id: 29,
-    },
-    {
-        name: "Dark Orange",
-        hex: "#b35408",
-        id: 68,
-    },
-    {
-        name: "Neon Orange",
-        hex: "#fa5947",
-        id: 165,
-    },
-    {
-        name: "Orange",
-        hex: "#ff7e14",
-        id: 4,
-    },
-    {
-        name: "Medium Orange",
-        hex: "#ffa531",
-        id: 31,
-    },
-    {
-        name: "Bright Light Orange",
-        hex: "#f7ba30",
-        id: 110,
-    },
-    {
-        name: "Light Orange",
-        hex: "#f7ad63",
-        id: 32,
-    },
-    {
-        name: "Very Light Orange",
-        hex: "#e6c05d",
-        id: 96,
-    },
-    {
-        name: "Dark Yellow",
-        hex: "#dd982e",
-        id: 161,
-    },
-    {
-        name: "Yellow",
-        hex: "#f7d117",
-        id: 3,
-    },
-    {
-        name: "Bright Light Yellow",
-        hex: "#f3e055",
-        id: 103,
-    },
-    {
-        name: "Light Yellow",
-        hex: "#ffe383",
-        id: 33,
-    },
-    {
-        name: "Light Lime",
-        hex: "#ebee8f",
-        id: 35,
-    },
-    {
-        name: "Yellowish Green",
-        hex: "#dfeea5",
-        id: 158,
-    },
-    {
-        name: "Neon Green",
-        hex: "#bcef66",
-        id: 166,
-    },
-    {
-        name: "Medium Lime",
-        hex: "#bdc618",
-        id: 76,
-    },
-    {
-        name: "Lime",
-        hex: "#a6ca55",
-        id: 34,
-    },
-    {
-        name: "Olive Green",
-        hex: "#7c9051",
-        id: 155,
-    },
-    {
-        name: "Dark Green",
-        hex: "#2e5543",
-        id: 80,
-    },
-    {
-        name: "Green",
-        hex: "#00642e",
-        id: 6,
-    },
-    {
-        name: "Bright Green",
-        hex: "#10cb31",
-        id: 36,
-    },
-    {
-        name: "Medium Green",
-        hex: "#62f58e",
-        id: 37,
-    },
-    {
-        name: "Light Green",
-        hex: "#a5dbb5",
-        id: 38,
-    },
-    {
-        name: "Sand Green",
-        hex: "#76a290",
-        id: 48,
-    },
-    {
-        name: "Dark Turquoise",
-        hex: "#008a80",
-        id: 39,
-    },
-    {
-        name: "Light Turquoise",
-        hex: "#31b5ca",
-        id: 40,
-    },
-    {
-        name: "Aqua",
-        hex: "#b5d3d6",
-        id: 41,
-    },
-    {
-        name: "Light Aqua",
-        hex: "#ccffff",
-        id: 152,
-    },
-    {
-        name: "Dark Blue",
-        hex: "#143044",
-        id: 63,
-    },
-    {
-        name: "Blue",
-        hex: "#0057a6",
-        id: 7,
-    },
-    {
-        name: "Dark Azure",
-        hex: "#3399ff",
-        id: 153,
-    },
-    {
-        name: "Medium Azure",
-        hex: "#42c0fb",
-        id: 156,
-    },
-    {
-        name: "Medium Blue",
-        hex: "#61afff",
-        id: 42,
-    },
-    {
-        name: "Maersk Blue",
-        hex: "#6badd6",
-        id: 72,
-    },
-    {
-        name: "Bright Light Blue",
-        hex: "#9fc3e9",
-        id: 105,
-    },
-    {
-        name: "Light Blue",
-        hex: "#b4d2e3",
-        id: 62,
-    },
-    {
-        name: "Sky Blue",
-        hex: "#7dbfdd",
-        id: 87,
-    },
-    {
-        name: "Sand Blue",
-        hex: "#5a7184",
-        id: 55,
-    },
-    {
-        name: "Blue-Violet",
-        hex: "#506cef",
-        id: 97,
-    },
-    {
-        name: "Dark Blue-Violet",
-        hex: "#2032b0",
-        id: 109,
-    },
-    {
-        name: "Violet",
-        hex: "#3448a4",
-        id: 43,
-    },
-    {
-        name: "Medium Violet",
-        hex: "#9391e4",
-        id: 73,
-    },
-    {
-        name: "Light Violet",
-        hex: "#c9cae2",
-        id: 44,
-    },
-    {
-        name: "Dark Purple",
-        hex: "#5f2683",
-        id: 89,
-    },
-    {
-        name: "Purple",
-        hex: "#a5499c",
-        id: 24,
-    },
-    {
-        name: "Light Purple",
-        hex: "#da70d6",
-        id: 93,
-    },
-    {
-        name: "Medium Lavender",
-        hex: "#885e9e",
-        id: 157,
-    },
-    {
-        name: "Clikits Lavender",
-        hex: "#e0aad9",
-        id: 227,
-    },
-    {
-        name: "Lavender",
-        hex: "#b18cbf",
-        id: 154,
-    },
-    {
-        name: "Sand Purple",
-        hex: "#b57da5",
-        id: 54,
-    },
-    {
-        name: "Magenta",
-        hex: "#b52952",
-        id: 71,
-    },
-    {
-        name: "Dark Pink",
-        hex: "#c87080",
-        id: 47,
-    },
-    {
-        name: "Medium Dark Pink",
-        hex: "#f785b1",
-        id: 94,
-    },
-    {
-        name: "Bright Pink",
-        hex: "#ffbbff",
-        id: 104,
-    },
-    {
-        name: "Pink",
-        hex: "#ffc0cb",
-        id: 23,
-    },
-    {
-        name: "Light Pink",
-        hex: "#ffe1ff",
-        id: 56,
-    },
-    {
-        name: "Neon Yellow",
-        hex: "#fffc00",
-        id: 236,
-    },
-    // add in some pearl colors to support specific sets,
-    // but avoid the other pearl colors for now since they
-    // may weirdly replace similar solid non pearl
-    {
-        name: "Pearl Gold",
-        hex: "#e79500",
-        id: 115,
-    },
-    {
-        name: "Pearl Dark Gray",
-        hex: "#666660",
-        id: 77,
-    },
-    {
-        name: "Flat Silver",
-        hex: "#898788",
-        id: 95,
-    },
-    // The 2 below are new in 2022
-    // {
-    //     name: "Medium Brown",
-    //     hex: "#A16C42",
-    //     id: 240,
-    // },
-    {
-        name: "Medium Tan",
-        hex: "#D9C594",
-        id: 241,
-    },
+  { id: "1", name: "White", hex: "#F5EDDC" },
+  { id: "194", name: "Medium Gray", hex: "#92999A" },
+  { id: "199", name: "Dark Gray", hex: "#5C5E63" },
+  { id: "A29", name: "Very Dark Gray", hex: "#3A3B3F" },
+  { id: "26", name: "Black", hex: "#242226" },
+  { id: "308", name: "Dark Brown", hex: "#402F2A" },
+  { id: "192", name: "Reddish Brown", hex: "#5F372C" },
+  { id: "38", name: "Dark Orange", hex: "#99451E" },
+  { id: "312", name: "Medium Nougat", hex: "#A36840" },
+  { id: "18", name: "Nougat", hex: "#D47C52" },
+  { id: "A25", name: "Dark Flesh", hex: "#E59066" },
+  { id: "A24", name: "Flesh", hex: "#ECAA81" },
+  { id: "283", name: "Light Nougat", hex: "#E5B393" },
+  { id: "A08", name: "Very Light Flesh", hex: "#FECDB6" },
+  { id: "A23", name: "Pastel Pink", hex: "#F9E3DE" },
+  { id: "5", name: "Beige", hex: "#D7BC7E" },
+  { id: "138", name: "Dark Tan", hex: "#877556" },
+  { id: "106", name: "Orange", hex: "#FC6825" },
+  { id: "191", name: "Medium Yellow", hex: "#FD9F11" },
+  { id: "24", name: "Yellow", hex: "#FECC0A" },
+  { id: "A27", name: "Ochre Yellow", hex: "#ECB664" },
+  { id: "226", name: "Light Yellow", hex: "#FFEF63" },
+  { id: "326", name: "Yellow Green", hex: "#C1F181" },
+  { id: "119", name: "Light Green", hex: "#8BB11E" },
+  { id: "37", name: "Bright Green", hex: "#14993C" },
+  { id: "28", name: "Green", hex: "#0F762C" },
+  { id: "141", name: "Dark Green", hex: "#163D2D" },
+  { id: "330", name: "Olive Green", hex: "#7A7E50" },
+  { id: "151", name: "Sand Green", hex: "#628770" },
+  { id: "323", name: "Light Aqua", hex: "#B5ECDC" },
+  { id: "322", name: "Medium Aqua", hex: "#15A7C0" },
+  { id: "212", name: "Light Blue", hex: "#82ADE0" },
+  { id: "102", name: "Medium Blue", hex: "#4891D1" },
+  { id: "321", name: "Dark Azure", hex: "#1080C5" },
+  { id: "23", name: "Blue", hex: "#094FA2" },
+  { id: "140", name: "Dark Blue", hex: "#1B314B" },
+  { id: "135", name: "Sand Blue", hex: "#687E94" },
+  { id: "268", name: "Dark Purple", hex: "#532B74" },
+  { id: "A13", name: "Purple", hex: "#6D3C9C" },
+  { id: "324", name: "Medium Purple", hex: "#9D60B5" },
+  { id: "325", name: "Light Purple", hex: "#B29BD7" },
+  { id: "222", name: "Light Pink", hex: "#E796CD" },
+  { id: "221", name: "Dark Pink", hex: "#CC4594" },
+  { id: "124", name: "Magenta", hex: "#A61562" },
+  { id: "21", name: "Red", hex: "#BF141F" },
+  { id: "154", name: "Dark Red", hex: "#712527" },
+  { id: "297", name: "Warm Gold", hex: "#A46F30" },
+  { id: "148", name: "Metallic Dark Gray", hex: "#383639" },
+  { id: "179", name: "Lego Silver", hex: "#6B6672" },
+  { id: "A02", name: "Silver Gray", hex: "#AEB4BA" },
+  { id: "A04", name: "Medium Bluish Gray", hex: "#818790" },
+  { id: "A26", name: "Salmon", hex: "#F0805D" },
+  { id: "220", name: "Coral Red", hex: "#FC5D6D" },
+  { id: "107", name: "Bright Teal", hex: "#11877D" },
+  { id: "B01", name: "Pastel Purple", hex: "#D7BAD7" },
+  { id: "B02", name: "Dusky Pink", hex: "#BD8CA2" },
+  { id: "B03", name: "Dark Violet", hex: "#B16B90" },
+  { id: "B04", name: "Peach Pink", hex: "#D96391" },
+  { id: "B05", name: "Light Rose", hex: "#B63A72" },
+  { id: "B07", name: "Deep Pink", hex: "#D63890" },
+  { id: "B08", name: "Plum", hex: "#D72A72" },
+  { id: "B09", name: "Tomato Red", hex: "#B33D4A" },
+  { id: "B10", name: "Coral", hex: "#D8766D" },
+  { id: "B11", name: "Grayish Purple", hex: "#8686A4" },
+  { id: "B12", name: "Medium Violet", hex: "#786095" },
+  { id: "B13", name: "Blue Violet", hex: "#615DAC" },
+  { id: "B14", name: "Eggplant", hex: "#942091" },
+  { id: "B15", name: "Dusty Rose", hex: "#5E384C" },
+  { id: "B16", name: "Brownish Red", hex: "#5E3235" },
+  { id: "B17", name: "Coffee Brown", hex: "#99785B" },
+  { id: "B18", name: "Pale Flesh", hex: "#E7CDCB" },
+  { id: "B19", name: "Deep Orange", hex: "#E63921" },
+  { id: "B20", name: "Egg Yolk Yellow", hex: "#ED8325" },
+  { id: "B21", name: "Sand Yellow", hex: "#FFFA88" },
+  { id: "B22", name: "Orange Yellow", hex: "#E0A155" },
+  { id: "B23", name: "Grayish White", hex: "#B3AE91" },
+  { id: "B24", name: "Ochre", hex: "#AA915A" },
+  { id: "B27", name: "Flesh Tone", hex: "#FECAAB" },
+  { id: "B28", name: "Royal Blue", hex: "#18395D" },
+  { id: "B29", name: "Dark Blue 2", hex: "#1F6194" },
+  { id: "B30", name: "Sea Blue", hex: "#15A6C6" },
+  { id: "B31", name: "Azure Blue", hex: "#446DB0" },
+  { id: "B32", name: "Army Green", hex: "#2B362C" },
+  { id: "B33", name: "Dark Green 2", hex: "#354B2A" },
+  { id: "B34", name: "Grass Green", hex: "#889635" },
+  { id: "B35", name: "Spring Green", hex: "#467524" },
+  { id: "B36", name: "Pea Green", hex: "#5F9F80" },
+  { id: "B37", name: "Pastel Green", hex: "#87CCA8" },
+  { id: "B38", name: "Light Aqua Blue", hex: "#659EA3" },
+  { id: "B39", name: "Pastel Blue", hex: "#AFC4D7" },
+  { id: "B40", name: "Dusty Blue", hex: "#849BBF" },
+  { id: "B41", name: "Emerald Green", hex: "#49DC2A" },
+  { id: "B42", name: "Light Grass Green", hex: "#CBEC53" },
+  { id: "B43", name: "Gray Blue", hex: "#647886" },
+  { id: "B44", name: "Dark Gray Blue", hex: "#465967" },
+  { id: "B45", name: "Medium Gray 2", hex: "#727270" },
 ];
 
 export const HEX_TO_COLOR_NAME: Record<string, string> = {};
 ALL_BRICKLINK_SOLID_COLORS.forEach((color) => {
+    const lowerHex = color.hex.toLowerCase();
     HEX_TO_COLOR_NAME[color.hex] = color.name;
+    HEX_TO_COLOR_NAME[lowerHex] = color.name;
+    HEX_TO_COLOR_NAME[lowerHex.toUpperCase()] = color.name;
 });
 
 export const COLOR_NAME_TO_ID: Record<string, number> = {};
 ALL_BRICKLINK_SOLID_COLORS.forEach((color) => {
-    COLOR_NAME_TO_ID[color.name] = color.id;
+  COLOR_NAME_TO_ID[color.name] = color.id;
 });
 
 export const PIXEL_TYPE_OPTIONS = [
-    {
-        name: "1x1 Square Plate",
-        number: 3024,
-    },
+  {
+    name: "1x1 Square Plate",
+    number: 3024,
+  },
 ];
 
 // use this for instructions - we prioritize readability over accuracy here
 export const PIXEL_TYPE_TO_FLATTENED = {
-    3024: "3070b",
+  3024: "3070b",
 };
