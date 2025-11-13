@@ -162,7 +162,7 @@
         </p>
       </header>
 
-      <div class="grid gap-6 lg:grid-cols-2">
+      <div class="grid gap-6 lg:grid-cols-3">
         <article
           class="space-y-4 rounded-xl border border-slate-100 bg-white/80 p-4"
         >
@@ -177,12 +177,19 @@
               </p>
             </div>
             <span
+              style="min-width: 64px;"
               class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"
               >Step 1</span
             >
           </div>
 
-          <input ref="fileInputRef" type="file" accept="image/*" class="hidden" @change="onFileChange" />
+          <input
+            ref="fileInputRef"
+            type="file"
+            accept="image/*"
+            class="hidden"
+            @change="onFileChange"
+          />
           <div class="flex flex-wrap items-center gap-3">
             <button
               class="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow"
@@ -191,7 +198,9 @@
             >
               เลือกไฟล์ภาพ
             </button>
-            <p class="text-xs text-slate-500">รองรับไฟล์ JPG/PNG สูงสุด ~10MB (ประมวลผลบน browser เท่านั้น)</p>
+            <p class="text-xs text-slate-500">
+              รองรับไฟล์ JPG/PNG สูงสุด ~10MB (ประมวลผลบน browser เท่านั้น)
+            </p>
           </div>
           <p v-if="uploadError" class="text-sm text-rose-600">
             {{ uploadError }}
@@ -286,10 +295,39 @@
               </p>
             </div>
             <span
+              style="min-width: 64px;"
               class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800"
               >Step 2</span
             >
           </div>
+
+          <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500">
+            <span
+              v-if="isStep2Processing"
+              class="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-slate-600 shadow-inner"
+            >
+              <span
+                class="h-2 w-2 animate-ping rounded-full bg-indigo-500"
+              ></span>
+              กำลังอัปเดตพรีวิว...
+            </span>
+          </div>
+
+          <p v-if="step2Error" class="text-sm text-rose-600">
+            {{ step2Error }}
+          </p>
+
+          <canvas ref="step2Canvas" class="hidden"></canvas>
+          <canvas
+            v-show="step2Ready"
+            ref="step2UpscaledCanvas"
+            class="w-full rounded-xl border border-indigo-200"
+            style="image-rendering: pixelated; width: 100%; height: auto"
+          ></canvas>
+          <p v-if="step2Ready" class="text-xs text-slate-500">
+            ความละเอียดปัจจุบัน {{ targetResolution.width }} ×
+            {{ targetResolution.height }} stud (อัตราขยาย ×{{ SCALING_FACTOR }})
+          </p>
 
           <div class="space-y-4">
             <div class="grid gap-3 md:grid-cols-3">
@@ -369,64 +407,29 @@
               </label>
             </div>
           </div>
-
-          <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500">
-            <span
-              v-if="isStep2Processing"
-              class="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-slate-600 shadow-inner"
-            >
-              <span
-                class="h-2 w-2 animate-ping rounded-full bg-indigo-500"
-              ></span>
-              กำลังอัปเดตพรีวิว...
-            </span>
-            <span
-              v-else-if="step2Ready"
-              class="rounded-full bg-emerald-100 px-3 py-1 text-emerald-600"
-              >พร้อมใช้งาน</span
-            >
-            <button
-              class="ml-auto rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-500"
-              type="button"
-              @click="scheduleStep2Processing(0)"
-            >
-              สร้างพรีวิวอีกครั้ง
-            </button>
-          </div>
-
-          <p v-if="step2Error" class="text-sm text-rose-600">
-            {{ step2Error }}
-          </p>
-
-          <canvas ref="step2Canvas" class="hidden"></canvas>
-          <canvas
-            v-show="step2Ready"
-            ref="step2UpscaledCanvas"
-            class="w-full rounded-xl border border-indigo-200"
-            style="image-rendering: pixelated; width: 100%; height: auto"
-          ></canvas>
-          <p v-if="step2Ready" class="text-xs text-slate-500">
-            ความละเอียดปัจจุบัน {{ targetResolution.width }} ×
-            {{ targetResolution.height }} stud (อัตราขยาย ×{{ SCALING_FACTOR }})
-          </p>
         </article>
 
-        <article class="space-y-4 rounded-xl border border-emerald-100 bg-emerald-50/60 p-4">
+        <article
+          class="space-y-4 rounded-xl border border-emerald-100 bg-emerald-50/60 p-4"
+        >
           <div class="flex items-center justify-between">
             <div>
-              <h3 class="text-lg font-semibold text-slate-900">Step 3 – ลดสีให้ตรงกับชุด Lego</h3>
+              <h3 class="text-lg font-semibold text-slate-900">
+                Step 3 – ลดสีให้ตรงกับชุด Lego
+              </h3>
               <p class="text-sm text-slate-500">
-                ใช้พาเลตของ {{ selectedSet?.name ?? 'ชุด Lego Art' }} เพื่อลดจำนวนสีและเตรียมข้อมูล stud ที่ต้องใช้
+                ใช้พาเลตสีทั้งหมดของ BrickLink เพื่อลดจำนวนสีและเตรียมข้อมูล stud (ไม่จำกัดสต็อก)
               </p>
             </div>
-            <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">Step 3</span>
+            <span
+              style="min-width: 64px;"
+              class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800"
+              >Step 3</span
+            >
           </div>
-
-          <p class="text-xs text-slate-500">
-            ใช้ Two Phase + CIEDE2000 พร้อมพาเลตสีทั้งหมดของ BrickLink เพื่อให้ภาพสมจริงที่สุด
+          <p class="text-sm text-rose-600" v-if="step3Error">
+            {{ step3Error }}
           </p>
-
-          <p class="text-sm text-rose-600" v-if="step3Error">{{ step3Error }}</p>
 
           <div class="space-y-3">
             <canvas ref="step3Canvas" class="hidden"></canvas>
@@ -437,13 +440,21 @@
               v-show="step3Ready"
             ></canvas>
             <p class="text-xs text-slate-500" v-if="step3Ready">
-              ความละเอียด {{ targetResolution.width }} × {{ targetResolution.height }} stud | Quantization error:
+              ความละเอียด {{ targetResolution.width }} ×
+              {{ targetResolution.height }} stud | Quantization error:
               {{ step3QuantizationError?.toFixed(3) ?? '0.000' }}
             </p>
-            <p v-else class="text-xs text-slate-500">สร้าง Step 2 ให้เสร็จและเลือกชุด Lego เพื่อคำนวณผลลดสี</p>
+            <p v-else class="text-xs text-slate-500">
+              สร้าง Step 2 ให้เสร็จและเลือกชุด Lego เพื่อคำนวณผลลดสี
+            </p>
 
-            <div v-if="step3Ready" class="space-y-2 text-sm text-slate-600 max-h-48 overflow-y-auto">
-              <p class="font-semibold text-slate-800">สีที่ใช้ ({{ step3StudUsage.length }})</p>
+            <div
+              v-if="step3Ready"
+              class="space-y-2 text-sm text-slate-600 max-h-48 overflow-y-auto"
+            >
+              <p class="font-semibold text-slate-800">
+                สีที่ใช้ ({{ step3StudUsage.length }})
+              </p>
               <div class="grid gap-2 sm:grid-cols-2">
                 <div
                   v-for="usage in step3StudUsage"
@@ -451,10 +462,18 @@
                   class="flex items-center justify-between rounded-lg border border-white/40 bg-white/60 px-3 py-2"
                 >
                   <div class="flex items-center gap-2">
-                    <span class="h-5 w-5 rounded-full border border-slate-200" :style="{ backgroundColor: usage.hex }"></span>
-                    <span class="text-xs font-semibold text-slate-700">{{ usage.hex }}</span>
+                    <span
+                      class="h-5 w-5 rounded-full border border-slate-200"
+                      :style="{ backgroundColor: usage.hex }"
+                    ></span>
+                    <span
+                      class="text-xs font-semibold text-slate-700"
+                      >{{ usage.hex }}</span
+                    >
                   </div>
-                  <span class="text-xs text-slate-500">× {{ usage.count }}</span>
+                  <span class="text-xs text-slate-500"
+                    >× {{ usage.count }}</span
+                  >
                 </div>
               </div>
             </div>
@@ -468,7 +487,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { studMaps, type StudMapId } from '~/lib/legoArtRemix/studMaps';
-import type { StudMapEntry } from '~/lib/legoArtRemix/types';
 import {
   getPixelArrayFromCanvas,
   drawPixelsOnCanvas,
@@ -489,7 +507,6 @@ import {
 const studMapEntries = reactive(studMaps);
 const availableSetIds = Object.keys(studMapEntries) as StudMapId[];
 const selectedSetId = ref<StudMapId>(availableSetIds[0]);
-const selectedSet = computed<StudMapEntry | null>(() => studMapEntries[selectedSetId.value] ?? null);
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const cropPreviewContainer = ref<HTMLDivElement | null>(null);
@@ -989,14 +1006,10 @@ const runStep3Pipeline = () => {
     step3Ready.value = false;
     return;
   }
-  const baseStudMap = selectedSet.value?.studMap ?? Object.fromEntries(
-    ALL_BRICKLINK_SOLID_COLORS.map((color) => [color.hex, Infinity])
-  );
-  if (Object.keys(baseStudMap).length === 0) {
-    step3Error.value = 'ไม่พบข้อมูลพาเลต';
-    step3Ready.value = false;
-    return;
-  }
+  const baseStudMap = ALL_BRICKLINK_SOLID_COLORS.reduce((acc, color) => {
+    acc[color.hex] = Number.MAX_SAFE_INTEGER;
+    return acc;
+  }, {} as Record<string, number>);
   try {
     const originalPixels = Array.from(step2PixelData.value);
     const alignedPixels = alignPixelsToStudMap(originalPixels, baseStudMap, ciede2000ColorDistance);
@@ -1060,12 +1073,4 @@ watch(
   }
 );
 
-watch(
-  () => selectedSetId.value,
-  () => {
-    if (step2Ready.value) {
-      runStep3Pipeline();
-    }
-  }
-);
 </script>
