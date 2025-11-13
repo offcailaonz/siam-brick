@@ -1,17 +1,21 @@
 <template>
   <section class="space-y-8">
     <header class="space-y-2 text-center">
-      <p class="text-sm uppercase tracking-[0.3em] text-slate-500">Lego Art Remix</p>
+      <p class="text-sm uppercase tracking-[0.3em] text-slate-500">
+        Lego Art Remix
+      </p>
       <h1 class="text-3xl font-semibold text-slate-900">
         แยก logic เก่าออกเป็น component เพื่อใช้งานใน Nuxt
       </h1>
       <p class="text-base text-slate-600">
-        เลือกชุด Lego Art ที่มีอยู่ แล้วอัปโหลดภาพเพื่อเริ่มเตรียม workflow ใหม่ใน Vue.
+        เลือกชุด Lego Art ที่มีอยู่ แล้วอัปโหลดภาพเพื่อเริ่มเตรียม workflow
+        ใหม่ใน Vue.
       </p>
     </header>
 
-    <div class="grid gap-6 lg:grid-cols-2">
-      <article class="rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm">
+    <!-- <div class="grid gap-6 lg:grid-cols-2"> -->
+    <div>
+      <!-- <article class="rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm">
         <h2 class="text-xl font-semibold text-slate-900">เลือกชุด Lego Art</h2>
         <p class="text-sm text-slate-500">ข้อมูลทั้งหมดมาจาก stud map ดั้งเดิม</p>
         <div class="mt-4 grid gap-3 sm:grid-cols-2">
@@ -33,37 +37,68 @@
             </p>
           </button>
         </div>
-      </article>
+      </article> -->
 
-      <article class="rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm">
-        <h2 class="text-xl font-semibold text-slate-900">อัปโหลดรูปเพื่อทดลอง pipeline</h2>
-        <p class="text-sm text-slate-500">ตอนนี้ component นี้ยังทำเฉพาะส่วนนำเข้า/normalization</p>
+      <article
+        class="rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm"
+      >
+        <h2 class="text-xl font-semibold text-slate-900">
+          อัปโหลดรูปเพื่อทดลอง pipeline
+        </h2>
+        <p class="text-sm text-slate-500">
+          ตอนนี้ component นี้ยังทำเฉพาะส่วนนำเข้า/normalization
+        </p>
 
-        <div class="mt-4 flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-          <input ref="fileInputRef" type="file" accept="image/*" class="hidden" @change="onFileChange" />
-          <button class="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow" @click="triggerFilePicker">
+        <div
+          class="mt-4 flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center"
+        >
+          <input
+            ref="fileInputRef"
+            type="file"
+            accept="image/*"
+            class="hidden"
+            @change="onFileChange"
+          />
+          <button
+            class="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow"
+            @click="triggerFilePicker"
+          >
             เลือกไฟล์ภาพ
           </button>
           <p class="text-xs text-slate-500">รองรับไฟล์ JPG/PNG สูงสุด ~10MB</p>
-          <p v-if="uploadError" class="text-sm text-rose-600">{{ uploadError }}</p>
+          <p v-if="uploadError" class="text-sm text-rose-600">
+            {{ uploadError }}
+          </p>
         </div>
 
-        <div v-if="isProcessing" class="mt-4 flex items-center gap-3 text-sm text-slate-500">
+        <div
+          v-if="isProcessing"
+          class="mt-4 flex items-center gap-3 text-sm text-slate-500"
+        >
           <span class="h-3 w-3 animate-ping rounded-full bg-indigo-500"></span>
           กำลังประมวลผลภาพ...
         </div>
 
-        <div v-show="uploadedImage" class="mt-4 space-y-2 text-sm text-slate-600">
-          <p>แสดงตัวอย่าง (ปรับขนาดอัตโนมัติเป็น 512px เพื่อเตรียม Step ถัดไป)</p>
-          <canvas ref="step1Canvas" class="w-full rounded-xl border border-slate-200 bg-black/5"></canvas>
+        <div
+          v-show="uploadedImage"
+          class="mt-4 space-y-2 text-sm text-slate-600"
+        >
+          <p>
+            แสดงตัวอย่าง (ปรับขนาดอัตโนมัติเป็น 512px เพื่อเตรียม Step ถัดไป)
+          </p>
+          <canvas
+            ref="step1Canvas"
+            class="w-full rounded-xl border border-slate-200 bg-black/5"
+          ></canvas>
           <p v-if="imageDimensions" class="text-xs text-slate-400">
-            ขนาดเดิม {{ imageDimensions.width }} × {{ imageDimensions.height }} px
+            ขนาดเดิม {{ imageDimensions.width }} ×
+            {{ imageDimensions.height }} px
           </p>
         </div>
       </article>
     </div>
 
-    <article v-if="selectedSet" class="rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm">
+    <!-- <article v-if="selectedSet" class="rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm">
       <header class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 class="text-xl font-semibold text-slate-900">พาเลตสีของ {{ selectedSet.name }}</h2>
@@ -107,24 +142,41 @@
           </p>
         </div>
       </div>
-    </article>
+    </article> -->
 
-    <section v-if="step1Ready" class="space-y-6 rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm">
+    <section
+      v-if="step1Ready"
+      class="space-y-6 rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm"
+    >
       <header class="space-y-2">
-        <h2 class="text-2xl font-semibold text-slate-900">ขั้นตอนที่ 1–2: เตรียมภาพและปรับแต่ง</h2>
+        <h2 class="text-2xl font-semibold text-slate-900">
+          ขั้นตอนที่ 1–2: เตรียมภาพและปรับแต่ง
+        </h2>
         <p class="text-slate-600">
-          เมื่ออัปโหลดภาพแล้ว ระบบจะ normalize ให้อัตโนมัติ จากนั้นคุณสามารถตั้งค่าความละเอียดและปรับโทนก่อนเข้าสู่ขั้น quantization
+          เมื่ออัปโหลดภาพแล้ว ระบบจะ normalize ให้อัตโนมัติ
+          จากนั้นคุณสามารถตั้งค่าความละเอียดและปรับโทนก่อนเข้าสู่ขั้น
+          quantization
         </p>
       </header>
 
       <div class="grid gap-6 lg:grid-cols-2">
-        <article class="space-y-4 rounded-xl border border-slate-100 bg-white/80 p-4">
+        <article
+          class="space-y-4 rounded-xl border border-slate-100 bg-white/80 p-4"
+        >
           <div class="flex items-center justify-between">
             <div>
-              <h3 class="text-lg font-semibold text-slate-900">Step 1 – Normalized Preview</h3>
-              <p class="text-sm text-slate-500">แปลงเป็น {{ SERIALIZE_EDGE_LENGTH }} × {{ SERIALIZE_EDGE_LENGTH }} px พร้อมลบค่า alpha</p>
+              <h3 class="text-lg font-semibold text-slate-900">
+                Step 1 – Normalized Preview
+              </h3>
+              <p class="text-sm text-slate-500">
+                แปลงเป็น {{ SERIALIZE_EDGE_LENGTH }} ×
+                {{ SERIALIZE_EDGE_LENGTH }} px พร้อมลบค่า alpha
+              </p>
             </div>
-            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Step 1</span>
+            <span
+              class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"
+              >Step 1</span
+            >
           </div>
           <img
             v-if="uploadedImage"
@@ -133,21 +185,12 @@
             class="w-full rounded-xl border border-slate-200"
           />
           <p v-if="imageDimensions" class="text-xs text-slate-500">
-            ขนาดต้นฉบับ {{ imageDimensions.width }} × {{ imageDimensions.height }} px
+            ขนาดต้นฉบับ {{ imageDimensions.width }} ×
+            {{ imageDimensions.height }} px
           </p>
-        </article>
-
-        <article class="space-y-4 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
-          <div class="flex items-center justify-between">
-            <div>
-              <h3 class="text-lg font-semibold text-slate-900">Step 2 – ปรับขนาดและโทน</h3>
-              <p class="text-sm text-slate-500">ตั้งค่าความกว้าง/สูง (หน่วย stud) และปรับ Hue/Saturation/Brightness ก่อนนำไปแม็พสี Lego</p>
-            </div>
-            <span class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800">Step 2</span>
-          </div>
-
           <div class="grid gap-3 sm:grid-cols-2">
-            <label class="text-sm text-slate-600">ความกว้าง (stud)
+            <label class="text-sm text-slate-600"
+              >ความกว้าง (stud)
               <input
                 type="number"
                 :min="RESOLUTION_MIN"
@@ -158,7 +201,8 @@
                 @input="handleResolutionInput('width', $event)"
               />
             </label>
-            <label class="text-sm text-slate-600">ความสูง (stud)
+            <label class="text-sm text-slate-600"
+              >ความสูง (stud)
               <input
                 type="number"
                 :min="RESOLUTION_MIN"
@@ -170,30 +214,107 @@
               />
             </label>
           </div>
+          <p class="text-xs text-slate-500">
+            ระบบจะครอปภาพให้อัตโนมัติด้วยอัตราส่วน
+            {{ targetResolution.width }} :
+            {{ targetResolution.height }} ก่อนนำไปสร้างโมเสก
+          </p>
+        </article>
+
+        <article
+          class="space-y-4 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-semibold text-slate-900">
+                Step 2 – ปรับโทนภาพ
+              </h3>
+              <p class="text-sm text-slate-500">
+                ตั้งค่า Hue / Saturation / Brightness / Contrast ก่อนนำไปแม็พสี
+                Lego
+              </p>
+            </div>
+            <span
+              class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800"
+              >Step 2</span
+            >
+          </div>
 
           <div class="space-y-4">
             <div class="grid gap-3 md:grid-cols-3">
-              <label class="text-sm text-slate-600">Hue (°)
-                <input type="range" min="-180" max="180" :value="hsvControls.hue" class="mt-1 w-full" @input="handleHsvInput('hue', $event)" />
-                <span class="text-xs text-slate-500">{{ hsvControls.hue }}°</span>
+              <label class="text-sm text-slate-600"
+                >Hue (°)
+                <input
+                  type="range"
+                  min="-180"
+                  max="180"
+                  :value="hsvControls.hue"
+                  class="mt-1 w-full"
+                  @input="handleHsvInput('hue', $event)"
+                />
+                <span class="text-xs text-slate-500"
+                  >{{ hsvControls.hue }}°</span
+                >
               </label>
-              <label class="text-sm text-slate-600">Saturation (%)
-                <input type="range" min="-100" max="100" :value="hsvControls.saturation" class="mt-1 w-full" @input="handleHsvInput('saturation', $event)" />
-                <span class="text-xs text-slate-500">{{ hsvControls.saturation }}%</span>
+              <label class="text-sm text-slate-600"
+                >Saturation (%)
+                <input
+                  type="range"
+                  min="-100"
+                  max="100"
+                  :value="hsvControls.saturation"
+                  class="mt-1 w-full"
+                  @input="handleHsvInput('saturation', $event)"
+                />
+                <span class="text-xs text-slate-500"
+                  >{{ hsvControls.saturation }}%</span
+                >
               </label>
-              <label class="text-sm text-slate-600">Value (%)
-                <input type="range" min="-100" max="100" :value="hsvControls.value" class="mt-1 w-full" @input="handleHsvInput('value', $event)" />
-                <span class="text-xs text-slate-500">{{ hsvControls.value }}%</span>
+              <label class="text-sm text-slate-600"
+                >Value (%)
+                <input
+                  type="range"
+                  min="-100"
+                  max="100"
+                  :value="hsvControls.value"
+                  class="mt-1 w-full"
+                  @input="handleHsvInput('value', $event)"
+                />
+                <span class="text-xs text-slate-500"
+                  >{{ hsvControls.value }}%</span
+                >
               </label>
             </div>
             <div class="grid gap-3 md:grid-cols-2">
-              <label class="text-sm text-slate-600">Brightness
-                <input type="range" min="-128" max="128" :value="hsvControls.brightness" class="mt-1 w-full" @input="handleHsvInput('brightness', $event)" />
-                <span class="text-xs text-slate-500">{{ hsvControls.brightness }}</span>
+              <label class="text-sm text-slate-600"
+                >Brightness
+                <input
+                  type="range"
+                  min="-128"
+                  max="128"
+                  :value="hsvControls.brightness"
+                  class="mt-1 w-full"
+                  @input="handleHsvInput('brightness', $event)"
+                />
+                <span
+                  class="text-xs text-slate-500"
+                  >{{ hsvControls.brightness }}</span
+                >
               </label>
-              <label class="text-sm text-slate-600">Contrast
-                <input type="range" min="-128" max="128" :value="hsvControls.contrast" class="mt-1 w-full" @input="handleHsvInput('contrast', $event)" />
-                <span class="text-xs text-slate-500">{{ hsvControls.contrast }}</span>
+              <label class="text-sm text-slate-600"
+                >Contrast
+                <input
+                  type="range"
+                  min="-128"
+                  max="128"
+                  :value="hsvControls.contrast"
+                  class="mt-1 w-full"
+                  @input="handleHsvInput('contrast', $event)"
+                />
+                <span
+                  class="text-xs text-slate-500"
+                  >{{ hsvControls.contrast }}</span
+                >
               </label>
             </div>
           </div>
@@ -203,10 +324,16 @@
               v-if="isStep2Processing"
               class="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-slate-600 shadow-inner"
             >
-              <span class="h-2 w-2 animate-ping rounded-full bg-indigo-500"></span>
+              <span
+                class="h-2 w-2 animate-ping rounded-full bg-indigo-500"
+              ></span>
               กำลังอัปเดตพรีวิว...
             </span>
-            <span v-else-if="step2Ready" class="rounded-full bg-emerald-100 px-3 py-1 text-emerald-600">พร้อมใช้งาน</span>
+            <span
+              v-else-if="step2Ready"
+              class="rounded-full bg-emerald-100 px-3 py-1 text-emerald-600"
+              >พร้อมใช้งาน</span
+            >
             <button
               class="ml-auto rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-500"
               type="button"
@@ -216,17 +343,20 @@
             </button>
           </div>
 
-          <p v-if="step2Error" class="text-sm text-rose-600">{{ step2Error }}</p>
+          <p v-if="step2Error" class="text-sm text-rose-600">
+            {{ step2Error }}
+          </p>
 
           <canvas ref="step2Canvas" class="hidden"></canvas>
-          <img
-            v-if="step2PreviewUrl"
-            :src="step2PreviewUrl"
-            alt="Step 2 Preview"
+          <canvas
+            v-show="step2Ready"
+            ref="step2UpscaledCanvas"
             class="w-full rounded-xl border border-indigo-200"
-          />
-          <p v-if="step2PreviewUrl" class="text-xs text-slate-500">
-            ความละเอียดปัจจุบัน {{ targetResolution.width }} × {{ targetResolution.height }} stud
+            style="image-rendering: pixelated; width: 100%; height: auto"
+          ></canvas>
+          <p v-if="step2Ready" class="text-xs text-slate-500">
+            ความละเอียดปัจจุบัน {{ targetResolution.width }} ×
+            {{ targetResolution.height }} stud (อัตราขยาย ×{{ SCALING_FACTOR }})
           </p>
         </article>
       </div>
@@ -255,6 +385,7 @@ const selectedSet = computed<StudMapEntry | null>(() => studMapEntries[selectedS
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const step1Canvas = ref<HTMLCanvasElement | null>(null);
 const step2Canvas = ref<HTMLCanvasElement | null>(null);
+const step2UpscaledCanvas = ref<HTMLCanvasElement | null>(null);
 const uploadedImage = ref<string | null>(null);
 const imageDimensions = ref<{ width: number; height: number } | null>(null);
 const uploadError = ref<string | null>(null);
@@ -263,12 +394,12 @@ const isStep2Processing = ref(false);
 const step2Error = ref<string | null>(null);
 const step1Ready = ref(false);
 const step2Ready = ref(false);
-const step2PreviewUrl = ref<string | null>(null);
 
 const SERIALIZE_EDGE_LENGTH = 512;
 const RESOLUTION_MIN = 32;
 const RESOLUTION_MAX = 128;
 const RESOLUTION_STEP = 8;
+const SCALING_FACTOR = 30;
 
 const totalStudCount = (studMap: Record<string, number>) =>
   Object.values(studMap).reduce((sum, count) => sum + count, 0);
@@ -309,6 +440,29 @@ const handleHsvInput = (key: keyof typeof hsvControls, event: Event) => {
   }
 };
 
+const computeCropRectangle = (canvasWidth: number, canvasHeight: number, targetWidth: number, targetHeight: number) => {
+  if (canvasWidth === 0 || canvasHeight === 0 || targetWidth === 0 || targetHeight === 0) {
+    return { sx: 0, sy: 0, sWidth: canvasWidth, sHeight: canvasHeight };
+  }
+  const desiredAspect = targetWidth / targetHeight;
+  const canvasAspect = canvasWidth / canvasHeight;
+  let sWidth = canvasWidth;
+  let sHeight = canvasHeight;
+
+  if (canvasAspect > desiredAspect) {
+    sHeight = canvasHeight;
+    sWidth = sHeight * desiredAspect;
+  } else {
+    sWidth = canvasWidth;
+    sHeight = sWidth / desiredAspect;
+  }
+
+  const sx = Math.max((canvasWidth - sWidth) / 2, 0);
+  const sy = Math.max((canvasHeight - sHeight) / 2, 0);
+
+  return { sx, sy, sWidth, sHeight };
+};
+
 const triggerFilePicker = () => {
   uploadError.value = null;
   fileInputRef.value?.click();
@@ -317,7 +471,6 @@ const triggerFilePicker = () => {
 const resetWorkflowState = () => {
   step1Ready.value = false;
   step2Ready.value = false;
-  step2PreviewUrl.value = null;
   step2Error.value = null;
   isStep2Processing.value = false;
 };
@@ -405,6 +558,7 @@ const scheduleStep2Processing = (delay = 120) => {
   if (step2Timeout) {
     clearTimeout(step2Timeout);
   }
+  step2Ready.value = false;
   step2Timeout = setTimeout(async () => {
     await nextTick();
     runStep2Pipeline();
@@ -428,8 +582,18 @@ const runStep2Pipeline = () => {
       throw new Error('เบราว์เซอร์ไม่รองรับการประมวลผล canvas');
     }
     bufferContext.imageSmoothingEnabled = false;
+    const { sx, sy, sWidth, sHeight } = computeCropRectangle(
+      sourceCanvas.width,
+      sourceCanvas.height,
+      targetResolution.width,
+      targetResolution.height
+    );
     bufferContext.drawImage(
       sourceCanvas,
+      sx,
+      sy,
+      sWidth,
+      sHeight,
       0,
       0,
       bufferCanvas.width,
@@ -442,8 +606,28 @@ const runStep2Pipeline = () => {
     outputCanvas.width = bufferCanvas.width;
     outputCanvas.height = bufferCanvas.height;
     drawPixelsOnCanvas(pixelArray, outputCanvas);
-    step2PreviewUrl.value = outputCanvas.toDataURL('image/png', 1.0);
-    step2Ready.value = true;
+    const upscaledCanvas = step2UpscaledCanvas.value;
+    if (upscaledCanvas) {
+      upscaledCanvas.width = targetResolution.width * SCALING_FACTOR;
+      upscaledCanvas.height = targetResolution.height * SCALING_FACTOR;
+      const upscaledContext = upscaledCanvas.getContext('2d');
+      if (upscaledContext) {
+        upscaledContext.imageSmoothingEnabled = false;
+        upscaledContext.clearRect(0, 0, upscaledCanvas.width, upscaledCanvas.height);
+        upscaledContext.drawImage(
+          outputCanvas,
+          0,
+          0,
+          outputCanvas.width,
+          outputCanvas.height,
+          0,
+          0,
+          upscaledCanvas.width,
+          upscaledCanvas.height
+        );
+        step2Ready.value = true;
+      }
+    }
   } catch (error) {
     step2Error.value = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดขณะสร้าง Step 2';
   } finally {
