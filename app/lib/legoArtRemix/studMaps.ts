@@ -1,4 +1,4 @@
-import { ALL_BRICKLINK_SOLID_COLORS, BRICKLINK_STUD_COLORS, BRICKLINK_TILE_COLORS } from "./bricklinkColors";
+import { ALL_BRICKLINK_SOLID_COLORS } from "./bricklinkColors";
 import type { StudMapCollection } from "./types";
 
 export const studMaps: StudMapCollection = {
@@ -531,43 +531,37 @@ export const studMaps: StudMapCollection = {
 
 export type StudMapId = keyof typeof studMaps;
 
-const availableStudHexes = BRICKLINK_STUD_COLORS.map((color) => color.hex);
-const studHexToCount = {};
-availableStudHexes.forEach((hex) => {
-    studHexToCount[hex] = 99999;
-});
+const allColorHexes = ALL_BRICKLINK_SOLID_COLORS.map((color) => color.hex);
+const buildUnlimitedStudMap = (hexes: string[]) => {
+    const map: Record<string, number> = {};
+    hexes.forEach((hex) => {
+        map[hex] = 99999;
+    });
+    return map;
+};
+
 studMaps["all_stud_colors"] = {
     name: "All Stud Colors",
     officialName: "All Available Stud Colors",
     descriptionHTML: "All colors in which studs (1x1 round plates) are available",
-    sortedStuds: availableStudHexes,
-    studMap: studHexToCount,
+    sortedStuds: allColorHexes,
+    studMap: buildUnlimitedStudMap(allColorHexes),
 };
 
-const availableTileHexes = BRICKLINK_TILE_COLORS.map((color) => color.hex);
-const tileHexToCount = {};
-availableTileHexes.forEach((hex) => {
-    tileHexToCount[hex] = 99999;
-});
 studMaps["all_tile_colors"] = {
     name: "All Tile Colors",
     officialName: "All Available Tile Colors",
     descriptionHTML: "All colors in which 1x1 round tiles are available",
-    sortedStuds: availableTileHexes,
-    studMap: tileHexToCount,
+    sortedStuds: allColorHexes,
+    studMap: buildUnlimitedStudMap(allColorHexes),
 };
 
-const availableSolidHexes = ALL_BRICKLINK_SOLID_COLORS.map((color) => color.hex);
-const solidHexToCount = {};
-availableSolidHexes.forEach((hex) => {
-    solidHexToCount[hex] = 99999;
-});
 studMaps["all_solid_colors"] = {
     name: "All Supported Colors",
     officialName: "All Supported Colors",
     descriptionHTML: "All colors supported by the application",
-    sortedStuds: availableSolidHexes,
-    studMap: solidHexToCount,
+    sortedStuds: allColorHexes,
+    studMap: buildUnlimitedStudMap(allColorHexes),
 };
 
 const availablePickABrickStudHexes = [
