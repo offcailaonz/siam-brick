@@ -89,6 +89,7 @@
                 :step="RESOLUTION_STEP"
                 class="mt-2 w-full"
                 :value="targetResolution.width"
+                :disabled="isPreviewFrameLoading"
                 @input="handleResolutionInput('width', $event)"
               />
               <span class="text-xs text-slate-500"
@@ -104,6 +105,7 @@
                 :step="RESOLUTION_STEP"
                 class="mt-2 w-full"
                 :value="targetResolution.height"
+                :disabled="isPreviewFrameLoading"
                 @input="handleResolutionInput('height', $event)"
               />
               <span class="text-xs text-slate-500"
@@ -177,6 +179,7 @@
                   max="180"
                   :value="hsvControls.hue"
                   class="mt-1 w-full"
+                  :disabled="isPreviewFrameLoading"
                   @input="handleHsvInput('hue', $event)"
                 />
                 <span class="text-xs text-slate-500"
@@ -191,6 +194,7 @@
                   max="100"
                   :value="hsvControls.saturation"
                   class="mt-1 w-full"
+                  :disabled="isPreviewFrameLoading"
                   @input="handleHsvInput('saturation', $event)"
                 />
                 <span class="text-xs text-slate-500"
@@ -205,6 +209,7 @@
                   max="100"
                   :value="hsvControls.value"
                   class="mt-1 w-full"
+                  :disabled="isPreviewFrameLoading"
                   @input="handleHsvInput('value', $event)"
                 />
                 <span class="text-xs text-slate-500"
@@ -221,6 +226,7 @@
                   max="128"
                   :value="hsvControls.brightness"
                   class="mt-1 w-full"
+                  :disabled="isPreviewFrameLoading"
                   @input="handleHsvInput('brightness', $event)"
                 />
                 <span
@@ -236,6 +242,7 @@
                   max="128"
                   :value="hsvControls.contrast"
                   class="mt-1 w-full"
+                  :disabled="isPreviewFrameLoading"
                   @input="handleHsvInput('contrast', $event)"
                 />
                 <span
@@ -255,6 +262,7 @@
             <select
               class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
               v-model="selectedPixelType"
+              :disabled="isPreviewFrameLoading"
             >
               <option
                 v-for="option in PIXEL_TYPE_OPTIONS"
