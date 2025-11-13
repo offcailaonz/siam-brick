@@ -13,11 +13,14 @@
       </p>
     </header>
 
-    <!-- <div class="grid gap-6 lg:grid-cols-2"> -->
-    <div>
-      <!-- <article class="rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm">
+    <!-- <div class="grid gap-6 lg:grid-cols-2">
+      <article
+        class="rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm"
+      >
         <h2 class="text-xl font-semibold text-slate-900">เลือกชุด Lego Art</h2>
-        <p class="text-sm text-slate-500">ข้อมูลทั้งหมดมาจาก stud map ดั้งเดิม</p>
+        <p class="text-sm text-slate-500">
+          ข้อมูลทั้งหมดมาจาก stud map ดั้งเดิม
+        </p>
         <div class="mt-4 grid gap-3 sm:grid-cols-2">
           <button
             v-for="(entry, id) in studMapEntries"
@@ -33,11 +36,12 @@
             <p class="text-sm font-medium">{{ entry.name }}</p>
             <p class="text-xs text-slate-500">{{ entry.officialName }}</p>
             <p class="mt-2 text-xs font-semibold text-slate-400">
-              {{ formatNumber(totalStudCount(entry.studMap)) }} ชิ้น / {{ entry.sortedStuds.length }} สี
+              {{ formatNumber(totalStudCount(entry.studMap)) }} ชิ้น /
+              {{ entry.sortedStuds.length }} สี
             </p>
           </button>
         </div>
-      </article> -->
+      </article>
 
       <article
         class="rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm"
@@ -96,7 +100,7 @@
           </p>
         </div>
       </article>
-    </div>
+    </div> -->
 
     <!-- <article v-if="selectedSet" class="rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-sm">
       <header class="flex flex-wrap items-center justify-between gap-3">
@@ -145,7 +149,6 @@
     </article> -->
 
     <section
-      v-if="step1Ready"
       class="space-y-6 rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm"
     >
       <header class="space-y-2">
@@ -166,11 +169,11 @@
           <div class="flex items-center justify-between">
             <div>
               <h3 class="text-lg font-semibold text-slate-900">
-                Step 1 – Normalized Preview
+                Step 1 – เตรียมและครอปภาพ
               </h3>
               <p class="text-sm text-slate-500">
                 แปลงเป็น {{ SERIALIZE_EDGE_LENGTH }} ×
-                {{ SERIALIZE_EDGE_LENGTH }} px พร้อมลบค่า alpha
+                {{ SERIALIZE_EDGE_LENGTH }} px
               </p>
             </div>
             <span
@@ -178,16 +181,37 @@
               >Step 1</span
             >
           </div>
-          <img
-            v-if="uploadedImage"
-            :src="uploadedImage"
-            alt="Step 1 Preview"
-            class="w-full rounded-xl border border-slate-200"
+
+          <input
+            ref="fileInputRef"
+            type="file"
+            accept="image/*"
+            class="hidden"
+            @change="onFileChange"
           />
-          <p v-if="imageDimensions" class="text-xs text-slate-500">
-            ขนาดต้นฉบับ {{ imageDimensions.width }} ×
-            {{ imageDimensions.height }} px
-          </p>
+          <button
+            class="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow"
+            type="button"
+            @click="triggerFilePicker"
+          >
+            เลือกไฟล์ภาพ
+          </button>
+
+          <div v-show="uploadedImage" class="space-y-2 text-sm text-slate-600">
+            <p>
+              พรีวิวหลัง normalize ({{ SERIALIZE_EDGE_LENGTH }} ×
+              {{ SERIALIZE_EDGE_LENGTH }} px)
+            </p>
+            <canvas
+              ref="step1Canvas"
+              class="w-full rounded-xl border border-slate-200 bg-black/5"
+            ></canvas>
+            <p v-if="imageDimensions" class="text-xs text-slate-500">
+              ขนาดต้นฉบับ {{ imageDimensions.width }} ×
+              {{ imageDimensions.height }} px
+            </p>
+          </div>
+
           <div class="grid gap-3 sm:grid-cols-2">
             <label class="text-sm text-slate-600"
               >ความกว้าง (stud)
