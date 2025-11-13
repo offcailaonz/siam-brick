@@ -423,7 +423,7 @@
           </div>
 
           <p class="text-xs text-slate-500">
-            ใช้การลดสีแบบสองช่วง (Two Phase) พร้อมตัววัดสี CIEDE2000 ทำให้ผลลัพธ์ใกล้ภาพต้นฉบับที่สุด
+            ใช้ Two Phase + CIEDE2000 พร้อมพาเลตสีทั้งหมดของ BrickLink เพื่อให้ภาพสมจริงที่สุด
           </p>
 
           <p class="text-sm text-rose-600" v-if="step3Error">{{ step3Error }}</p>
@@ -477,9 +477,14 @@ import {
   applyContrastAdjustment,
   alignPixelsToStudMap,
   getAverageQuantizationError,
-  getUsedPixelsStudMap
+  getUsedPixelsStudMap,
+  drawStudImageOnCanvas
 } from '~/lib/legoArtRemix/algo';
-import { HEX_TO_COLOR_NAME } from '~/lib/legoArtRemix/bricklinkColors';
+import {
+  HEX_TO_COLOR_NAME,
+  PIXEL_TYPE_OPTIONS,
+  ALL_BRICKLINK_SOLID_COLORS
+} from '~/lib/legoArtRemix/bricklinkColors';
 
 const studMapEntries = reactive(studMaps);
 const availableSetIds = Object.keys(studMapEntries) as StudMapId[];
@@ -979,22 +984,16 @@ const runStep2Pipeline = () => {
   }
 };
 
-const euclideanColorDistance = (pixel1: number[], pixel2: number[]) => {
-  let total = 0;
-  for (let i = 0; i < 3; i++) {
-    total += Math.pow(pixel1[i] - pixel2[i], 2);
-  }
-  return Math.sqrt(total);
-};
-
 const runStep3Pipeline = () => {
   if (!step2Ready.value || step2PixelData.value == null) {
     step3Ready.value = false;
     return;
   }
-  const baseStudMap = selectedSet.value?.studMap;
-  if (baseStudMap == null || Object.keys(baseStudMap).length === 0) {
-    step3Error.value = 'ไม่พบข้อมูลชุด Lego ที่เลือก';
+  const baseStudMap = selectedSet.value?.studMap ?? Object.fromEntries(
+    ALL_BRICKLINK_SOLID_COLORS.map((color) => [color.hex, Infinity])
+  );
+  if (Object.keys(baseStudMap).length === 0) {
+    step3Error.value = 'ไม่พบข้อมูลพาเลต';
     step3Ready.value = false;
     return;
   }
@@ -1012,27 +1011,19 @@ const runStep3Pipeline = () => {
     step3BaseCanvas.height = targetResolution.height;
     drawPixelsOnCanvas(quantPixels, step3BaseCanvas);
 
-    step3Upscaled.width = targetResolution.width * SCALING_FACTOR;
-    step3Upscaled.height = targetResolution.height * SCALING_FACTOR;
-    const upscaledContext = step3Upscaled.getContext('2d');
-    if (!upscaledContext) {
-      throw new Error('เบราว์เซอร์ไม่รองรับการประมวลผล canvas');
-    }
-    upscaledContext.imageSmoothingEnabled = false;
-    upscaledContext.clearRect(0, 0, step3Upscaled.width, step3Upscaled.height);
-    upscaledContext.drawImage(
-      step3BaseCanvas,
-      0,
-      0,
-      step3BaseCanvas.width,
-      step3BaseCanvas.height,
-      0,
-      0,
-      step3Upscaled.width,
-      step3Upscaled.height
+    drawStudImageOnCanvas(
+      quantPixels,
+      targetResolution.width,
+      SCALING_FACTOR,
+      step3Upscaled,
+      PIXEL_TYPE_OPTIONS[0].number
     );
 
-    step3QuantizationError.value = getAverageQuantizationError(Array.from(step2PixelData.value), alignedPixels, euclideanColorDistance);
+    step3QuantizationError.value = getAverageQuantizationError(
+      Array.from(step2PixelData.value),
+      alignedPixels,
+      ciede2000ColorDistance
+    );
     const usageMap = getUsedPixelsStudMap(quantPixels);
     step3StudUsage.value = Object.entries(usageMap)
       .map(([hex, count]) => ({ hex, count }))

@@ -1,3 +1,5 @@
+import { PIXEL_TYPE_OPTIONS } from "./bricklinkColors";
+
 export function hexToRgb(hex) {
     const hexInt = parseInt(hex.replace("#", ""), 16);
     const r = (hexInt >> 16) & 255;
