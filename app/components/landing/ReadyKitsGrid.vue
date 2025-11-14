@@ -11,7 +11,11 @@
         :key="kit.name"
         class="rounded-2xl border border-white bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
       >
-        <div class="h-40 rounded-xl bg-slate-100"></div>
+        <img
+          :src="kit.image"
+          :alt="kit.name"
+          class="h-40 w-full rounded-xl object-cover"
+        />
         <div class="mt-4 space-y-2">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-semibold text-slate-900">{{ kit.name }}</h3>
@@ -54,6 +58,7 @@ defineProps<{
     difficulty: string;
     priceKit: string;
     priceInstructions: string;
+    image: string;
   }>;
 }>();
 </script>

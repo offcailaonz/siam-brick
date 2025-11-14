@@ -10,7 +10,11 @@
         :key="item.name"
         class="rounded-2xl border border-white bg-white p-5 shadow-sm"
       >
-        <div class="h-40 rounded-xl bg-slate-100"></div>
+        <img
+          :src="item.image"
+          :alt="item.name"
+          class="h-40 w-full rounded-xl object-cover"
+        />
         <h3 class="mt-4 text-lg font-semibold text-slate-900">{{ item.name }}</h3>
         <p class="text-sm text-slate-500">{{ item.story }}</p>
       </article>
@@ -20,6 +24,6 @@
 
 <script setup lang="ts">
 defineProps<{
-  showcase: Array<{ name: string; story: string }>;
+  showcase: Array<{ name: string; story: string; image: string }>;
 }>();
 </script>
