@@ -1,7 +1,7 @@
 <template>
   <div class="brick-bg--content">
     <main
-      class="min-h-[calc(100vh-64px-100px)] mx-auto max-w-3xl space-y-6 px-4 py-16 text-slate-800 text-white"
+      class="min-h-[calc(100vh-64px-68px)] mx-auto max-w-3xl space-y-6 px-4 py-16 text-slate-800 text-white"
     >
       <h1 class="text-3xl font-bold">ข้อตกลงการใช้บริการ</h1>
       <p>กรุณาอ่านก่อนใช้ Generate Brick Pixel</p>
