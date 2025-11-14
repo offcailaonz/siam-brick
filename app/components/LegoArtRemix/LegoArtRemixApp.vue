@@ -89,7 +89,9 @@
                 :step="RESOLUTION_STEP"
                 class="mt-2 w-full"
                 :value="targetResolution.width"
-                :disabled="isPreviewFrameLoading"
+                @pointerdown="handleControlPointerDown"
+                @pointerup="handleControlPointerUp"
+                @pointercancel="handleControlPointerUp"
                 @input="handleResolutionInput('width', $event)"
               />
               <span class="text-xs text-slate-500"
@@ -105,7 +107,9 @@
                 :step="RESOLUTION_STEP"
                 class="mt-2 w-full"
                 :value="targetResolution.height"
-                :disabled="isPreviewFrameLoading"
+                @pointerdown="handleControlPointerDown"
+                @pointerup="handleControlPointerUp"
+                @pointercancel="handleControlPointerUp"
                 @input="handleResolutionInput('height', $event)"
               />
               <span class="text-xs text-slate-500"
@@ -168,7 +172,9 @@
                   max="180"
                   :value="hsvControls.hue"
                   class="mt-1 w-full"
-                  :disabled="isPreviewFrameLoading"
+                  @pointerdown="handleControlPointerDown"
+                  @pointerup="handleControlPointerUp"
+                  @pointercancel="handleControlPointerUp"
                   @input="handleHsvInput('hue', $event)"
                 />
                 <span class="text-xs text-slate-500"
@@ -183,7 +189,9 @@
                   max="100"
                   :value="hsvControls.saturation"
                   class="mt-1 w-full"
-                  :disabled="isPreviewFrameLoading"
+                  @pointerdown="handleControlPointerDown"
+                  @pointerup="handleControlPointerUp"
+                  @pointercancel="handleControlPointerUp"
                   @input="handleHsvInput('saturation', $event)"
                 />
                 <span class="text-xs text-slate-500"
@@ -198,7 +206,9 @@
                   max="100"
                   :value="hsvControls.value"
                   class="mt-1 w-full"
-                  :disabled="isPreviewFrameLoading"
+                  @pointerdown="handleControlPointerDown"
+                  @pointerup="handleControlPointerUp"
+                  @pointercancel="handleControlPointerUp"
                   @input="handleHsvInput('value', $event)"
                 />
                 <span class="text-xs text-slate-500"
@@ -215,7 +225,9 @@
                   max="128"
                   :value="hsvControls.brightness"
                   class="mt-1 w-full"
-                  :disabled="isPreviewFrameLoading"
+                  @pointerdown="handleControlPointerDown"
+                  @pointerup="handleControlPointerUp"
+                  @pointercancel="handleControlPointerUp"
                   @input="handleHsvInput('brightness', $event)"
                 />
                 <span
@@ -231,7 +243,9 @@
                   max="128"
                   :value="hsvControls.contrast"
                   class="mt-1 w-full"
-                  :disabled="isPreviewFrameLoading"
+                  @pointerdown="handleControlPointerDown"
+                  @pointerup="handleControlPointerUp"
+                  @pointercancel="handleControlPointerUp"
                   @input="handleHsvInput('contrast', $event)"
                 />
                 <span
@@ -551,6 +565,9 @@ const isPreviewFrameLoading = computed(
     step1Ready.value &&
     (isStep2Processing.value || (step2Ready.value && !step3Ready.value && !step3Error.value))
 );
+const activeControlPointerIds = new Set<number>();
+let deferredStep2Delay = 120;
+const hasDeferredStep2Request = ref(false);
 
 const clampResolutionValue = (value: number) => {
   const rounded = Math.round(value / RESOLUTION_STEP) * RESOLUTION_STEP;
@@ -572,6 +589,32 @@ const handleHsvInput = (key: keyof typeof hsvControls, event: Event) => {
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+const finalizeControlPointer = (pointerId?: number) => {
+  if (pointerId != null) {
+    activeControlPointerIds.delete(pointerId);
+  } else {
+    activeControlPointerIds.clear();
+  }
+  if (activeControlPointerIds.size === 0 && hasDeferredStep2Request.value) {
+    hasDeferredStep2Request.value = false;
+    scheduleStep2Processing(deferredStep2Delay);
+  }
+};
+
+const handleControlPointerDown = (event: PointerEvent) => {
+  activeControlPointerIds.add(event.pointerId);
+};
+
+const handleControlPointerUp = (event: PointerEvent) => {
+  finalizeControlPointer(event.pointerId);
+};
+
+const handleGlobalControlPointerEnd = (event: PointerEvent) => {
+  if (activeControlPointerIds.has(event.pointerId)) {
+    finalizeControlPointer(event.pointerId);
+  }
+};
 
 const getCanvasDimensions = () => {
   const width = step1Canvas.value?.width ?? SERIALIZE_EDGE_LENGTH;
@@ -797,6 +840,15 @@ const scheduleStep2Processing = (delay = 120) => {
   }, delay);
 };
 
+const requestStep2Processing = (delay = 120) => {
+  if (activeControlPointerIds.size > 0) {
+    hasDeferredStep2Request.value = true;
+    deferredStep2Delay = delay;
+    return;
+  }
+  scheduleStep2Processing(delay);
+};
+
 const runStep2Pipeline = () => {
   const sourceCanvas = step1Canvas.value;
   const outputCanvas = step2Canvas.value;
@@ -928,14 +980,14 @@ watch(
       targetResolution.height = clampedHeight;
     }
     syncCropRectToAspect();
-    scheduleStep2Processing();
+    requestStep2Processing();
   }
 );
 
 watch(
   () => [hsvControls.hue, hsvControls.saturation, hsvControls.value, hsvControls.brightness, hsvControls.contrast],
   () => {
-    scheduleStep2Processing();
+    requestStep2Processing();
   }
 );
 
