@@ -38,10 +38,10 @@
                 ></div>
               </div>
             </div>
-            <p v-if="imageDimensions" class="text-xs text-slate-500">
+            <!-- <p v-if="imageDimensions" class="text-xs text-slate-500">
               ขนาดต้นฉบับ {{ imageDimensions.width }} ×
               {{ imageDimensions.height }} px
-            </p>
+            </p> -->
           </div>
           <div class="flex items-center justify-between">
             <div>
@@ -323,7 +323,8 @@
                 v-model="isHighQualityColorMode"
               />
               <span>
-                High quality colors (ไม่ลดสีที่ใช้ ≤ {{ SPARSE_COLOR_THRESHOLD }} studs)
+                High quality colors (ไม่ลดสีที่ใช้ ≤
+                {{ SPARSE_COLOR_THRESHOLD }} studs)
               </span>
             </label>
 
@@ -367,6 +368,7 @@
         </article>
 
         <article
+          v-if="props.showStep4"
           class="rounded-xl border border-amber-100 bg-amber-50/70 p-4 lg:col-span-3"
         >
           <div class="flex items-center justify-between flex-wrap gap-3">
@@ -386,14 +388,17 @@
           </div>
 
           <div class="mt-4 flex flex-wrap items-center gap-4">
-            <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+            <label
+              class="inline-flex items-center gap-2 text-sm text-slate-700"
+            >
               <input
                 type="checkbox"
                 class="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                 v-model="useHighQualityPdf"
               />
               <span>
-                export แบบ <strong>High quality</strong> ({{ HIGH_DPI }} DPI, แยกไฟล์ทุก 20 หน้า)
+                export แบบ <strong>High quality</strong> ({{ HIGH_DPI }} DPI,
+                แยกไฟล์ทุก 20 หน้า)
               </span>
             </label>
 
@@ -424,7 +429,9 @@
             </p>
           </div>
 
-          <p v-if="pdfError" class="text-sm text-rose-600 mt-3">{{ pdfError }}</p>
+          <p v-if="pdfError" class="text-sm text-rose-600 mt-3">
+            {{ pdfError }}
+          </p>
           <p
             v-else-if="pdfSuccessMessage"
             class="text-sm text-emerald-600 mt-3"
@@ -438,7 +445,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
+import { useRouter } from '#imports';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch, withDefaults } from 'vue';
 import { studMaps, type StudMapId } from '~/lib/brickArtRemix/studMaps';
 import {
   getPixelArrayFromCanvas,
@@ -470,6 +478,39 @@ import {
   sleep,
   DEFAULT_WATERMARK
 } from '~/lib/brickArtRemix/pdf';
+
+type CropInteractionState = {
+  active: boolean;
+  type: 'move' | 'resize-left' | 'resize-right' | null;
+  startX: number;
+  startY: number;
+  containerWidth: number;
+  containerHeight: number;
+  rectSnapshot: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+};
+
+const props = withDefaults(
+  defineProps<{
+    initialResolution?: { width?: number; height?: number };
+    showStep4?: boolean;
+    redirectOnUpload?: string | null;
+    defaultImageSrc?: string | null;
+    initialCropInteraction?: CropInteractionState | null;
+  }>(),
+  {
+    showStep4: true,
+    redirectOnUpload: null,
+    defaultImageSrc: null,
+    initialCropInteraction: null
+  }
+);
+
+const router = useRouter();
 
 const studMapEntries = reactive(studMaps);
 const availableSetIds = Object.keys(studMapEntries) as StudMapId[];
@@ -632,6 +673,13 @@ const targetResolution = reactive({
   height: 64
 });
 
+if (props.initialResolution?.width) {
+  targetResolution.width = props.initialResolution.width;
+}
+if (props.initialResolution?.height) {
+  targetResolution.height = props.initialResolution.height;
+}
+
 const cropRect = reactive({
   left: 0,
   top: 0,
@@ -649,9 +697,9 @@ const cropOverlayStyle = computed(() => ({
 
 type CropInteractionType = 'move' | 'resize-left' | 'resize-right';
 
-const cropInteraction = reactive({
+const cropInteraction = reactive<CropInteractionState>({
   active: false,
-  type: null as CropInteractionType | null,
+  type: null,
   startX: 0,
   startY: 0,
   containerWidth: 1,
@@ -663,6 +711,7 @@ const cropInteraction = reactive({
     height: 1
   }
 });
+const initialCropApplied = ref(false);
 
 const hsvControls = reactive({
   hue: 0,
@@ -776,6 +825,8 @@ const beginCropInteraction = (event: PointerEvent, type: CropInteractionType) =>
   cropInteraction.rectSnapshot = { ...cropRect };
   window.addEventListener('pointermove', handleCropPointerMove);
   window.addEventListener('pointerup', endCropInteraction);
+
+  console.log("cropInteraction", cropInteraction);
 };
 
 const handleCropPointerMove = (event: PointerEvent) => {
@@ -836,8 +887,47 @@ onBeforeUnmount(() => {
 });
 
 const triggerFilePicker = () => {
+  if (props.redirectOnUpload) {
+    router.push(props.redirectOnUpload);
+    return;
+  }
   uploadError.value = null;
   fileInputRef.value?.click();
+};
+
+onMounted(() => {
+  if (props.defaultImageSrc) {
+    resetWorkflowState();
+    isProcessing.value = true;
+    drawImagePreview(props.defaultImageSrc);
+  } else {
+    applyInitialCrop();
+  }
+});
+
+watch(
+  () => step1Ready.value,
+  (ready) => {
+    if (ready) {
+      applyInitialCrop();
+    }
+  }
+);
+
+const applyInitialCrop = () => {
+  if (!props.initialCropInteraction || initialCropApplied.value === true) {
+    return;
+  }
+  const snapshot = props.initialCropInteraction.rectSnapshot;
+  if (snapshot) {
+    cropRect.left = snapshot.left ?? cropRect.left;
+    cropRect.top = snapshot.top ?? cropRect.top;
+    cropRect.width = snapshot.width ?? cropRect.width;
+    cropRect.height = snapshot.height ?? cropRect.height;
+  }
+  Object.assign(cropInteraction, props.initialCropInteraction);
+  initialCropApplied.value = true;
+  scheduleStep2Processing(100);
 };
 
 const resetWorkflowState = () => {
@@ -895,6 +985,7 @@ const drawImagePreview = (src: string) => {
     cropRect.width = 1;
     cropRect.height = 1;
     syncCropRectToAspect();
+    applyInitialCrop();
     nextTick().then(() => scheduleStep2Processing(10));
     isProcessing.value = false;
   };

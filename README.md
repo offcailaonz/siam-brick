@@ -1,6 +1,6 @@
 # Siam Brick – MVP Overview
 
-> Brick Art Remix: เครื่องมือแปลงภาพเป็นโมเสกตัวต่อ พร้อม storefront สำหรับขายชุดประกอบและคำสั่งพิมพ์
+> Generate Brick Pixel: เครื่องมือแปลงภาพเป็นโมเสกตัวต่อ พร้อม storefront สำหรับขายชุดประกอบและคำสั่งพิมพ์
 
 ## 1. Vision
 - ผู้ใช้ **อัปโหลดรูป → ระบบสร้างโมเสก + คำนวณวัสดุให้อัตโนมัติ** → สามารถลองดาวน์โหลด PDF ตัวอย่าง 3–4 หน้า (ที่เหลือเบลอ)
@@ -64,7 +64,7 @@ type Product = {
 ## ภาพรวมสำหรับทีมพัฒนา (ภาษาไทย)
 1. **โครงสร้างโปรเจกต์**
    - `/app/pages/index.vue` = Landing page (กำลัง refactor)
-   - `/app/pages/brick.vue` = Brick Art Remix generator ที่ย้ายมาจากเว็บเดิม
+   - `/app/pages/brick.vue` = Generate Brick Pixel generator ที่ย้ายมาจากเว็บเดิม
    - `/app/components/BrickArtRemix/**` = core UI + logic (เส้นทาง import ปรับแล้ว)
    - `/app/lib/brickArtRemix/**` = อัลกอริทึม, สี, PDF helper
 
