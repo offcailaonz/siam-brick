@@ -1277,8 +1277,8 @@ export function generateInstructionTitlePage(
 
   const platesPerRow = width / plateWidth;
   const legendSquareSide = Math.max(
-    12,
-    Math.min(scalingFactor, (topBlockWidth * 0.35) / platesPerRow)
+    scalingFactor * 0.9,
+    Math.min(scalingFactor * 1.4, (topBlockWidth * 0.45) / platesPerRow)
   );
   const legendHorizontalOffset = summaryX;
   const legendVerticalOffset = summaryY + scalingFactor;
@@ -1300,16 +1300,20 @@ export function generateInstructionTitlePage(
     const vertIndex = Math.floor((i * plateWidth) / width);
     ctx.beginPath();
     ctx.rect(
-      legendHorizontalOffset + horIndex * legendSquareSide,
-      legendVerticalOffset + vertIndex * legendSquareSide,
+      legendHorizontalOffset + horIndex * (legendSquareSide + 2),
+      legendVerticalOffset + vertIndex * (legendSquareSide + 2),
       legendSquareSide,
       legendSquareSide
     );
     ctx.stroke();
     ctx.fillText(
       `${i + 1}`,
-      legendHorizontalOffset + horIndex * legendSquareSide + legendSquareSide * 0.35,
-      legendVerticalOffset + vertIndex * legendSquareSide + legendSquareSide * 0.7
+      legendHorizontalOffset +
+        horIndex * (legendSquareSide + 2) +
+        legendSquareSide * 0.35,
+      legendVerticalOffset +
+        vertIndex * (legendSquareSide + 2) +
+        legendSquareSide * 0.7
     );
   }
 
