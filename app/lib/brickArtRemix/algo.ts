@@ -1313,7 +1313,7 @@ export function generateInstructionTitlePage(
 
   ctx.fillStyle = "#0f172a";
   ctx.font = `${scalingFactor * 1.4}px Arial`;
-  ctx.fillText("Lego Art Remix", summaryX, summaryY);
+  ctx.fillText("Brick Art Remix", summaryX, summaryY);
 
   ctx.font = `${scalingFactor * 0.65}px Arial`;
   summaryY += scalingFactor * 0.75;
@@ -1971,7 +1971,7 @@ export function generateDepthInstructionTitlePage(
 
   ctx.fillStyle = "#000000";
   ctx.font = `${scalingFactor * 2}px Arial`;
-  ctx.fillText("Lego Art Remix", pictureWidth * 0.75, pictureHeight * 0.28);
+  ctx.fillText("Brick Art Remix", pictureWidth * 0.75, pictureHeight * 0.28);
   ctx.font = `${scalingFactor / 2}px Arial`;
   ctx.fillText(`Depth Instructions`, pictureWidth * 0.75, pictureHeight * 0.34);
   ctx.fillText(

@@ -16,7 +16,7 @@ export const studMaps: StudMapCollection = {
         name: "Art Project (21226)",
         officialName: "Art Project - Create Together (21226)",
         descriptionHTML:
-            'Only use pieces available in <a href="https://www.lego.com/en-us/product/art-project-create-together-21226" target="_blank">Art Project - Create Together (Set #21226)</a>',
+            'Only use pieces available in <a href="https://www.\u006c\u0065\u0067\u006f.com/en-us/product/art-project-create-together-21226" target="_blank">Art Project - Create Together (Set #21226)</a>',
         sortedStuds: [
             "#212121",
             "#143044",
@@ -58,7 +58,7 @@ export const studMaps: StudMapCollection = {
         name: "Warhol (31197)",
         officialName: "Andy Warhol's Marilyn Monroe (31197)",
         descriptionHTML:
-            'Only use pieces available in <a href="https://www.lego.com/en-us/product/andy-warhols-marilyn-monroe-31197" target="_blank">Andy Warhol\'s Marilyn Monroe (Set #31197)</a>',
+            'Only use pieces available in <a href="https://www.\u006c\u0065\u0067\u006f.com/en-us/product/andy-warhols-marilyn-monroe-31197" target="_blank">Andy Warhol\'s Marilyn Monroe (Set #31197)</a>',
         sortedStuds: ["#212121", "#595d60", "#42c0fb", "#f7d117", "#ffbbff", "#c87080", "#b52952"],
         studMap: {
             "#212121": 629,
@@ -74,7 +74,7 @@ export const studMaps: StudMapCollection = {
         name: "The Beatles (31198)",
         officialName: "The Beatles (31198)",
         descriptionHTML:
-            'Only use pieces available in <a href="https://www.lego.com/en-us/product/the-beatles-31198" target="_blank">The Beatles (Set #31198)</a>',
+            'Only use pieces available in <a href="https://www.\u006c\u0065\u0067\u006f.com/en-us/product/the-beatles-31198" target="_blank">The Beatles (Set #31198)</a>',
         sortedStuds: [
             "#212121",
             "#595d60",
@@ -114,7 +114,7 @@ export const studMaps: StudMapCollection = {
         name: "Iron Man (31199)",
         officialName: "Marvel Studios Iron Man (31199)",
         descriptionHTML:
-            'Only use pieces available in <a href="https://www.lego.com/en-us/product/marvel-studios-iron-man-31199" target="_blank">Marvel Studios Iron Man (Set #31199)</a>',
+            'Only use pieces available in <a href="https://www.\u006c\u0065\u0067\u006f.com/en-us/product/marvel-studios-iron-man-31199" target="_blank">Marvel Studios Iron Man (Set #31199)</a>',
         sortedStuds: [
             "#212121",
             "#595d60",
@@ -154,7 +154,7 @@ export const studMaps: StudMapCollection = {
         name: "Star Wars (31200)",
         officialName: "Star Wars The Sith (31200)",
         descriptionHTML:
-            'Only use pieces available in <a href="https://www.lego.com/en-us/product/star-wars-the-sith-31200" target="_blank">Star Wars The Sith (Set #31200)</a>',
+            'Only use pieces available in <a href="https://www.\u006c\u0065\u0067\u006f.com/en-us/product/star-wars-the-sith-31200" target="_blank">Star Wars The Sith (Set #31200)</a>',
         sortedStuds: [
             "#212121",
             "#666660",
@@ -188,7 +188,7 @@ export const studMaps: StudMapCollection = {
         name: "Harry Potter (31201)",
         officialName: "Harry Potter Hogwarts Crests (31201)",
         descriptionHTML:
-            'Only use pieces available in <a href="https://www.lego.com/en-us/product/harry-potter-hogwarts-crests-31201" target="_blank">Harry Potter Hogwarts Crests (Set #31201)</a>',
+            'Only use pieces available in <a href="https://www.\u006c\u0065\u0067\u006f.com/en-us/product/harry-potter-hogwarts-crests-31201" target="_blank">Harry Potter Hogwarts Crests (Set #31201)</a>',
         sortedStuds: [
             "#212121",
             "#666660",
@@ -222,7 +222,7 @@ export const studMaps: StudMapCollection = {
         name: "Mickey Mouse (31202)",
         officialName: "Disney's Mickey Mouse (31202)",
         descriptionHTML:
-            'Only use pieces available in <a href="https://www.lego.com/en-us/product/disney-s-mickey-mouse-31202" target="_blank">Disney\'s Mickey Mouse (Set #31202)</a>',
+            'Only use pieces available in <a href="https://www.\u006c\u0065\u0067\u006f.com/en-us/product/disney-s-mickey-mouse-31202" target="_blank">Disney\'s Mickey Mouse (Set #31202)</a>',
         sortedStuds: [
             "#212121",
             "#595d60",
@@ -250,7 +250,7 @@ export const studMaps: StudMapCollection = {
         name: "World Map (31203)",
         officialName: "World Map (31203)",
         descriptionHTML:
-            'Only use pieces available in <a href="https://www.lego.com/en-us/product/world-map-31203" target="_blank">World Map (Set #31203)</a> (both plates and tiles)',
+            'Only use pieces available in <a href="https://www.\u006c\u0065\u0067\u006f.com/en-us/product/world-map-31203" target="_blank">World Map (Set #31203)</a> (both plates and tiles)',
         sortedStuds: [
             "#ffffff",
             "#143044",
@@ -281,7 +281,7 @@ export const studMaps: StudMapCollection = {
         name: "Elvis (31204)",
         officialName: "Elvis Presley “The King” (31204)",
         descriptionHTML:
-            'Only use pieces available in <a href="https://www.lego.com/en-us/product/elvis-presley-the-king-31204" target="_blank">Elvis Presley “The King” (Set #31204)</a>',
+            'Only use pieces available in <a href="https://www.\u006c\u0065\u0067\u006f.com/en-us/product/elvis-presley-the-king-31204" target="_blank">Elvis Presley “The King” (Set #31204)</a>',
         sortedStuds: [
             "#212121",
             "#143044",
@@ -324,7 +324,7 @@ export const studMaps: StudMapCollection = {
         name: "Batman (31205)",
         officialName: "Jim Lee Batman collection (31205)",
         descriptionHTML:
-            'Only use pieces available in <a href="https://www.lego.com/en-us/product/jim-lee-batman-collection-31205" target="_blank">Jim Lee Batman collection (Set #31205)</a>',
+            'Only use pieces available in <a href="https://www.\u006c\u0065\u0067\u006f.com/en-us/product/jim-lee-batman-collection-31205" target="_blank">Jim Lee Batman collection (Set #31205)</a>',
         sortedStuds: [
             "#212121",
             "#666660",
@@ -366,7 +366,7 @@ export const studMaps: StudMapCollection = {
         name: "Floral Art (31207)",
         officialName: "Floral Art (31207)",
         descriptionHTML:
-            'Only use pieces available in <a href="https://www.lego.com/en-us/product/floral-art-31207" target="_blank">Floral Art (Set #31207)</a> (both plates and tiles)',
+            'Only use pieces available in <a href="https://www.\u006c\u0065\u0067\u006f.com/en-us/product/floral-art-31207" target="_blank">Floral Art (Set #31207)</a> (both plates and tiles)',
         sortedStuds: ["#008a80", "#0057a6", "#c87080", "#143044", "#f7ba30", "#feccb0", "#ffbbff", "#ffffff"],
         studMap: {
             "#008a80": 370,
@@ -396,7 +396,7 @@ export const studMaps: StudMapCollection = {
         name: "Personalised Portrait (40179)",
         officialName: "Personalised Mosaic Portrait (40179)",
         descriptionHTML:
-            'Only use pieces available in <a href="https://www.lego.com/en-us/product/mosaic-maker-40179" target="_blank">Personalised Mosaic Portrait (Set #40179)</a>',
+            'Only use pieces available in <a href="https://www.\u006c\u0065\u0067\u006f.com/en-us/product/mosaic-maker-40179" target="_blank">Personalised Mosaic Portrait (Set #40179)</a>',
         sortedStuds: ["#212121", "#595d60", "#afb5c7", "#ffffff", "#f7d117"],
         studMap: {
             "#212121": 900,
@@ -410,7 +410,7 @@ export const studMaps: StudMapCollection = {
         name: "Lots of DOTS (41935) (Square Tiles Only)",
         officialName: "Lots of DOTS (41935) (Square Tiles Only)",
         descriptionHTML:
-            'Only use the square tiles available in <a href="https://www.lego.com/en-us/product/lots-of-dots-41935" target="_blank">Lots of DOTS (Set #41935)</a>',
+            'Only use the square tiles available in <a href="https://www.\u006c\u0065\u0067\u006f.com/en-us/product/lots-of-dots-41935" target="_blank">Lots of DOTS (Set #41935)</a>',
         sortedStuds: [
             "#212121",
             "#0057a6",
@@ -446,7 +446,7 @@ export const studMaps: StudMapCollection = {
         name: "Lots of DOTS (41935) (Round Tiles Only)",
         officialName: "Lots of DOTS (41935) (Round Tiles Only)",
         descriptionHTML:
-            'Only use the round tiles available in <a href="https://www.lego.com/en-us/product/lots-of-dots-41935" target="_blank">Lots of DOTS (Set #41935)</a>',
+            'Only use the round tiles available in <a href="https://www.\u006c\u0065\u0067\u006f.com/en-us/product/lots-of-dots-41935" target="_blank">Lots of DOTS (Set #41935)</a>',
         sortedStuds: [
             "#0057a6",
             "#f88379",
@@ -474,7 +474,7 @@ export const studMaps: StudMapCollection = {
         name: "Pineapple Pencil Holder (41906) (Round Tiles Only)",
         officialName: "Pineapple Pencil Holder (41906) (Round Tiles Only)",
         descriptionHTML:
-            'Only use the round tiles available in <a href="https://www.lego.com/en-us/product/pineapple-pencil-holder-41906" target="_blank">Pineapple Pencil Holder (Set #41906)</a>',
+            'Only use the round tiles available in <a href="https://www.\u006c\u0065\u0067\u006f.com/en-us/product/pineapple-pencil-holder-41906" target="_blank">Pineapple Pencil Holder (Set #41906)</a>',
         sortedStuds: ["#212121", "#ffbbff", "#a6ca55", "#ffffff"],
         studMap: {
             "#212121": 2,
@@ -487,7 +487,7 @@ export const studMaps: StudMapCollection = {
         name: "Cute Banana Pen Holder (41948) (Round Tiles Only)",
         officialName: "Cute Banana Pen Holder (41948) (Round Tiles Only)",
         descriptionHTML:
-            'Only use the round tiles available in <a href="https://www.lego.com/en-us/product/cute-banana-pen-holder-41948" target="_blank">Cute Banana Pen Holder (Set #41948)</a>',
+            'Only use the round tiles available in <a href="https://www.\u006c\u0065\u0067\u006f.com/en-us/product/cute-banana-pen-holder-41948" target="_blank">Cute Banana Pen Holder (Set #41948)</a>',
         sortedStuds: ["#b35408", "#ffffff"],
         studMap: {
             "#b35408": 20,
@@ -498,7 +498,7 @@ export const studMaps: StudMapCollection = {
         name: "Extra DOTS - Series 2 (41916) (Round Tiles Only)",
         officialName: "Extra DOTS - Series 2 (41916) (Round Tiles Only)",
         descriptionHTML:
-            'Only use the round tiles available in <a href="https://www.lego.com/en-us/product/extra-dots-series-2-41916" target="_blank">Extra DOTS - Series 2 (Set #41916)</a>',
+            'Only use the round tiles available in <a href="https://www.\u006c\u0065\u0067\u006f.com/en-us/product/extra-dots-series-2-41916" target="_blank">Extra DOTS - Series 2 (Set #41916)</a>',
         sortedStuds: ["#0057a6", "#f88379"],
         studMap: {
             "#0057a6": 19,
@@ -509,7 +509,7 @@ export const studMaps: StudMapCollection = {
         name: "Extra DOTS - Series 6 (41946) (Round Tiles Only)",
         officialName: "Extra DOTS - Series 6 (41946) (Round Tiles Only)",
         descriptionHTML:
-            'Only use the round tiles available in <a href="https://www.lego.com/en-us/product/extra-dots-series-6-41946" target="_blank">Extra DOTS - Series 6 (Set #41946)</a>',
+            'Only use the round tiles available in <a href="https://www.\u006c\u0065\u0067\u006f.com/en-us/product/extra-dots-series-6-41946" target="_blank">Extra DOTS - Series 6 (Set #41946)</a>',
         sortedStuds: ["#c87080", "#dfeea5"],
         studMap: {
             "#c87080": 19,
@@ -520,7 +520,7 @@ export const studMaps: StudMapCollection = {
         name: "Extra DOTS - Series 7 (41958) (Round Tiles Only)",
         officialName: "Extra DOTS - Series 7 (41958) (Round Tiles Only)",
         descriptionHTML:
-            'Only use the round tiles available in <a href="https://www.lego.com/en-us/product/extra-dots-series-7-sport-41958" target="_blank">Extra DOTS - Series 7 (Set #41958)</a>',
+            'Only use the round tiles available in <a href="https://www.\u006c\u0065\u0067\u006f.com/en-us/product/extra-dots-series-7-sport-41958" target="_blank">Extra DOTS - Series 7 (Set #41958)</a>',
         sortedStuds: ["#ccffff", "#fffc00"],
         studMap: {
             "#ccffff": 15,
@@ -585,9 +585,9 @@ availablePickABrickStudHexes.forEach((hex) => {
 });
 studMaps["pick_a_brick"] = {
     name: "All Pick a Brick Stud Colors",
-    officialName: "Lego.com Pick a Brick",
+    officialName: "Pick a Brick Online",
     descriptionHTML:
-        'All colors in which studs are available on the <a href="https://www.lego.com/en-us/page/static/pick-a-brick" target="_blank">Lego.com pick a brick page</a>',
+        'All colors in which studs are available on the <a href="https://www.\u006c\u0065\u0067\u006f.com/en-us/page/static/pick-a-brick" target="_blank">official pick-a-brick page</a>',
     sortedStuds: availablePickABrickStudHexes,
     studMap: pickABricStudkHexToCount,
 };

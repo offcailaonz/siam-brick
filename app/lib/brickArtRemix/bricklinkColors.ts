@@ -49,7 +49,7 @@ export const ALL_BRICKLINK_SOLID_COLORS: BricklinkColor[] = [
   { id: "154", name: "Dark Red", hex: "#712527" },
   { id: "297", name: "Warm Gold", hex: "#A46F30" },
   { id: "148", name: "Metallic Dark Gray", hex: "#383639" },
-  { id: "179", name: "Lego Silver", hex: "#6B6672" },
+  { id: "179", name: "Brick Silver", hex: "#6B6672" },
   { id: "A02", name: "Silver Gray", hex: "#AEB4BA" },
   { id: "A04", name: "Medium Bluish Gray", hex: "#818790" },
   { id: "A26", name: "Salmon", hex: "#F0805D" },

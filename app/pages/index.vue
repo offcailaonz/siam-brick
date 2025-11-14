@@ -3,13 +3,13 @@
     <p class="text-sm uppercase tracking-[0.4em] text-slate-500">Siam Brick</p>
     <h1 class="text-4xl font-semibold text-slate-900">Nuxt playground</h1>
     <p class="text-lg text-slate-600">
-      โปรเจ็กต์นี้เริ่มย้าย Lego Art Remix เข้ามาในโลกของ Vue แล้ว — ลอง component prototype ได้เลย
+      โปรเจ็กต์นี้กำลังย้าย Brick Art Remix เข้ามาในโลกของ Vue แล้ว — ลอง component prototype ได้เลย
     </p>
     <NuxtLink
-      to="/lego"
+      to="/brick"
       class="rounded-full bg-indigo-600 px-6 py-3 text-lg font-semibold text-white shadow hover:bg-indigo-500"
     >
-      เปิด Lego Art Remix (Vue)
+      เปิด Brick Art Remix (Vue)
     </NuxtLink>
   </main>
 </template>

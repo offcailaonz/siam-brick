@@ -439,7 +439,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
-import { studMaps, type StudMapId } from '~/lib/legoArtRemix/studMaps';
+import { studMaps, type StudMapId } from '~/lib/brickArtRemix/studMaps';
 import {
   getPixelArrayFromCanvas,
   drawPixelsOnCanvas,
@@ -454,12 +454,12 @@ import {
   generateInstructionPage,
   getSubPixelArray,
   replaceSparseColors
-} from '~/lib/legoArtRemix/algo';
+} from '~/lib/brickArtRemix/algo';
 import {
   HEX_TO_COLOR_NAME,
   PIXEL_TYPE_OPTIONS,
   ALL_BRICKLINK_SOLID_COLORS
-} from '~/lib/legoArtRemix/bricklinkColors';
+} from '~/lib/brickArtRemix/bricklinkColors';
 import {
   DEFAULT_PLATE_WIDTH,
   HIGH_DPI,
@@ -469,7 +469,7 @@ import {
   setCanvasDpi,
   sleep,
   DEFAULT_WATERMARK
-} from '~/lib/legoArtRemix/pdf';
+} from '~/lib/brickArtRemix/pdf';
 
 const studMapEntries = reactive(studMaps);
 const availableSetIds = Object.keys(studMapEntries) as StudMapId[];
