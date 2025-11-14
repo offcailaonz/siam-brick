@@ -18,7 +18,7 @@
         />
       </section>
     </div>
-    
+
     <div class="brick-bg--coming">
       <LandingComingSoonSection />
     </div>
@@ -26,7 +26,6 @@
     <div class="brick-bg--readykits">
       <LandingReadyKitsGrid :kits="readyKits" />
     </div>
-
 
     <div class="brick-bg--steps">
       <LandingStepsTimeline :steps="steps" />
