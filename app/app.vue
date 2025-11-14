@@ -52,6 +52,6 @@ import SiteFooter from '~/components/layout/SiteFooter.vue';
 }
 
 .brick-bg--header {
-  @include brick-bg(#fdd835, 0deg);
+  @include brick-bg(#43a047, 0deg);
 }
 </style>
