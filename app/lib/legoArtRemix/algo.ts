@@ -202,6 +202,62 @@ export function getUsedPixelsStudMap(inputPixels) {
   return result;
 }
 
+export function replaceSparseColors(
+  pixels: Uint8ClampedArray,
+  threshold: number,
+  colorDistanceFunction: (
+    rgb1: number[] | Uint8ClampedArray,
+    rgb2: number[] | Uint8ClampedArray
+  ) => number
+) {
+  const usageMap = getUsedPixelsStudMap(pixels);
+  const abundantColors = Object.keys(usageMap).filter(
+    (hex) => (usageMap[hex] ?? 0) > threshold
+  );
+  if (abundantColors.length === 0) {
+    return pixels;
+  }
+  const sparseColors = Object.keys(usageMap).filter(
+    (hex) => usageMap[hex] > 0 && usageMap[hex] <= threshold
+  );
+  if (sparseColors.length === 0) {
+    return pixels;
+  }
+
+  const replacementMap: Record<string, string> = {};
+  sparseColors.forEach((hex) => {
+    let closest = abundantColors[0];
+    let closestDist = colorDistanceFunction(hexToRgb(hex), hexToRgb(closest));
+    for (let i = 1; i < abundantColors.length; i++) {
+      const candidate = abundantColors[i];
+      const dist = colorDistanceFunction(hexToRgb(hex), hexToRgb(candidate));
+      if (dist < closestDist) {
+        closest = candidate;
+        closestDist = dist;
+      }
+    }
+    replacementMap[hex] = closest;
+  });
+
+  if (Object.keys(replacementMap).length === 0) {
+    return pixels;
+  }
+
+  const output = Uint8ClampedArray.from(pixels);
+  for (let i = 0; i < output.length; i += 4) {
+    const hex = rgbToHex(output[i], output[i + 1], output[i + 2]);
+    const replacement = replacementMap[hex];
+    if (replacement) {
+      const rgb = hexToRgb(replacement);
+      output[i] = rgb[0];
+      output[i + 1] = rgb[1];
+      output[i + 2] = rgb[2];
+    }
+  }
+
+  return output;
+}
+
 export function studMapDifference(map1, map2) {
   const hexCodes = Array.from(
     new Set(

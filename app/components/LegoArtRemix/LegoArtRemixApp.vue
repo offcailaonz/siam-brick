@@ -314,6 +314,18 @@
             <p v-else class="text-xs text-slate-500">
               สร้าง Step 2 ให้เสร็จก่อนจึงจะแสดงตัวอย่าง Step 3 ได้
             </p>
+            <label
+              class="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-slate-600"
+            >
+              <input
+                type="checkbox"
+                class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                v-model="isHighQualityColorMode"
+              />
+              <span>
+                High quality colors (ไม่ลดสีที่ใช้ ≤ {{ SPARSE_COLOR_THRESHOLD }} studs)
+              </span>
+            </label>
 
             <div
               v-if="step3Ready"
@@ -440,7 +452,8 @@ import {
   drawStudImageOnCanvas,
   generateInstructionTitlePage,
   generateInstructionPage,
-  getSubPixelArray
+  getSubPixelArray,
+  replaceSparseColors
 } from '~/lib/legoArtRemix/algo';
 import {
   HEX_TO_COLOR_NAME,
@@ -482,12 +495,14 @@ const step3Error = ref<string | null>(null);
 const step3QuantizationError = ref<number | null>(null);
 const step3StudUsage = ref<Array<{ hex: string; name?: string; count: number }>>([]);
 const step2PixelData = ref<Uint8ClampedArray | null>(null);
+const isHighQualityColorMode = ref(true);
 
 const SERIALIZE_EDGE_LENGTH = 512;
 const RESOLUTION_MIN = 32;
 const RESOLUTION_MAX = 128;
 const RESOLUTION_STEP = 16;
 const SCALING_FACTOR = 30;
+const SPARSE_COLOR_THRESHOLD = 10;
 const PDF_FILENAME_BASE = 'Siam-Brick-Instructions';
 const APP_WATERMARK = {
   ...DEFAULT_WATERMARK,
@@ -1028,7 +1043,10 @@ const runStep3Pipeline = () => {
   try {
     const originalPixels = Array.from(step2PixelData.value);
     const alignedPixels = alignPixelsToStudMap(originalPixels, baseStudMap, ciede2000ColorDistance);
-    const quantPixels = Uint8ClampedArray.from(alignedPixels);
+    let quantPixels = Uint8ClampedArray.from(alignedPixels);
+    if (!isHighQualityColorMode.value) {
+      quantPixels = replaceSparseColors(quantPixels, SPARSE_COLOR_THRESHOLD, ciede2000ColorDistance);
+    }
 
     const step3BaseCanvas = step3Canvas.value;
     const step3Upscaled = step3UpscaledCanvas.value;
@@ -1233,6 +1251,12 @@ watch(
 );
 
 watch(selectedPixelType, () => {
+  if (step2Ready.value) {
+    runStep3Pipeline();
+  }
+});
+
+watch(isHighQualityColorMode, () => {
   if (step2Ready.value) {
     runStep3Pipeline();
   }
