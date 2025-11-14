@@ -27,15 +27,9 @@
       <LandingReadyKitsGrid :kits="readyKits" />
     </div>
 
-    <div class="brick-bg--steps">
-      <LandingStepsTimeline :steps="steps" />
-    </div>
-
-    <div class="brick-bg--materials">
-      <LandingMaterialsSection :materials="materials" />
-    </div>
-
     <div class="brick-bg--faq">
+      <LandingStepsTimeline :steps="steps" />
+      <LandingMaterialsSection :materials="materials" />
       <LandingFaqAccordion :faqs="faqs" />
     </div>
   </main>

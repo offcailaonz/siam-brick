@@ -1,5 +1,5 @@
 <template>
-  <section class="py-16">
+  <section>
     <div class="mx-auto max-w-6xl px-6">
       <div class="mb-8 text-center">
         <h2 class="text-white text-3xl font-bold">มาตรฐานวัสดุและการจัดส่ง</h2>

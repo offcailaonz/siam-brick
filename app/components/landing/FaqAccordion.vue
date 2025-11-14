@@ -1,6 +1,6 @@
 <template>
   <section class="py-16">
-    <div class="mx-auto max-w-4xl px-6">
+    <div class="mx-auto max-w-6xl px-6">
       <div class="mb-8 text-center">
         <h2 class="text-3xl font-bold text-white">คำถามที่พบบ่อย</h2>
       </div>

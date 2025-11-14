@@ -1,5 +1,5 @@
 <template>
-  <footer class="text-white py-10 text-center">
+  <footer class="text-white py-6 text-center">
     <div class="mx-auto md:flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 text-sm">
       <div>
         <p class="text-white/70">© {{ new Date().getFullYear() }} Siam Brick. สงวนสิทธิ์.</p>
