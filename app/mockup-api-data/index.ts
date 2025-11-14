@@ -130,7 +130,7 @@ export const readyKits = [
     priceKit: "9999",
     priceInstructions: "999",
     image: "/mockup-api-data/images/mockup/12.png",
-  },
+    },
 ];
 
 export const steps = [

@@ -1,7 +1,7 @@
 <template>
   <main class="bg-slate-50 text-slate-900">
     <div class="brick-bg--hero">
-      <LandingHeroBanner :data="hero"></LandingHeroBanner>
+      <LandingHeroBanner :data="hero" @view-gallery="scrollToReady" />
     </div>
 
     <div class="brick-bg--generator">
@@ -23,7 +23,7 @@
       <LandingComingSoonSection />
     </div>
 
-    <div class="brick-bg--readykits">
+    <div class="brick-bg--readykits" ref="readyKitsRef">
       <LandingReadyKitsGrid :kits="readyKits" />
     </div>
 
@@ -42,6 +42,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue';
 import LandingHeroBanner from '~/components/landing/HeroBanner.vue';
 import LandingReadyKitsGrid from '~/components/landing/ReadyKitsGrid.vue';
 import LandingStepsTimeline from '~/components/landing/StepsTimeline.vue';
@@ -53,6 +54,10 @@ import LandingComingSoonSection from '~/components/landing/ComingSoonSection.vue
 import { heroData, readyKits, steps, materials, showcase, faqs } from '~/mockup-api-data';
 
 const hero = heroData;
+const readyKitsRef = ref<HTMLElement | null>(null);
+const scrollToReady = () => {
+  readyKitsRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 const demoCropInteraction = {
     "active": false,
     "type": null,

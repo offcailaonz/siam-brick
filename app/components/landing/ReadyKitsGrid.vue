@@ -7,7 +7,7 @@
     </div>
     <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       <article
-        v-for="kit in kits"
+        v-for="kit in paginatedKits"
         :key="kit.name"
         class="rounded-2xl border border-white bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
       >
@@ -49,20 +49,81 @@
         </div>
       </article>
     </div>
+    <div
+      v-if="totalPages > 1"
+      class="mt-8 flex items-center justify-center gap-4 text-sm font-semibold"
+    >
+      <button
+        
+        type="button"
+        class="rounded-full bg-yellow-400 hover:bg-yellow-500 border border-slate-300 px-4 py-2 text-slate-600 disabled:opacity-40"
+        :disabled="currentPage === 1"
+        @click="prevPage"
+      >
+        ก่อนหน้า
+      </button>
+      <span class="text-white">หน้า {{ currentPage }} / {{ totalPages }}</span>
+      <button
+        type="button"
+        class="rounded-full bg-yellow-400 hover:bg-yellow-500 border border-slate-300 px-4 py-2 text-slate-600 disabled:opacity-40"
+        :disabled="currentPage === totalPages"
+        @click="nextPage"
+      >
+        ถัดไป
+      </button>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
-defineProps<{
-  kits: Array<{
-    name: string;
-    tag: string;
-    size: string;
-    studs: number;
-    difficulty: string;
-    priceKit: string;
-    priceInstructions: string;
-    image: string;
-  }>;
-}>();
+import { computed, ref, watch, withDefaults } from 'vue';
+
+const props = withDefaults(
+  defineProps<{
+    kits: Array<{
+      name: string;
+      tag: string;
+      size: string;
+      studs: number;
+      difficulty: string;
+      priceKit: string;
+      priceInstructions: string;
+      image: string;
+    }>;
+    pageSize?: number;
+  }>(),
+  {
+    pageSize: 3
+  }
+);
+
+const currentPage = ref(1);
+const totalPages = computed(() => Math.max(1, Math.ceil(props.kits.length / props.pageSize)));
+const paginatedKits = computed(() => {
+  const start = (currentPage.value - 1) * props.pageSize;
+  return props.kits.slice(start, start + props.pageSize);
+});
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) currentPage.value += 1;
+};
+const prevPage = () => {
+  if (currentPage.value > 1) currentPage.value -= 1;
+};
+
+watch(
+  () => props.kits.length,
+  () => {
+    currentPage.value = 1;
+  }
+);
 </script>
+<style>
+.text-outline-black {
+    text-shadow:
+      -2px -2px 0 #000,
+       2px -2px 0 #000,
+      -2px  2px 0 #000,
+       2px  2px 0 #000;
+  }
+</style>

@@ -20,13 +20,14 @@
         <div class="flex flex-wrap gap-3">
           <NuxtLink
             to="/brick"
-            class="rounded-full bg-yellow-400 px-6 py-3 text-3xl  font-semibold text-white shadow hover:bg-yellow-500 text-outline-black"
+            class="rounded-full bg-yellow-400 hover:bg-yellow-500 px-6 py-3 text-3xl  font-semibold text-white shadow hover:bg-yellow-500 text-outline-black"
           >
             สร้างเลย !!
           </NuxtLink>
           <button
             type="button"
             class="rounded-full border border-yellow-400 px-6 py-3 text-3xl font-semibold text-white hover:bg-white/10 text-outline-black"
+            @click="$emit('view-gallery')"
           >
             แกลเลอรียอดฮิต
           </button>
@@ -54,6 +55,8 @@
 </template>
 
 <script setup lang="ts">
+defineEmits(['view-gallery']);
+
 defineProps<{
   data: {
     headline: string;
