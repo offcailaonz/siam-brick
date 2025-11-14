@@ -2,7 +2,7 @@
   <section
     class="bg-cover bg-center"
     :style="{
-      backgroundImage: `linear-gradient(rgb(0 0 0 / 15%), rgb(0 0 0 / 59%)), url(${data.heroImage})`
+      backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.59)), url(${data.heroImage})`
     }"
   >
     <div
@@ -25,15 +25,15 @@
         <div class="flex flex-wrap gap-3">
           <NuxtLink
             to="/brick"
-            class="rounded-full bg-white/90 px-6 py-3 text-base  font-semibold text-emerald-900 shadow hover:bg-white"
+            class="rounded-full bg-red-500 px-6 py-3 text-3xl  font-semibold text-yellow-400 shadow hover:bg-red-900 text-outline-black"
           >
-            สร้างตัวต่อรูปภาพของคุณ
+            สร้างเลย !!
           </NuxtLink>
           <button
             type="button"
-            class="rounded-full border border-white/60 px-6 py-3 text-base font-semibold text-white hover:bg-white/10"
+            class="rounded-full border border-yellow-100 px-6 py-3 text-3xl font-semibold text-yellow-400 hover:bg-white/10 text-outline-black"
           >
-            ดูแกลเลอรีลายยอดนิยม
+            แกลเลอรียอดฮิต
           </button>
         </div>
         <div class="flex flex-wrap gap-6 text-sm text-white/80">
@@ -43,9 +43,7 @@
           </div>
         </div>
       </div>
-      <div
-        class="flex-1 rounded-3xl border border-emerald-200 bg-emerald-50/70 p-10 text-center shadow-2xl"
-      >
+      <div class="flex-1 text-center shadow-2xl">
         <div
           class="rounded-[2rem] border border-white/60 bg-white/70 p-2 text-slate-600 shadow-inner"
         >

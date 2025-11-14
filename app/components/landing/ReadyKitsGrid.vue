@@ -1,9 +1,9 @@
 <template>
-  <section class="mx-auto max-w-6xl px-6 py-16">
+  <section class="mx-auto max-w-6xl px-6 py-16 pt-8 ">
     <div class="mb-8 flex flex-col gap-3 text-center">
-      <p class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">Ready-to-build</p>
-      <h2 class="text-3xl font-bold">ลายพร้อมสร้างที่จัดชุดให้ครบ</h2>
-      <p class="text-slate-600">เลือกแบบที่ชอบแล้วกดสั่งได้ทันที ทั้งชุดเต็มหรือเฉพาะคำสั่ง</p>
+      <h2 class="text-3xl font-bold text-white">
+        ลายพร้อมสร้างที่จัดชุดให้ครบ
+      </h2>
     </div>
     <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       <article
@@ -19,14 +19,18 @@
         <div class="mt-4 space-y-2">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-semibold text-slate-900">{{ kit.name }}</h3>
-            <span class="text-xs font-semibold uppercase text-amber-600">{{ kit.tag }}</span>
+            <span
+              class="text-xs font-semibold uppercase text-amber-600"
+              >{{ kit.tag }}</span
+            >
           </div>
           <p class="text-sm text-slate-500">
             {{ kit.size }} · {{ kit.studs }} studs · ระดับ {{ kit.difficulty }}
           </p>
           <div class="flex items-center gap-3 text-sm">
-            <span class="font-semibold text-slate-900">฿{{ kit.priceKit }}</span>
-            <span class="text-slate-400">หรือ ฿{{ kit.priceInstructions }} / คำสั่ง</span>
+            <span class="font-semibold text-slate-900"
+              >฿{{ kit.priceKit }}</span
+            >
           </div>
         </div>
         <div class="mt-4 flex gap-3">

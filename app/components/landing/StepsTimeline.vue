@@ -1,8 +1,7 @@
 <template>
   <section class="mx-auto max-w-6xl px-6 py-16">
     <div class="mb-8 text-center">
-      <p class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">Flow การใช้งาน</p>
-      <h2 class="text-3xl font-bold">ทุกอย่างเกิดขึ้นใน 3 ขั้นตอน</h2>
+      <h2 class="text-white text-3xl font-bold">ทุกอย่างเกิดขึ้นใน 3 ขั้นตอน</h2>
     </div>
     <div class="grid gap-6 md:grid-cols-3">
       <article
