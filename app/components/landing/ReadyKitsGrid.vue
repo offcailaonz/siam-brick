@@ -1,5 +1,5 @@
 <template>
-  <section class="mx-auto max-w-6xl px-6 py-16 pt-8 ">
+  <section class="mx-auto max-w-6xl px-6 py-16">
     <div class="mb-8 flex flex-col gap-3 text-center">
       <h2 class="text-3xl font-bold text-white">
         ลายพร้อมสร้างที่จัดชุดให้ครบ
@@ -14,7 +14,7 @@
         <img
           :src="kit.image"
           :alt="kit.name"
-          class="h-40 w-full rounded-xl object-cover"
+          class="h-50 w-full rounded-xl object-cover"
         />
         <div class="mt-4 space-y-2">
           <div class="flex items-center justify-between">

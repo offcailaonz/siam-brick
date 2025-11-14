@@ -7,7 +7,9 @@
     <main>
       <NuxtPage />
     </main>
-    <SiteFooter />
+    <div class="brick-bg--footer">
+      <SiteFooter />
+    </div>
   </div>
 </template>
 
@@ -53,5 +55,9 @@ import SiteFooter from '~/components/layout/SiteFooter.vue';
 
 .brick-bg--header {
   @include brick-bg(#43a047, 0deg);
+}
+
+.brick-bg--footer {
+  @include brick-bg(#0f172a, 0deg);
 }
 </style>

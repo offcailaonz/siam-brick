@@ -5,8 +5,8 @@
     </div>
 
     <div class="brick-bg--generator">
-      <section class="mx-auto max-w-6xl px-6 pb-16">
-        <h2 class="py-6 text-center text-3xl font-bold text-white">
+      <section class="mx-auto max-w-6xl px-6 py-16">
+        <h2 class="pb-6 text-center text-3xl font-bold text-white">
           ลองใช้งาน Generate Brick Pixel ได้ทันที
         </h2>
         <BrickArtRemixApp

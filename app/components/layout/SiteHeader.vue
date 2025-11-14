@@ -21,7 +21,7 @@
         </span>
       </NuxtLink>
       <nav class="flex items-center gap-4 text-sm font-semibold text-white">
-        <NuxtLink
+        <!-- <NuxtLink
           to="/brick"
           class="hover:text-white/60 
          text-white
@@ -43,7 +43,7 @@
          drop-shadow-[0_-2px_0_black]"
         >
           แกลเลอรี
-        </NuxtLink>
+        </NuxtLink> -->
 
         <button
           class="text-black rounded-full bg-yellow-400 px-4 py-2 text-sm"

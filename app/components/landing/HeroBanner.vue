@@ -4,11 +4,11 @@
       class="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-16 lg:flex-row lg:items-center"
     >
       <div class="flex-1 space-y-6">
-        <p
+        <!-- <p
           class="text-xs font-semibold uppercase tracking-[0.4em] text-emerald-200"
         >
           Siam Brick
-        </p>
+        </p> -->
         <h1
           class="font-jersey text-5xl leading-snug drop-shadow text-white text-outline-black"
         >
