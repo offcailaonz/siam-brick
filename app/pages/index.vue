@@ -1,7 +1,10 @@
 <template>
   <main class="bg-slate-50 text-slate-900">
-    <LandingHeroBanner :data="hero" />
-    <div class="brick-art-bg">
+    <div class="brick-bg--hero">
+      <LandingHeroBanner :data="hero"></LandingHeroBanner>
+    </div>
+
+    <div class="brick-bg--generator">
       <section class="mx-auto max-w-6xl px-6 pb-16">
         <h2 class="py-6 text-center text-3xl font-bold text-white">
           ลองใช้งาน Generate Brick Pixel ได้ทันที
@@ -15,22 +18,27 @@
         />
       </section>
     </div>
-    <div class="ready-kits-grid-bg">
+    
+    <div class="brick-bg--coming">
+      <LandingComingSoonSection />
+    </div>
+
+    <div class="brick-bg--readykits">
       <LandingReadyKitsGrid :kits="readyKits" />
     </div>
-    <div class="ready-kits-grid-bg">
+
+
+    <div class="brick-bg--steps">
       <LandingStepsTimeline :steps="steps" />
     </div>
-    <div class="ready-kits-grid-bg">
+
+    <div class="brick-bg--materials">
       <LandingMaterialsSection :materials="materials" />
     </div>
-    <!-- <div class="ready-kits-grid-bg">
-      <LandingShowcaseGrid :showcase="showcase" />
-    </div> -->
-    <div class="ready-kits-grid-bg">
+
+    <div class="brick-bg--faq">
       <LandingFaqAccordion :faqs="faqs" />
     </div>
-    <LandingComingSoonSection />
   </main>
 </template>
 
@@ -61,50 +69,74 @@ const demoCropInteraction = {
     }
 };
 </script>
-<style>
-.brick-art-bg {
+<style lang="scss">
+@mixin brick-bg($color, $hue: 0deg) {
+  $brick-peg-size: 15px;
+  $brick-wall-thickness: 6px;
+  $brick-square: $brick-peg-size + $brick-wall-thickness * 2;
+
   position: relative;
   z-index: 1;
-  overflow: hidden; /* กัน ::before เกินขอบ */
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+
+    background-color: $color;
+    background-image:
+      radial-gradient($color $brick-peg-size/2, transparent $brick-peg-size/2+1px),
+      radial-gradient(rgba(#fff, .4) $brick-peg-size/2, transparent $brick-peg-size/2+1px),
+      radial-gradient(rgba(#000, .18) $brick-peg-size/2, transparent $brick-peg-size/2+$brick-wall-thickness/2),
+      radial-gradient(rgba(#000, .18) $brick-peg-size/2, transparent $brick-peg-size/2+$brick-wall-thickness/2);
+
+    background-size: $brick-square $brick-square;
+    background-position:
+      0px 0px,
+      -0.5px -0.5px,
+      0px 0px,
+      $brick-wall-thickness/2 $brick-wall-thickness/2;
+
+    background-repeat: repeat;
+
+    filter: hue-rotate($hue);
+  }
 }
 
-.brick-art-bg::before {
-  content: "";
-  position: absolute;
-  inset: 0; /* top:0; right:0; bottom:0; left:0 */
-  z-index: -1;
-
-  background-image:
-    linear-gradient(rgba(0, 0, 0, 0.59) ,rgba(0, 0, 0, 0.15)),
-    url("/mockup-api-data/images/hero/bg-banner.png");
-
-  background-size: cover;
-  background-position: center;
-
-  /* ใช้เฉพาะ background ไม่โดนเนื้อหา */
-  filter: hue-rotate(280deg);
+/* HERO — แดงอิฐเข้ม ไม่จิ๊ด */
+.brick-bg--hero {
+  @include brick-bg(#B91C1C, 0deg);
 }
 
-.ready-kits-grid-bg {
-  position: relative;
-  z-index: 1;
-  overflow: hidden; /* กัน ::before เกินขอบ */
+/* GENERATOR — น้ำเงินเข้ม น่าเชื่อถือ */
+.brick-bg--generator {
+  @include brick-bg(#1E3A8A, 0deg);
 }
 
-.ready-kits-grid-bg::before {
-  content: "";
-  position: absolute;
-  inset: 0; /* top:0; right:0; bottom:0; left:0 */
-  z-index: -1;
+/* READY KITS — เขียวอมฟ้า สุภาพ */
+.brick-bg--readykits {
+  @include brick-bg(#0F766E, 0deg);
+}
 
-  background-image:
-    linear-gradient(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.59)),
-    url("/mockup-api-data/images/hero/bg-banner.png");
+/* STEPS — ม่วงกรมท่า ดูมี structure */
+.brick-bg--steps {
+  @include brick-bg(#4338CA, 0deg);
+}
 
-  background-size: cover;
-  background-position: center;
+/* MATERIALS — น้ำตาลอิฐ ดูเป็นวัสดุจริงจัง */
+.brick-bg--materials {
+  @include brick-bg(#7C2D12, 0deg);
+}
 
-  /* ใช้เฉพาะ background ไม่โดนเนื้อหา */
-  filter: hue-rotate(220deg);
+/* FAQ — ฟ้าเทาเข้ม อ่านง่าย ดูน่าเชื่อถือ */
+.brick-bg--faq {
+  @include brick-bg(#334155, 0deg);
+}
+
+/* coming — น้ำเงินเทาเกือบดำ ปิดท้ายเว็บ */
+.brick-bg--coming {
+  @include brick-bg(#0F172A, 0deg);
 }
 </style>

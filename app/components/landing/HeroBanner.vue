@@ -1,10 +1,5 @@
 <template>
-  <section
-    class="bg-cover bg-center"
-    :style="{
-      backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.59)), url(${data.heroImage})`
-    }"
-  >
+  <section class="bg-cover bg-center brick-background">
     <div
       class="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-16 lg:flex-row lg:items-center"
     >
@@ -25,13 +20,13 @@
         <div class="flex flex-wrap gap-3">
           <NuxtLink
             to="/brick"
-            class="rounded-full bg-red-500 px-6 py-3 text-3xl  font-semibold text-yellow-400 shadow hover:bg-red-900 text-outline-black"
+            class="rounded-full bg-yellow-400 px-6 py-3 text-3xl  font-semibold text-white shadow hover:bg-yellow-500 text-outline-black"
           >
             สร้างเลย !!
           </NuxtLink>
           <button
             type="button"
-            class="rounded-full border border-yellow-100 px-6 py-3 text-3xl font-semibold text-yellow-400 hover:bg-white/10 text-outline-black"
+            class="rounded-full border border-yellow-400 px-6 py-3 text-3xl font-semibold text-white hover:bg-white/10 text-outline-black"
           >
             แกลเลอรียอดฮิต
           </button>

@@ -55,6 +55,9 @@ type Product = {
   - Checkout / payment integration
   - Automated fulfillment handoff (packing list, shipping labels)
   - 3D Model generator (coming-soon lead capture)
+- **Future 2 (Experimental)**:
+  - เบลอหน้าที่เหลือใน PDF preview ให้เนียนขึ้น + เพิ่ม watermark แบบ brand
+  - ทดสอบ prototype แปลงภาพเป็นโมเดล 3D (coming soon section)
 
 ## 6. Development
 - Install deps: `yarn install`

@@ -2,7 +2,7 @@
   <section class="py-16">
     <div class="mx-auto max-w-4xl px-6">
       <div class="mb-8 text-center">
-        <h2 class="text-3xl font-bold">คำถามที่พบบ่อย</h2>
+        <h2 class="text-3xl font-bold text-white">คำถามที่พบบ่อย</h2>
       </div>
       <div class="space-y-4">
         <details
