@@ -1211,65 +1211,91 @@ export function generateInstructionTitlePage(
   const pictureWidth = plateWidth * scalingFactor;
   const pictureHeight = plateWidth * scalingFactor;
 
-  const radius = scalingFactor / 2;
-
   const studMap = getUsedPixelsStudMap(pixelArray);
   const legendHexList = availableStudHexList.filter(
     (hex) => (studMap[hex] ?? 0) > 0
   );
-
-  canvas.height = Math.max(
-    pictureHeight * 1.5,
-    pictureHeight * 0.4 + availableStudHexList.length * radius * 2.5
+  const padding = scalingFactor;
+  const numPlates = pixelArray.length / (4 * plateWidth * plateWidth);
+  const columns = legendHexList.length > 14 ? 2 : 1;
+  const legendItemHeight = Math.max(scalingFactor * 1.4, 32);
+  const legendRows = Math.max(1, Math.ceil(legendHexList.length / columns));
+  const topBlockHeight = pictureHeight * 1.25 + padding;
+  const bottomBlockHeight = Math.max(
+    legendRows * legendItemHeight + padding * 2,
+    pictureHeight * 0.6
   );
+
   canvas.width = pictureWidth * 2;
+  canvas.height = topBlockHeight + bottomBlockHeight + padding * 3;
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  drawStudCountForContext(
-    studMap,
-    legendHexList,
-    scalingFactor,
-    ctx,
-    pictureWidth * 0.25,
-    pictureHeight * 0.2 - radius,
-    pixelType
-  );
+  const topBlockY = padding;
+  const topBlockX = padding;
+  const topBlockWidth = canvas.width - padding * 2;
 
-  ctx.fillStyle = "#000000";
-  ctx.font = `${scalingFactor * 2}px Arial`;
-  ctx.fillText("Lego Art Remix", pictureWidth * 0.75, pictureHeight * 0.28);
-  ctx.font = `${scalingFactor / 2}px Arial`;
+  ctx.fillStyle = "#f8fafc";
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.rect(topBlockX, topBlockY, topBlockWidth, topBlockHeight);
+  ctx.fill();
+  ctx.stroke();
+
+  const bottomBlockY = topBlockY + topBlockHeight + padding;
+  ctx.fillStyle = "#fff7ed";
+  ctx.strokeStyle = "#fcd34d";
+  ctx.beginPath();
+  ctx.rect(topBlockX, bottomBlockY, topBlockWidth, bottomBlockHeight);
+  ctx.fill();
+  ctx.stroke();
+
+  // Top block content
+  const summaryX = topBlockX + padding * 1.2;
+  let summaryY = topBlockY + padding * 1.6;
+
+  ctx.fillStyle = "#0f172a";
+  ctx.font = `${scalingFactor * 1.4}px Arial`;
+  ctx.fillText("Lego Art Remix", summaryX, summaryY);
+
+  ctx.font = `${scalingFactor * 0.65}px Arial`;
+  summaryY += scalingFactor * 0.75;
   ctx.fillText(
-    `Resolution: ${width} x ${pixelArray.length / (4 * width)}`,
-    pictureWidth * 0.75,
-    pictureHeight * 0.34
+    `Resolution: ${width} x ${Math.round(pixelArray.length / (4 * width))} px`,
+    summaryX,
+    summaryY
+  );
+  summaryY += scalingFactor * 0.55;
+  ctx.fillText(`Total plates: ${Math.round(numPlates)}`, summaryX, summaryY);
+  summaryY += scalingFactor * 0.55;
+  ctx.fillText(
+    `Total studs: ${Math.round(pixelArray.length / 4)}`,
+    summaryX,
+    summaryY
   );
 
-  const legendHorizontalOffset = pictureWidth * 0.75;
-  const legendVerticalOffset = pictureHeight * 0.41;
-  const numPlates = pixelArray.length / (4 * plateWidth * plateWidth);
-  const legendSquareSide = scalingFactor;
-
-  ctx.drawImage(
-    finalImageCanvas,
-    0,
-    0,
-    finalImageCanvas.width,
-    finalImageCanvas.height,
-    legendHorizontalOffset +
-      legendSquareSide / 4 +
-      (legendSquareSide * width) / plateWidth,
-    legendVerticalOffset,
-    (legendSquareSide * width) / plateWidth,
-    legendSquareSide * ((numPlates * plateWidth) / width)
+  const platesPerRow = width / plateWidth;
+  const legendSquareSide = Math.max(
+    12,
+    Math.min(scalingFactor, (topBlockWidth * 0.35) / platesPerRow)
   );
+  const legendHorizontalOffset = summaryX;
+  const legendVerticalOffset = summaryY + scalingFactor;
 
-  ctx.lineWidth = 5;
-  ctx.strokeStyle = "#000000";
-  ctx.font = `${legendSquareSide / 2}px Arial`;
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#64748b";
+  ctx.strokeRect(
+    legendHorizontalOffset - legendSquareSide * 0.2,
+    legendVerticalOffset - legendSquareSide * 0.2,
+    platesPerRow * legendSquareSide + legendSquareSide * 0.4,
+    Math.ceil(numPlates / platesPerRow) * legendSquareSide +
+      legendSquareSide * 0.4
+  );
+  ctx.font = `${legendSquareSide * 0.35}px Arial`;
+  ctx.fillStyle = "#0f172a";
 
-  for (var i = 0; i < numPlates; i++) {
+  for (let i = 0; i < numPlates; i++) {
     const horIndex = ((i * plateWidth) % width) / plateWidth;
     const vertIndex = Math.floor((i * plateWidth) / width);
     ctx.beginPath();
@@ -1279,12 +1305,108 @@ export function generateInstructionTitlePage(
       legendSquareSide,
       legendSquareSide
     );
-    ctx.fillText(
-      i + 1,
-      legendHorizontalOffset + (horIndex + 0.18) * legendSquareSide,
-      legendVerticalOffset + (vertIndex + 0.65) * legendSquareSide
-    );
     ctx.stroke();
+    ctx.fillText(
+      `${i + 1}`,
+      legendHorizontalOffset + horIndex * legendSquareSide + legendSquareSide * 0.35,
+      legendVerticalOffset + vertIndex * legendSquareSide + legendSquareSide * 0.7
+    );
+  }
+
+  const previewWidth = Math.min(topBlockWidth * 0.45, pictureWidth * 1.2);
+  const previewHeight =
+    (previewWidth / finalImageCanvas.width) * finalImageCanvas.height;
+  const previewX = topBlockX + topBlockWidth - previewWidth - padding * 1.2;
+  const previewY = topBlockY + padding * 1.5;
+
+  ctx.fillStyle = "#e2e8f0";
+  ctx.fillRect(previewX - 10, previewY - 10, previewWidth + 20, previewHeight + 20);
+  ctx.drawImage(finalImageCanvas, previewX, previewY, previewWidth, previewHeight);
+
+  // Bottom block: color legend
+  const legendColumnWidth = (topBlockWidth - padding * 2) / columns;
+  const legendStartX = topBlockX + padding;
+  const legendStartY = bottomBlockY + padding * 1.2;
+  ctx.font = `${legendItemHeight * 0.38}px Arial`;
+  ctx.fillStyle = "#0f172a";
+  ctx.fillText("Stud colors used", legendStartX, legendStartY - legendItemHeight * 0.4);
+
+  if (legendHexList.length === 0) {
+    ctx.font = `${legendItemHeight * 0.5}px Arial`;
+    ctx.fillText(
+      "No colors selected",
+      legendStartX,
+      legendStartY + legendItemHeight * 0.5
+    );
+  } else {
+    legendHexList.forEach((pixelHex, index) => {
+      const number = index + 1;
+      const column = index % columns;
+      const row = Math.floor(index / columns);
+      const baseX = legendStartX + column * legendColumnWidth;
+      const baseY = legendStartY + row * legendItemHeight;
+      const swatchSize = legendItemHeight * 0.85;
+      const numberBoxWidth = swatchSize;
+
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = "#cbd5f5";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.rect(baseX, baseY, numberBoxWidth, swatchSize);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#0f172a";
+      ctx.font = `${swatchSize * 0.5}px Arial`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(
+        `${number}`,
+        baseX + numberBoxWidth / 2,
+        baseY + swatchSize / 2
+      );
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
+
+      const colorBoxX = baseX + numberBoxWidth + swatchSize * 0.2;
+      ctx.fillStyle = pixelHex;
+      ctx.strokeStyle = "#0f172a";
+      ctx.beginPath();
+      const isRound =
+        typeof pixelType === "string"
+          ? false
+          : ROUND_PIXEL_NUMBERS.has(Number(pixelType));
+      if (isRound) {
+        ctx.arc(
+          colorBoxX + swatchSize / 2,
+          baseY + swatchSize / 2,
+          swatchSize / 2,
+          0,
+          2 * Math.PI
+        );
+        ctx.fill();
+        ctx.stroke();
+      } else {
+        ctx.rect(colorBoxX, baseY, swatchSize, swatchSize);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = "#0f172a";
+      ctx.font = `${legendItemHeight * 0.45}px Arial`;
+      ctx.fillText(
+        `X ${studMap[pixelHex] || 0}`,
+        colorBoxX + swatchSize + swatchSize * 0.4,
+        baseY + legendItemHeight * 0.5
+      );
+      ctx.font = `${legendItemHeight * 0.35}px Arial`;
+      ctx.fillStyle = "#475569";
+      ctx.fillText(
+        HEX_TO_COLOR_NAME[pixelHex] || pixelHex,
+        colorBoxX + swatchSize + swatchSize * 0.4,
+        baseY + legendItemHeight * 0.95
+      );
+    });
   }
 }
 

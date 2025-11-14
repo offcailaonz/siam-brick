@@ -451,6 +451,7 @@ import {
   DEFAULT_PLATE_WIDTH,
   HIGH_DPI,
   LOW_DPI,
+  PDF_MARGIN_MM,
   addWatermark,
   setCanvasDpi,
   sleep,
@@ -1142,18 +1143,30 @@ const buildInstructionPdf = async (isHighQuality: boolean) => {
   );
   setCanvasDpi(titlePageCanvas, dpi);
   const titleImg = titlePageCanvas.toDataURL('image/png', 1.0);
+  const orientation = titlePageCanvas.width <= titlePageCanvas.height ? 'p' : 'l';
 
   const createPdfInstance = () =>
     new jsPDF({
-      orientation: titlePageCanvas.width < titlePageCanvas.height ? 'p' : 'l',
+      orientation,
       unit: 'mm',
-      format: [titlePageCanvas.width, titlePageCanvas.height]
+      format: 'a4'
     });
 
   let pdf = createPdfInstance();
-  const pdfWidth = pdf.internal.pageSize.getWidth();
   const addImageToPdf = (canvasData: string, canvasWidth: number, canvasHeight: number) => {
-    pdf.addImage(canvasData, 'PNG', 0, 0, pdfWidth, (pdfWidth * canvasHeight) / canvasWidth);
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const maxWidth = Math.max(pageWidth - PDF_MARGIN_MM * 2, 10);
+    const maxHeight = Math.max(pageHeight - PDF_MARGIN_MM * 2, 10);
+    let drawWidth = maxWidth;
+    let drawHeight = (canvasHeight / canvasWidth) * drawWidth;
+    if (drawHeight > maxHeight) {
+      drawHeight = maxHeight;
+      drawWidth = (canvasWidth / canvasHeight) * drawHeight;
+    }
+    const offsetX = (pageWidth - drawWidth) / 2;
+    const offsetY = (pageHeight - drawHeight) / 2;
+    pdf.addImage(canvasData, 'PNG', offsetX, offsetY, drawWidth, drawHeight);
   };
 
   addImageToPdf(titleImg, titlePageCanvas.width, titlePageCanvas.height);
