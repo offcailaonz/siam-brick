@@ -14,7 +14,9 @@
         >
           Siam Brick
         </p>
-        <h1 class="text-4xl font-bold leading-snug drop-shadow text-white">
+        <h1
+          class="font-jersey text-5xl leading-snug drop-shadow text-white text-outline-black"
+        >
           {{ data.headline }}
         </h1>
         <p class="text-lg text-emerald-50 ">
@@ -69,3 +71,13 @@ defineProps<{
   };
 }>();
 </script>
+
+<style>
+.text-outline-black {
+    text-shadow:
+      -2px -2px 0 #000,
+       2px -2px 0 #000,
+      -2px  2px 0 #000,
+       2px  2px 0 #000;
+  }
+</style>

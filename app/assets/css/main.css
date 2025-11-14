@@ -1,0 +1,9 @@
+@import url("https://fonts.googleapis.com/css2?family=Jersey+25&family=Kanit:wght@300;400;600&display=swap");
+
+:root {
+    font-family: "Kanit", "Noto Sans Thai", "Segoe UI", sans-serif;
+}
+
+.font-jersey {
+    font-family: "Jersey 25", "Kanit", "Segoe UI", sans-serif;
+}
