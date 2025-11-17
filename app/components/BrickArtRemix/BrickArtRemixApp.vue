@@ -251,7 +251,6 @@
                 >
                   <span class="h-4 w-4 rounded-sm border border-slate-200" :style="{ backgroundColor: color.hex }"></span>
                   <span class="truncate">{{ color.name }}</span>
-                  <span class="text-[10px] uppercase text-slate-400">{{ color.hex }}</span>
                 </button>
               </div>
             </div> -->
@@ -463,9 +462,6 @@
                       <span class="text-xs font-semibold text-slate-700">
                         {{ usage.name ?? usage.hex }}
                       </span>
-                      <span class="text-[10px] uppercase text-slate-400">
-                        {{ usage.hex }}
-                      </span>
                     </div>
                   </div>
                   <span class="text-xs text-slate-500"
@@ -562,7 +558,7 @@
     role="dialog"
     aria-modal="true"
   >
-    <div class="relative w-full max-w-5xl rounded-2xl bg-white shadow-2xl">
+    <div class="relative w-full max-w-5xl rounded-2xl bg-white shadow-2xl overflow-hidden">
       <div
         class="flex items-start justify-between border-b border-slate-200 px-5 py-4"
       >
@@ -694,10 +690,6 @@
                     :style="{ backgroundColor: color.hex }"
                   ></span>
                   <span class="truncate">{{ color.name }}</span>
-                  <span
-                    class="text-[10px] uppercase text-slate-400"
-                    >{{ color.hex }}</span
-                  >
                 </button>
               </div>
             </div>
@@ -841,10 +833,12 @@ const isToolDropdownOpen = ref(false);
 const isColorDropdownOpen = ref(false);
 const isEditModalOpen = ref(false);
 const paintColorHex = ref('#42c0fb');
+const userPaintColorTouched = ref(false);
 const paintInProgress = ref(false);
 const modalPaintInProgress = ref(false);
 let pendingStep3AfterPaint = false;
 let modalPendingStep3AfterPaint = false;
+const originalBodyOverflow = ref<string | null>(null);
 const step3Error = ref<string | null>(null);
 const step3QuantizationError = ref<number | null>(null);
 const step3StudUsage = ref<Array<{ hex: string; name?: string; count: number }>>([]);
@@ -1312,6 +1306,7 @@ const endCropInteraction = () => {
 
 onBeforeUnmount(() => {
   endCropInteraction();
+  lockBodyScroll(false);
 });
 
 const triggerFilePicker = () => {
@@ -1377,6 +1372,8 @@ const resetWorkflowState = () => {
   modalPaintInProgress.value = false;
   pendingStep3AfterPaint = false;
   modalPendingStep3AfterPaint = false;
+  userPaintColorTouched.value = false;
+  lockBodyScroll(false);
   cropRect.left = 0;
   cropRect.top = 0;
   cropRect.width = 1;
@@ -1651,12 +1648,15 @@ const runStep3Pipeline = () => {
     step3StudUsage.value = Object.entries(usageMap)
       .map(([hex, count]) => ({ hex, count, name: colorName(hex) ?? hex }))
       .sort((a, b) => b.count - a.count);
+    if (!userPaintColorTouched.value && step3StudUsage.value.length > 0) {
+      paintColorHex.value = step3StudUsage.value[0].hex;
+    }
 
     step3Error.value = null;
     step3Ready.value = true;
   } catch (err) {
     step3Ready.value = false;
-    step3Error.value = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดใน Step 3';
+  step3Error.value = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดใน Step 3';
   }
 };
 
@@ -1667,6 +1667,7 @@ const selectPaintTool = (tool: PaintTool) => {
 
 const selectPaintColor = (hex: string) => {
   paintColorHex.value = hex;
+  userPaintColorTouched.value = true;
   isColorDropdownOpen.value = false;
 };
 
@@ -1698,6 +1699,21 @@ const toggleColorDropdown = () => {
   }
 };
 
+const lockBodyScroll = (locked: boolean) => {
+  if (typeof document === 'undefined') {
+    return;
+  }
+  if (locked) {
+    if (originalBodyOverflow.value === null) {
+      originalBodyOverflow.value = document.body.style.overflow || '';
+    }
+    document.body.style.overflow = 'hidden';
+  } else {
+    document.body.style.overflow = originalBodyOverflow.value ?? '';
+    originalBodyOverflow.value = null;
+  }
+};
+
 const openEditModal = async () => {
   if (!step2Ready.value || !step2PixelData.value) {
     return;
@@ -1705,6 +1721,7 @@ const openEditModal = async () => {
   ensurePaintOverrideArray(step2PixelData.value.length);
   modalOverrides.value = Array.from(paintOverrides.value ?? new Array(step2PixelData.value.length).fill(null));
   isEditModalOpen.value = true;
+  lockBodyScroll(true);
   await nextTick();
   renderModalPreview();
 };
@@ -1714,6 +1731,7 @@ const cancelEditModal = () => {
   modalOverrides.value = null;
   modalPaintInProgress.value = false;
   modalPendingStep3AfterPaint = false;
+  lockBodyScroll(false);
 };
 
 const confirmEditModal = () => {
@@ -1729,6 +1747,7 @@ const confirmEditModal = () => {
     runStep3Pipeline();
   }
   isEditModalOpen.value = false;
+  lockBodyScroll(false);
 };
 
 const clearModalOverrides = () => {
@@ -1774,6 +1793,7 @@ const applyPaintAtPointer = (
   if (selectedPaintTool.value === 'dropper') {
     const hex = rgbToHex(pixels[pixelIndex], pixels[pixelIndex + 1], pixels[pixelIndex + 2]);
     paintColorHex.value = hex;
+    userPaintColorTouched.value = true;
     return;
   }
 
@@ -1853,6 +1873,9 @@ const handleModalPaintPointerUp = () => {
   }
   modalPaintInProgress.value = false;
   // ไม่รัน step3 ทันที ปล่อยให้กดบันทึก
+  if (!isEditModalOpen.value) {
+    lockBodyScroll(false);
+  }
 };
 
 const handleGenerateInstructions = async () => {
