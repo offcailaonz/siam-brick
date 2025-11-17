@@ -818,8 +818,9 @@ const step3Ready = ref(false);
 const paintOverrides = ref<Array<number | null> | null>(null);
 const modalOverrides = ref<Array<number | null> | null>(null);
 const modalQuantPixels = ref<Uint8ClampedArray | null>(null);
-const step3QuantPixels = ref<Uint8ClampedArray | null>(null);
-const modalBaseQuantPixels = ref<Uint8ClampedArray | null>(null);
+const step3QuantPixels = ref<Uint8ClampedArray | null>(null); // current edited image
+const step3QuantPixelsBase = ref<Uint8ClampedArray | null>(null); // original quantized image from step 2
+const modalBaseQuantPixels = ref<Uint8ClampedArray | null>(null); // baseline for current modal session (original)
 let modalRenderTimeout: ReturnType<typeof setTimeout> | null = null;
 const selectedPaintTool = ref<PaintTool>('brush');
 const isToolDropdownOpen = ref(false);
@@ -1136,7 +1137,10 @@ const getStep2PixelsWithOverrides = (overrides = paintOverrides.value) => {
 };
 
 const renderModalPreview = () => {
-  const result = computeQuantizedForOverrides(modalOverrides.value ?? paintOverrides.value, modalBaseQuantPixels.value);
+  const result = computeQuantizedForOverrides(
+    modalOverrides.value ?? paintOverrides.value,
+    modalBaseQuantPixels.value ?? step3QuantPixelsBase.value
+  );
   if (result?.quantPixels) {
     modalQuantPixels.value = result.quantPixels;
     drawStudImageOnCanvas(
@@ -1374,6 +1378,7 @@ const resetWorkflowState = () => {
   step2PixelData.value = null;
   paintOverrides.value = null;
   modalOverrides.value = null;
+  step3QuantPixelsBase.value = null;
   modalBaseQuantPixels.value = null;
   modalQuantPixels.value = null;
   if (modalRenderTimeout) {
@@ -1654,6 +1659,9 @@ const runStep3Pipeline = () => {
       selectedPixelType.value
     );
     step3QuantPixels.value = quantPixels;
+    if (!step3QuantPixelsBase.value) {
+      step3QuantPixelsBase.value = Uint8ClampedArray.from(quantPixels);
+    }
     step3QuantizationError.value = getAverageQuantizationError(
       Array.from(sourcePixels),
       alignedPixels,
@@ -1729,14 +1737,28 @@ const lockBodyScroll = (locked: boolean) => {
   }
 };
 
+const buildOverridesFromCurrent = (current: Uint8ClampedArray, base: Uint8ClampedArray) => {
+  const overrides = new Array(current.length).fill(null);
+  for (let i = 0; i < current.length; i += 4) {
+    if (current[i] !== base[i] || current[i + 1] !== base[i + 1] || current[i + 2] !== base[i + 2]) {
+      overrides[i] = current[i];
+      overrides[i + 1] = current[i + 1];
+      overrides[i + 2] = current[i + 2];
+      overrides[i + 3] = 255;
+    }
+  }
+  return overrides;
+};
+
 const openEditModal = async () => {
-  if (!step2Ready.value || !step2PixelData.value || !step3Ready.value) {
+  if (!step2Ready.value || !step2PixelData.value || !step3Ready.value || !step3QuantPixels.value) {
     return;
   }
-  ensurePaintOverrideArray(step2PixelData.value.length);
-  modalBaseQuantPixels.value = step3QuantPixels.value ? Uint8ClampedArray.from(step3QuantPixels.value) : null;
-  modalOverrides.value = Array.from(paintOverrides.value ?? new Array(step2PixelData.value.length).fill(null));
-  modalQuantPixels.value = modalBaseQuantPixels.value ? Uint8ClampedArray.from(modalBaseQuantPixels.value) : null;
+  const baseline = step3QuantPixelsBase.value ?? step3QuantPixels.value;
+  modalBaseQuantPixels.value = Uint8ClampedArray.from(baseline);
+  ensurePaintOverrideArray(baseline.length);
+  modalOverrides.value = buildOverridesFromCurrent(step3QuantPixels.value, baseline);
+  modalQuantPixels.value = Uint8ClampedArray.from(step3QuantPixels.value);
   isEditModalOpen.value = true;
   lockBodyScroll(true);
   await nextTick();
@@ -1758,13 +1780,14 @@ const confirmEditModal = () => {
     isEditModalOpen.value = false;
     return;
   }
-  const baseQuant = modalBaseQuantPixels.value ?? step3QuantPixels.value;
+  const baseQuant = modalBaseQuantPixels.value ?? step3QuantPixelsBase.value ?? step3QuantPixels.value;
   const finalQuant =
     modalQuantPixels.value ??
     (baseQuant ? applyOverridesToPixels(baseQuant, modalOverrides.value) : null) ??
     step3QuantPixels.value;
   if (finalQuant) {
     step3QuantPixels.value = Uint8ClampedArray.from(finalQuant);
+    step3QuantizationError.value = step3QuantizationError.value ?? 0;
     const step3BaseCanvas = step3Canvas.value;
     const step3Upscaled = step3UpscaledCanvas.value;
     if (step3BaseCanvas && step3Upscaled) {
@@ -1805,7 +1828,7 @@ const clearModalOverrides = () => {
 
 const computeQuantizedForOverrides = (
   overrides: Array<number | null> | null,
-  baseQuant: Uint8ClampedArray | null = step3QuantPixels.value
+  baseQuant: Uint8ClampedArray | null = step3QuantPixelsBase.value
 ) => {
   if (!step2Ready.value || step2PixelData.value == null) {
     return null;
