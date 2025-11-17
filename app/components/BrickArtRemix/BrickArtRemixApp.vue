@@ -560,170 +560,168 @@
     </section>
   </section>
 
-  <div
-    v-if="isEditModalOpen"
-    class="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/70 p-4"
-    role="dialog"
-    aria-modal="true"
-  >
+  <Teleport to="body">
     <div
-      class="relative w-full max-w-5xl rounded-2xl bg-white shadow-2xl overflow-hidden"
+      v-if="isEditModalOpen"
+      class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/70 p-4"
+      role="dialog"
+      aria-modal="true"
     >
       <div
-        class="flex items-start justify-between border-b border-slate-200 px-5 py-4"
+        class="relative w-full max-w-5xl rounded-2xl bg-white shadow-2xl overflow-hidden z-[10000]"
       >
-        <div>
-          <h3 class="text-lg font-semibold text-slate-900">
-            แก้ไขสีด้วย Paintbrush/Eraser/Dropper
-          </h3>
-          <p class="text-xs text-slate-500">
-            ขยายภาพเพื่อแตะเลือกพิกเซลได้ง่ายขึ้น
-          </p>
-        </div>
-        <button
-          type="button"
-          class="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-200"
-          @click="cancelEditModal"
+        <div
+          class="flex items-start justify-between border-b border-slate-200 px-5 py-4"
         >
-          ปิด
-        </button>
-      </div>
-
-      <div class="grid gap-4 px-5 py-4 lg:grid-cols-[2fr,1fr]">
-        <div class="border border-slate-200 rounded-xl bg-slate-50/60 p-3">
-          <canvas
-            ref="modalUpscaledCanvas"
-            class="w-full rounded-lg border border-slate-200 bg-white"
-            style="image-rendering: pixelated; width: 100%; height: auto; min-height: 280px"
-            :style="{ imageRendering: 'pixelated', width: '100%', height: 'auto', minHeight: '280px', cursor: paintCursor }"
-            @pointerdown.prevent="handleModalPaintPointerDown"
-            @pointermove.prevent="handleModalPaintPointerMove"
-            @pointerup="handleModalPaintPointerUp"
-            @pointerleave="handleModalPaintPointerUp"
-          ></canvas>
-          <p class="mt-2 text-[11px] text-slate-500">
-            คลิก/ลากเพื่อวาด, ใช้ Dropper เพื่อเลือกสีจากภาพ, กด
-            “บันทึกการแก้สี” เพื่อใช้กับ Step 2
-          </p>
+          <div>
+            <h3 class="text-lg font-semibold text-slate-900">
+              แก้ไขสีด้วย Paintbrush/Eraser/Dropper
+            </h3>
+            <p class="text-xs text-slate-500">
+              ขยายภาพเพื่อแตะเลือกพิกเซลได้ง่ายขึ้น
+            </p>
+          </div>
+          <button
+            type="button"
+            class="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-200"
+            @click="cancelEditModal"
+          >
+            ปิด
+          </button>
         </div>
 
-        <div class="space-y-3">
-          <div
-            class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
-          >
-            <p class="text-xs font-semibold text-slate-700 mb-2">เครื่องมือ</p>
-            <div class="relative mb-2 flex">
-              <button
-                v-for="tool in paintToolOptions"
-                :key="tool.value"
-                :class="[
-                  'flex w-full items-center gap-2 px-3 py-2 text-left text-sm rounded-lg border',
-                  selectedPaintTool === tool.value
-                    ? 'bg-indigo-50 text-indigo-800 border-indigo-400 shadow-inner'
-                    : 'hover:bg-indigo-50 border-transparent'
-                ]"
-                type="button"
-                @click="selectPaintTool(tool.value)"
-              >
-                <component :is="tool.icon" class="h-4 w-4" />
-                <span>{{ tool.label }}</span>
-              </button>
-              <!-- <div
-                v-if="isToolDropdownOpen"
-                class="absolute z-50 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg"
-              ></div> -->
-            </div>
-
-            <div class="relative">
-              <button
-                class="inline-flex w-full items-center justify-between rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm font-semibold text-indigo-700 shadow-sm"
-                type="button"
-                @click="isColorDropdownOpen = !isColorDropdownOpen"
-              >
-                <span class="inline-flex items-center gap-2">
-                  <span
-                    class="h-4 w-4 rounded-sm border border-slate-200"
-                    :style="{ backgroundColor: paintColorHex }"
-                  ></span>
-                  <span
-                    class="max-w-[140px] truncate"
-                    >{{ paintColorLabel }}</span
-                  >
-                </span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-4 w-4"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.25 8.29a.75.75 0 01-.02-1.08z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
-              </button>
-              <div
-                v-if="isColorDropdownOpen"
-                class="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg"
-              >
-                <button
-                  v-for="color in ALL_BRICKLINK_SOLID_COLORS"
-                  :key="color.hex"
-                  type="button"
-                  class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-indigo-50"
-                  @click="selectPaintColor(color.hex)"
-                >
-                  <span
-                    class="h-4 w-4 rounded-sm border border-slate-200"
-                    :style="{ backgroundColor: color.hex }"
-                  ></span>
-                  <span class="truncate">{{ color.name }}</span>
-                </button>
-              </div>
-            </div>
-
-            <button
-              class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm font-semibold text-rose-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
-              type="button"
-              :disabled="!(modalOverrides?.some(v => v != null) || paintOverrides?.some(v => v != null))"
-              @click="clearModalOverrides"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                fill="currentColor"
-                viewBox="0 0 16 16"
-              >
-                <path
-                  d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0z"
-                />
-              </svg>
-              ล้างการแก้สีใน modal
-            </button>
+        <div class="grid gap-4 px-5 py-4 lg:grid-cols-[2fr,1fr]">
+          <div class="border border-slate-200 rounded-xl bg-slate-50/60 p-3">
+            <canvas
+              ref="modalUpscaledCanvas"
+              class="w-full rounded-lg border border-slate-200 bg-white"
+              style="image-rendering: pixelated; width: 100%; height: auto; min-height: 280px"
+              :style="{ imageRendering: 'pixelated', width: '100%', height: 'auto', minHeight: '280px', cursor: paintCursor }"
+              @pointerdown.prevent="handleModalPaintPointerDown"
+              @pointermove.prevent="handleModalPaintPointerMove"
+              @pointerup="handleModalPaintPointerUp"
+              @pointerleave="handleModalPaintPointerUp"
+            ></canvas>
+            <p class="mt-2 text-[11px] text-slate-500">
+              คลิก/ลากเพื่อวาด, ใช้ Dropper เพื่อเลือกสีจากภาพ, กด
+              “บันทึกการแก้สี” เพื่อใช้กับ Step 2
+            </p>
           </div>
 
-          <div class="flex flex-wrap gap-2">
-            <button
-              class="inline-flex items-center justify-center gap-2 rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-300"
-              type="button"
-              @click="cancelEditModal"
+          <div class="space-y-3">
+            <div
+              class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
             >
-              ยกเลิก
-            </button>
-            <button
-              class="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
-              type="button"
-              @click="confirmEditModal"
-            >
-              บันทึกการแก้สี
-            </button>
+              <p class="text-xs font-semibold text-slate-700 mb-2">เครื่องมือ</p>
+              <div class="relative mb-2 flex">
+                <button
+                  v-for="tool in paintToolOptions"
+                  :key="tool.value"
+                  :class="[
+                    'flex w-full items-center gap-2 px-3 py-2 text-left text-sm rounded-lg border',
+                    selectedPaintTool === tool.value
+                      ? 'bg-indigo-50 text-indigo-800 border-indigo-400 shadow-inner'
+                      : 'hover:bg-indigo-50 border-transparent'
+                  ]"
+                  type="button"
+                  @click="selectPaintTool(tool.value)"
+                >
+                  <component :is="tool.icon" class="h-4 w-4" />
+                  <span>{{ tool.label }}</span>
+                </button>
+              </div>
+
+              <div class="relative">
+                <button
+                  class="inline-flex w-full items-center justify-between rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm font-semibold text-indigo-700 shadow-sm"
+                  type="button"
+                  @click="isColorDropdownOpen = !isColorDropdownOpen"
+                >
+                  <span class="inline-flex items-center gap-2">
+                    <span
+                      class="h-4 w-4 rounded-sm border border-slate-200"
+                      :style="{ backgroundColor: paintColorHex }"
+                    ></span>
+                    <span
+                      class="max-w-[140px] truncate"
+                      >{{ paintColorLabel }}</span
+                    >
+                  </span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.25 8.29a.75.75 0 01-.02-1.08z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </button>
+                <div
+                  v-if="isColorDropdownOpen"
+                  class="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg"
+                >
+                  <button
+                    v-for="color in ALL_BRICKLINK_SOLID_COLORS"
+                    :key="color.hex"
+                    type="button"
+                    class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-indigo-50"
+                    @click="selectPaintColor(color.hex)"
+                  >
+                    <span
+                      class="h-4 w-4 rounded-sm border border-slate-200"
+                      :style="{ backgroundColor: color.hex }"
+                    ></span>
+                    <span class="truncate">{{ color.name }}</span>
+                  </button>
+                </div>
+              </div>
+
+              <button
+                class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm font-semibold text-rose-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                type="button"
+                :disabled="!(modalOverrides?.some(v => v != null) || paintOverrides?.some(v => v != null))"
+                @click="clearModalOverrides"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0z"
+                  />
+                </svg>
+                ล้างการแก้สีใน modal
+              </button>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+              <button
+                class="inline-flex items-center justify-center gap-2 rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-300"
+                type="button"
+                @click="cancelEditModal"
+              >
+                ยกเลิก
+              </button>
+              <button
+                class="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
+                type="button"
+                @click="confirmEditModal"
+              >
+                บันทึกการแก้สี
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
