@@ -37,12 +37,14 @@
           <button
             type="button"
             class="flex-1 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+            @click="handleOrder(kit)"
           >
             สั่งชุดเต็ม
           </button>
           <button
             type="button"
             class="flex-1 rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-900"
+            @click="handleDownload(kit)"
           >
             ดาวน์โหลดคำสั่ง
           </button>
@@ -78,18 +80,20 @@
 <script setup lang="ts">
 import { computed, ref, watch, withDefaults } from 'vue';
 
+type KitItem = {
+  name: string;
+  tag: string;
+  size: string;
+  studs: number;
+  difficulty: string;
+  priceKit: string;
+  priceInstructions: string;
+  image: string;
+};
+
 const props = withDefaults(
   defineProps<{
-    kits: Array<{
-      name: string;
-      tag: string;
-      size: string;
-      studs: number;
-      difficulty: string;
-      priceKit: string;
-      priceInstructions: string;
-      image: string;
-    }>;
+    kits: Array<KitItem>;
     pageSize?: number;
   }>(),
   {
@@ -97,12 +101,25 @@ const props = withDefaults(
   }
 );
 
+const emit = defineEmits<{
+  (e: 'order', kit: KitItem): void;
+  (e: 'download', kit: KitItem): void;
+}>();
+
 const currentPage = ref(1);
 const totalPages = computed(() => Math.max(1, Math.ceil(props.kits.length / props.pageSize)));
 const paginatedKits = computed(() => {
   const start = (currentPage.value - 1) * props.pageSize;
   return props.kits.slice(start, start + props.pageSize);
 });
+
+const handleOrder = (kit: KitItem) => {
+  emit('order', kit);
+};
+
+const handleDownload = (kit: KitItem) => {
+  emit('download', kit);
+};
 
 const nextPage = () => {
   if (currentPage.value < totalPages.value) currentPage.value += 1;

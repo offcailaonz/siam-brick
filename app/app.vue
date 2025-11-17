@@ -10,12 +10,20 @@
     <div class="brick-bg--footer">
       <SiteFooter />
     </div>
+    <AuthModal
+      :open="authModalOpen"
+      @close="closeAuthModal"
+      @authed="handleAuthenticated"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import SiteHeader from '~/components/layout/SiteHeader.vue';
 import SiteFooter from '~/components/layout/SiteFooter.vue';
+import AuthModal from '~/components/auth/AuthModal.vue';
+
+const { authModalOpen, closeAuthModal, handleAuthenticated } = useAuthFlow();
 </script>
 <style lang="scss">
 @mixin brick-bg($color, $hue: 0deg) {
