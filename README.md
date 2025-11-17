@@ -22,14 +22,19 @@
 9. **Coming Soon: 3D Brick Model** – ใช้ภาพ mock (คนขี่ไดโนเสาร์ → โมเดล brick) พร้อม CTA `แจ้งเตือนเมื่อเปิดให้ใช้งาน`
 
 ## 3. Generator (`/brick`)
-- Step 1–4 UI (อัปโหลด → ปรับโทน → ตัวอย่าง → ดาวน์โหลด) / Landing preview ปิด Step 4 ด้วย props
-- Props ใหม่ใน `BrickArtRemixApp`:
+- ฟลูสเต็ป: Step 1 (อัปโหลด/ครอป) → Step 2 (ปรับโทนสี/คอนทราสต์) → Step 3 (ภาพอิฐจริง) → Step 4 (ดาวน์โหลด/ส่งออก)
+- **แก้ไขภาพทำใน Step 3 เท่านั้น**: คลิกปุ่ม “แก้ไขภาพด้วย Paintbrush/Eraser/Dropper” จะเปิด modal (Teleport ไป `body`, z-index สูง) พร้อมภาพอิฐล่าสุด
+  - แก้สีทับภาพล่าสุดได้ทันที (ใช้ภาพล่าสุดเป็นพื้นหลังใน modal)
+  - Eraser อ้างอิงสี “ภาพต้นฉบับจาก Step 2” ที่ quantize ครั้งแรก เพื่อคืนค่าสีได้ถูกต้อง แม้เคยเซฟไปแล้ว
+  - Dropper/Color dropdown อัปเดตสีปัจจุบัน, ปุ่มเครื่องมือมี highlight, cursor ตามเครื่องมือ (brush, eraser=not-allowed, dropper=copy)
+  - Preview modal ดีบาวซ์เพื่อความลื่น แต่แสดงผลบน canvas ทันที
+- **Step 2 ไม่รองรับการวาด/ลบ** แล้ว เหลือเฉพาะการปรับโทน/คอนทราสต์ก่อนเข้าขั้นตอนอิฐ
+- Props ใน `BrickArtRemixApp` ที่ใช้บน landing:
   - `initialResolution`, `initialCropInteraction`, `defaultImageSrc` สำหรับ seed UI
   - `showStep4`, `redirectOnUpload` ใช้ซ่อน Step 4 และเปลี่ยน flow บน landing
-- Step 4 แสดงปุ่ม `ดาวน์โหลดตัวอย่าง PDF` (3–4 หน้าแรกชัด, ที่เหลือเบลอ) และ CTA `ปลดล็อกชุดเต็ม`
+- Step 4: `ดาวน์โหลดตัวอย่าง PDF` (3–4 หน้าแรกชัด, ที่เหลือเบลอ) + CTA `ปลดล็อกชุดเต็ม`
 - High-quality color toggle (ปิด/เปิดการรวมสีที่ใช้ ≤ 10 studs)
-- PDF export เป็น A4 + watermark ขวาบน
-- หลังชำระเงิน (อนาคต) ผู้ใช้ที่ล็อกอินจะกดดาวน์โหลด PDF เต็ม และทีม fulfillment จะจัดส่ง brick kit + เอกสาร
+- PDF export เป็น A4 + watermark ขวาบน; อนาคตล็อกอิน + จ่ายเงินแล้วดาวน์โหลดไฟล์เต็มได้
 
 ## 4. Data Model (Draft)
 ```ts
