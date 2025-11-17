@@ -166,7 +166,7 @@
             {{ targetResolution.height }} Pixel (อัตราขยาย ×{{ SCALING_FACTOR}})
           </p>
 
-          <div v-if="step2Ready" class="mt-3">
+          <!-- <div v-if="step2Ready" class="mt-3">
             <button
               type="button"
               class="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
@@ -174,7 +174,7 @@
             >
               แก้ไขภาพ
             </button>
-          </div>
+          </div> -->
 
           <div
             v-if="step2Ready"
@@ -274,7 +274,7 @@
             </span> -->
           </div>
 
-          <div class="mt-4">
+          <div >
             <div class="grid gap-3 md:grid-cols-3">
               <label class="text-sm text-slate-600"
                 >Hue (°)
@@ -417,6 +417,18 @@
               {{ targetResolution.height }} Pixel | Quantization error:
               {{ step3QuantizationError?.toFixed(3) ?? '0.000' }}
             </p>
+            <div
+              class="mt-3 flex flex-wrap items-center gap-2"
+              v-if="step3Ready"
+            >
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
+                @click="openEditModal"
+              >
+                แก้ไขภาพตัวต่อ
+              </button>
+            </div>
             <p
               v-else-if="step3Ready && isStep2Processing"
               class="text-xs text-indigo-500"
@@ -426,7 +438,7 @@
             <p v-else class="text-xs text-slate-500">
               สร้าง Step 2 ให้เสร็จก่อนจึงจะแสดงตัวอย่าง Step 3 ได้
             </p>
-            <label
+            <!-- <label
               class="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-slate-600"
             >
               <input
@@ -438,11 +450,11 @@
                 High quality colors (ไม่ลดสีที่ใช้ ≤
                 {{ SPARSE_COLOR_THRESHOLD }} studs)
               </span>
-            </label>
+            </label> -->
 
             <div
               v-if="step3Ready"
-              class="text-sm text-slate-600 max-h-48 overflow-y-auto"
+              class="text-sm text-slate-600 max-h-48 overflow-y-auto mt-3"
             >
               <p class="font-semibold text-slate-800">
                 สีที่ใช้ ({{ step3StudUsage.length }})
@@ -558,7 +570,9 @@
     role="dialog"
     aria-modal="true"
   >
-    <div class="relative w-full max-w-5xl rounded-2xl bg-white shadow-2xl overflow-hidden">
+    <div
+      class="relative w-full max-w-5xl rounded-2xl bg-white shadow-2xl overflow-hidden"
+    >
       <div
         class="flex items-start justify-between border-b border-slate-200 px-5 py-4"
       >
@@ -828,6 +842,9 @@ const step2Ready = ref(false);
 const step3Ready = ref(false);
 const paintOverrides = ref<Array<number | null> | null>(null);
 const modalOverrides = ref<Array<number | null> | null>(null);
+const modalQuantPixels = ref<Uint8ClampedArray | null>(null);
+const step3QuantPixels = ref<Uint8ClampedArray | null>(null);
+let modalRenderTimeout: ReturnType<typeof setTimeout> | null = null;
 const selectedPaintTool = ref<PaintTool>('brush');
 const isToolDropdownOpen = ref(false);
 const isColorDropdownOpen = ref(false);
@@ -843,7 +860,7 @@ const step3Error = ref<string | null>(null);
 const step3QuantizationError = ref<number | null>(null);
 const step3StudUsage = ref<Array<{ hex: string; name?: string; count: number }>>([]);
 const step2PixelData = ref<Uint8ClampedArray | null>(null);
-const isHighQualityColorMode = ref(true);
+const isHighQualityColorMode = ref(false);
 
 const SERIALIZE_EDGE_LENGTH = 512;
 const RESOLUTION_MIN = 32;
@@ -1143,10 +1160,26 @@ const getStep2PixelsWithOverrides = (overrides = paintOverrides.value) => {
 };
 
 const renderModalPreview = () => {
-  const merged = getStep2PixelsWithOverrides(modalOverrides.value ?? paintOverrides.value);
-  if (merged) {
-    renderUpscaledPreviewToTarget(modalUpscaledCanvas, merged);
+  const result = computeQuantizedForOverrides(modalOverrides.value ?? paintOverrides.value);
+  if (result?.quantPixels) {
+    modalQuantPixels.value = result.quantPixels;
+    drawStudImageOnCanvas(
+      result.quantPixels,
+      targetResolution.width,
+      SCALING_FACTOR,
+      modalUpscaledCanvas.value,
+      selectedPixelType.value
+    );
   }
+};
+const scheduleModalPreview = () => {
+  if (modalRenderTimeout) {
+    return;
+  }
+  modalRenderTimeout = setTimeout(() => {
+    modalRenderTimeout = null;
+    renderModalPreview();
+  }, 80);
 };
 const activeControlPointerIds = new Set<number>();
 let deferredStep2Delay = 120;
@@ -1365,6 +1398,11 @@ const resetWorkflowState = () => {
   step2PixelData.value = null;
   paintOverrides.value = null;
   modalOverrides.value = null;
+  modalQuantPixels.value = null;
+  if (modalRenderTimeout) {
+    clearTimeout(modalRenderTimeout);
+    modalRenderTimeout = null;
+  }
   isToolDropdownOpen.value = false;
   isColorDropdownOpen.value = false;
   isEditModalOpen.value = false;
@@ -1638,7 +1676,7 @@ const runStep3Pipeline = () => {
       step3Upscaled,
       selectedPixelType.value
     );
-
+    step3QuantPixels.value = quantPixels;
     step3QuantizationError.value = getAverageQuantizationError(
       Array.from(sourcePixels),
       alignedPixels,
@@ -1715,7 +1753,7 @@ const lockBodyScroll = (locked: boolean) => {
 };
 
 const openEditModal = async () => {
-  if (!step2Ready.value || !step2PixelData.value) {
+  if (!step2Ready.value || !step2PixelData.value || !step3Ready.value) {
     return;
   }
   ensurePaintOverrideArray(step2PixelData.value.length);
@@ -1729,6 +1767,7 @@ const openEditModal = async () => {
 const cancelEditModal = () => {
   isEditModalOpen.value = false;
   modalOverrides.value = null;
+  modalQuantPixels.value = null;
   modalPaintInProgress.value = false;
   modalPendingStep3AfterPaint = false;
   lockBodyScroll(false);
@@ -1740,6 +1779,7 @@ const confirmEditModal = () => {
     return;
   }
   paintOverrides.value = Array.from(modalOverrides.value);
+  modalQuantPixels.value = null;
   const merged = getStep2PixelsWithOverrides();
   if (merged) {
     renderStep2Preview(merged, false);
@@ -1753,6 +1793,27 @@ const confirmEditModal = () => {
 const clearModalOverrides = () => {
   modalOverrides.value?.fill(null);
   renderModalPreview();
+};
+
+const computeQuantizedForOverrides = (overrides: Array<number | null> | null) => {
+  if (!step2Ready.value || step2PixelData.value == null) {
+    return null;
+  }
+  const sourcePixels = getStep2PixelsWithOverrides(overrides);
+  if (!sourcePixels) {
+    return null;
+  }
+  const baseStudMap = ALL_BRICKLINK_SOLID_COLORS.reduce((acc, color) => {
+    acc[color.hex] = Number.MAX_SAFE_INTEGER;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const alignedPixels = alignPixelsToStudMap(Array.from(sourcePixels), baseStudMap, ciede2000ColorDistance);
+  let quantPixels = Uint8ClampedArray.from(alignedPixels);
+  if (!isHighQualityColorMode.value) {
+    quantPixels = replaceSparseColors(quantPixels, SPARSE_COLOR_THRESHOLD, ciede2000ColorDistance);
+  }
+  return { quantPixels };
 };
 
 const getStep2PixelIndexFromPointerEvent = (event: PointerEvent, targetCanvasRef: typeof step2UpscaledCanvas) => {
@@ -1817,10 +1878,10 @@ const applyPaintAtPointer = (
   }
   const merged = getStep2PixelsWithOverrides(overrides);
   if (merged) {
-    if (targetCanvasRef === step2UpscaledCanvas) {
-      renderStep2Preview(merged, false);
+    if (targetCanvasRef === modalUpscaledCanvas) {
+      scheduleModalPreview();
     } else {
-      renderModalPreview();
+      renderStep2Preview(merged, false);
     }
     setPending(true);
   }
