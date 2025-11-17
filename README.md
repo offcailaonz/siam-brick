@@ -101,3 +101,4 @@ type Product = {
    - `yarn install` → `yarn dev`
    - ตรวจวัด branding: ห้ามใช้คำว่า “Lego” ใน source (เช็คด้วย `rg -ni "lego"`)
    - ให้น้ำหนักกับ responsive design และ performance
+# siam-brick
