@@ -143,11 +143,7 @@
             v-show="step2Ready"
             ref="step2UpscaledCanvas"
             class="w-full rounded-xl border border-indigo-200 mb-4"
-            :style="{ imageRendering: 'pixelated', width: '100%', height: 'auto', cursor: paintCursor }"
-            @pointerdown.prevent="handlePaintPointerDown"
-            @pointermove.prevent="handlePaintPointerMove"
-            @pointerup="handlePaintPointerUp"
-            @pointerleave="handlePaintPointerUp"
+            :style="{ imageRendering: 'pixelated', width: '100%', height: 'auto' }"
           ></canvas>
           <div class="flex items-center justify-between">
             <div>
@@ -274,7 +270,7 @@
             </span> -->
           </div>
 
-          <div >
+          <div>
             <div class="grid gap-3 md:grid-cols-3">
               <label class="text-sm text-slate-600"
                 >Hue (°)
@@ -616,47 +612,26 @@
             class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
           >
             <p class="text-xs font-semibold text-slate-700 mb-2">เครื่องมือ</p>
-            <div class="relative mb-2">
+            <div class="relative mb-2 flex">
               <button
-                class="inline-flex w-full items-center justify-between rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm font-semibold text-indigo-700 shadow-sm"
+                v-for="tool in paintToolOptions"
+                :key="tool.value"
+                :class="[
+                  'flex w-full items-center gap-2 px-3 py-2 text-left text-sm rounded-lg border',
+                  selectedPaintTool === tool.value
+                    ? 'bg-indigo-50 text-indigo-800 border-indigo-400 shadow-inner'
+                    : 'hover:bg-indigo-50 border-transparent'
+                ]"
                 type="button"
-                @click="isToolDropdownOpen = !isToolDropdownOpen"
+                @click="selectPaintTool(tool.value)"
               >
-                <span class="inline-flex items-center gap-2">
-                  <component
-                    :is="paintToolOptions.find(o => o.value === selectedPaintTool)?.icon"
-                    class="h-4 w-4"
-                  />
-                  <span>{{ paintToolLabel }}</span>
-                </span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-4 w-4"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.25 8.29a.75.75 0 01-.02-1.08z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
+                <component :is="tool.icon" class="h-4 w-4" />
+                <span>{{ tool.label }}</span>
               </button>
-              <div
+              <!-- <div
                 v-if="isToolDropdownOpen"
                 class="absolute z-50 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg"
-              >
-                <button
-                  v-for="tool in paintToolOptions"
-                  :key="tool.value"
-                  class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-indigo-50"
-                  type="button"
-                  @click="selectPaintTool(tool.value)"
-                >
-                  <component :is="tool.icon" class="h-4 w-4" />
-                  <span>{{ tool.label }}</span>
-                </button>
-              </div>
+              ></div> -->
             </div>
 
             <div class="relative">
@@ -844,6 +819,7 @@ const paintOverrides = ref<Array<number | null> | null>(null);
 const modalOverrides = ref<Array<number | null> | null>(null);
 const modalQuantPixels = ref<Uint8ClampedArray | null>(null);
 const step3QuantPixels = ref<Uint8ClampedArray | null>(null);
+const modalBaseQuantPixels = ref<Uint8ClampedArray | null>(null);
 let modalRenderTimeout: ReturnType<typeof setTimeout> | null = null;
 const selectedPaintTool = ref<PaintTool>('brush');
 const isToolDropdownOpen = ref(false);
@@ -932,7 +908,7 @@ const paintColorLabel = computed(() => colorName(paintColorHex.value) ?? paintCo
 const hasPaintOverrides = computed(() => paintOverrides.value?.some((channel) => channel != null) ?? false);
 const paintCursor = computed(() => {
   if (selectedPaintTool.value === 'brush') return 'crosshair';
-  if (selectedPaintTool.value === 'eraser') return 'cell';
+  if (selectedPaintTool.value === 'eraser') return 'not-allowed';
   return 'copy';
 });
 
@@ -1160,7 +1136,7 @@ const getStep2PixelsWithOverrides = (overrides = paintOverrides.value) => {
 };
 
 const renderModalPreview = () => {
-  const result = computeQuantizedForOverrides(modalOverrides.value ?? paintOverrides.value);
+  const result = computeQuantizedForOverrides(modalOverrides.value ?? paintOverrides.value, modalBaseQuantPixels.value);
   if (result?.quantPixels) {
     modalQuantPixels.value = result.quantPixels;
     drawStudImageOnCanvas(
@@ -1179,7 +1155,7 @@ const scheduleModalPreview = () => {
   modalRenderTimeout = setTimeout(() => {
     modalRenderTimeout = null;
     renderModalPreview();
-  }, 80);
+  }, 150);
 };
 const activeControlPointerIds = new Set<number>();
 let deferredStep2Delay = 120;
@@ -1398,6 +1374,7 @@ const resetWorkflowState = () => {
   step2PixelData.value = null;
   paintOverrides.value = null;
   modalOverrides.value = null;
+  modalBaseQuantPixels.value = null;
   modalQuantPixels.value = null;
   if (modalRenderTimeout) {
     clearTimeout(modalRenderTimeout);
@@ -1757,7 +1734,9 @@ const openEditModal = async () => {
     return;
   }
   ensurePaintOverrideArray(step2PixelData.value.length);
+  modalBaseQuantPixels.value = step3QuantPixels.value ? Uint8ClampedArray.from(step3QuantPixels.value) : null;
   modalOverrides.value = Array.from(paintOverrides.value ?? new Array(step2PixelData.value.length).fill(null));
+  modalQuantPixels.value = modalBaseQuantPixels.value ? Uint8ClampedArray.from(modalBaseQuantPixels.value) : null;
   isEditModalOpen.value = true;
   lockBodyScroll(true);
   await nextTick();
@@ -1768,6 +1747,7 @@ const cancelEditModal = () => {
   isEditModalOpen.value = false;
   modalOverrides.value = null;
   modalQuantPixels.value = null;
+  modalBaseQuantPixels.value = null;
   modalPaintInProgress.value = false;
   modalPendingStep3AfterPaint = false;
   lockBodyScroll(false);
@@ -1778,14 +1758,42 @@ const confirmEditModal = () => {
     isEditModalOpen.value = false;
     return;
   }
-  paintOverrides.value = Array.from(modalOverrides.value);
-  modalQuantPixels.value = null;
-  const merged = getStep2PixelsWithOverrides();
-  if (merged) {
-    renderStep2Preview(merged, false);
-    pendingStep3AfterPaint = true;
-    runStep3Pipeline();
+  const baseQuant = modalBaseQuantPixels.value ?? step3QuantPixels.value;
+  const finalQuant =
+    modalQuantPixels.value ??
+    (baseQuant ? applyOverridesToPixels(baseQuant, modalOverrides.value) : null) ??
+    step3QuantPixels.value;
+  if (finalQuant) {
+    step3QuantPixels.value = Uint8ClampedArray.from(finalQuant);
+    const step3BaseCanvas = step3Canvas.value;
+    const step3Upscaled = step3UpscaledCanvas.value;
+    if (step3BaseCanvas && step3Upscaled) {
+      step3BaseCanvas.width = targetResolution.width;
+      step3BaseCanvas.height = targetResolution.height;
+      drawPixelsOnCanvas(step3QuantPixels.value, step3BaseCanvas);
+      drawStudImageOnCanvas(
+        step3QuantPixels.value,
+        targetResolution.width,
+        SCALING_FACTOR,
+        step3Upscaled,
+        selectedPixelType.value
+      );
+    }
+    const basePixelsForError = step2PixelData.value ? Array.from(step2PixelData.value) : Array.from(step3QuantPixels.value);
+    step3QuantizationError.value = getAverageQuantizationError(
+      basePixelsForError,
+      Array.from(step3QuantPixels.value),
+      ciede2000ColorDistance
+    );
+    const usageMap = getUsedPixelsStudMap(step3QuantPixels.value);
+    step3StudUsage.value = Object.entries(usageMap)
+      .map(([hex, count]) => ({ hex, count, name: colorName(hex) ?? hex }))
+      .sort((a, b) => b.count - a.count);
+    step3Ready.value = true;
+    step3Error.value = null;
   }
+  modalQuantPixels.value = null;
+  modalBaseQuantPixels.value = null;
   isEditModalOpen.value = false;
   lockBodyScroll(false);
 };
@@ -1795,9 +1803,16 @@ const clearModalOverrides = () => {
   renderModalPreview();
 };
 
-const computeQuantizedForOverrides = (overrides: Array<number | null> | null) => {
+const computeQuantizedForOverrides = (
+  overrides: Array<number | null> | null,
+  baseQuant: Uint8ClampedArray | null = step3QuantPixels.value
+) => {
   if (!step2Ready.value || step2PixelData.value == null) {
     return null;
+  }
+  if (baseQuant) {
+    const quantPixels = applyOverridesToPixels(baseQuant, overrides);
+    return { quantPixels };
   }
   const sourcePixels = getStep2PixelsWithOverrides(overrides);
   if (!sourcePixels) {
@@ -1839,11 +1854,60 @@ const applyPaintAtPointer = (
   setPending: (value: boolean) => void,
   paintStateRef: typeof paintInProgress
 ) => {
-  if (!step2Ready.value || !step2PixelData.value) {
-    return;
-  }
   const pixelIndex = getStep2PixelIndexFromPointerEvent(event, targetCanvasRef);
   if (pixelIndex == null) {
+    return;
+  }
+  // modal editing path works on step 3 quant pixels only
+  if (targetCanvasRef === modalUpscaledCanvas) {
+    const baseQuant = modalBaseQuantPixels.value ?? step3QuantPixels.value;
+    if (!baseQuant) {
+      return;
+    }
+    ensurePaintOverrideArray(baseQuant.length);
+    const overrides = targetOverridesRef.value;
+    if (!overrides) {
+      return;
+    }
+
+    const currentPixels = modalQuantPixels.value ?? baseQuant;
+
+    if (selectedPaintTool.value === 'dropper') {
+      const hex = rgbToHex(currentPixels[pixelIndex], currentPixels[pixelIndex + 1], currentPixels[pixelIndex + 2]);
+      paintColorHex.value = hex;
+      userPaintColorTouched.value = true;
+      return;
+    }
+
+    if (selectedPaintTool.value === 'eraser') {
+      overrides[pixelIndex] = null;
+      overrides[pixelIndex + 1] = null;
+      overrides[pixelIndex + 2] = null;
+      overrides[pixelIndex + 3] = null;
+    } else {
+      const [r, g, b] = hexToRgb(paintColorHex.value);
+      overrides[pixelIndex] = r;
+      overrides[pixelIndex + 1] = g;
+      overrides[pixelIndex + 2] = b;
+      overrides[pixelIndex + 3] = 255;
+    }
+
+    const merged = applyOverridesToPixels(baseQuant, overrides);
+    modalQuantPixels.value = merged;
+    drawStudImageOnCanvas(
+      merged,
+      targetResolution.width,
+      SCALING_FACTOR,
+      modalUpscaledCanvas.value,
+      selectedPixelType.value
+    );
+    scheduleModalPreview();
+    setPending(true);
+    return;
+  }
+
+  // non-modal path (currently unused)
+  if (!step2Ready.value || !step2PixelData.value) {
     return;
   }
   const pixels = getStep2PixelsWithOverrides(targetOverridesRef.value ?? paintOverrides.value);
@@ -1878,11 +1942,7 @@ const applyPaintAtPointer = (
   }
   const merged = getStep2PixelsWithOverrides(overrides);
   if (merged) {
-    if (targetCanvasRef === modalUpscaledCanvas) {
-      scheduleModalPreview();
-    } else {
-      renderStep2Preview(merged, false);
-    }
+    renderStep2Preview(merged, false);
     setPending(true);
   }
 };
