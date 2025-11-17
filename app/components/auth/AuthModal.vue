@@ -85,8 +85,8 @@ const supabase = useSupabaseClient();
 const user = useSupabaseUser();
 
 const mode = ref<'sign-in' | 'sign-up'>('sign-in');
-const email = ref('');
-const password = ref('');
+const email = ref('admin@siam-brick.com');
+const password = ref('123456');
 const loading = ref(false);
 const errorMessage = ref('');
 const infoMessage = ref('');

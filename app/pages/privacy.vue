@@ -1,6 +1,6 @@
 <template>
   <div class="brick-bg--content">
-    <main class="min-h-[calc(100vh-64px-68px)] mx-auto max-w-3xl space-y-6 px-4 py-16 text-slate-800 text-white">
+    <main class="min-h-[calc(100vh-68px-68px)] mx-auto max-w-3xl space-y-6 px-4 py-16 text-slate-800 text-white">
       <h1 class="text-3xl font-bold">นโยบายความเป็นส่วนตัว</h1>
       <p>อัปเดตล่าสุด {{ new Date().toLocaleDateString('th-TH') }}</p>
       <section>

@@ -504,7 +504,7 @@
             >
           </div>
 
-          <div class="mt-4 flex flex-wrap items-center gap-4">
+          <div class="mt-4 flex flex-wrap items-center gap-4 justify-between">
             <label
               class="inline-flex items-center gap-2 text-sm text-slate-700"
             >
@@ -515,19 +515,42 @@
               />
               <span>
                 export แบบ <strong>High quality</strong> ({{ HIGH_DPI }} DPI,
-                แยกไฟล์ทุก 20 หน้า)
+                ไฟล์เดียว)
               </span>
             </label>
 
-            <button
-              class="rounded-full bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
-              type="button"
-              :disabled="!step3Ready || isGeneratingPdf || isStep2Processing"
-              @click="handleGenerateInstructions"
-            >
-              <span v-if="isGeneratingPdf">กำลังสร้างไฟล์…</span>
-              <span v-else>ดาวน์โหลดคำสั่งเป็น PDF</span>
-            </button>
+            <div>
+              <button
+                class="rounded-full bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
+                type="button"
+                :disabled="!step3Ready || isGeneratingPdf || isStep2Processing"
+                @click="handleGenerateInstructions"
+              >
+                <span v-if="isGeneratingPdf">กำลังสร้างไฟล์…</span>
+                <span v-else>ดาวน์โหลดตัวอย่าง PDF</span>
+              </button>
+
+              <button
+                class="ms-3 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
+                type="button"
+                :disabled="!step3Ready || isStep2Processing"
+                @click="goToCheckout"
+              >
+                <span>ไปหน้าชำระเงิน</span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M1 8a.75.75 0 0 1 .75-.75h10.638L9.23 4.09a.75.75 0 1 1 1.04-1.08l4.25 4.1a.75.75 0 0 1 0 1.08l-4.25 4.1a.75.75 0 0 1-1.04-1.08l3.158-3.16H1.75A.75.75 0 0 1 1 8"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
 
           <p class="text-xs text-slate-500 mt-2">
@@ -612,7 +635,9 @@
             <div
               class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
             >
-              <p class="text-xs font-semibold text-slate-700 mb-2">เครื่องมือ</p>
+              <p class="text-xs font-semibold text-slate-700 mb-2">
+                เครื่องมือ
+              </p>
               <div class="relative mb-2 flex">
                 <button
                   v-for="tool in paintToolOptions"
@@ -725,7 +750,7 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from '#imports';
+import { useAuthFlow, useCookie, useRouter } from '#imports';
 import { computed, defineComponent, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch, withDefaults } from 'vue';
 import { studMaps, type StudMapId } from '~/lib/brickArtRemix/studMaps';
 import {
@@ -774,6 +799,28 @@ type CropInteractionState = {
   };
 };
 
+type HsvState = {
+  hue: number;
+  saturation: number;
+  value: number;
+  brightness: number;
+  contrast: number;
+};
+
+type BrickWorkflowSession = {
+  version: 1;
+  hasImage: boolean;
+  userId: string;
+  resolution: { width: number; height: number };
+  crop: { left: number; top: number; width: number; height: number };
+  hsv: HsvState;
+  pixelType: number;
+  highQuality: boolean;
+};
+
+const PERSISTENCE_COOKIE_NAME = 'brick-workflow';
+const PERSISTENCE_IMAGE_STORAGE_KEY = 'brick-workflow-image';
+
 const props = withDefaults(
   defineProps<{
     initialResolution?: { width?: number; height?: number };
@@ -781,16 +828,27 @@ const props = withDefaults(
     redirectOnUpload?: string | null;
     defaultImageSrc?: string | null;
     initialCropInteraction?: CropInteractionState | null;
+    enablePersistence?: boolean;
   }>(),
   {
     showStep4: true,
     redirectOnUpload: null,
     defaultImageSrc: null,
-    initialCropInteraction: null
+    initialCropInteraction: null,
+    enablePersistence: false
   }
 );
 
 const router = useRouter();
+const { user } = useAuthFlow();
+const currentUserId = computed(() => user.value?.id ?? 'guest');
+const brickWorkflowCookie = useCookie<Record<string, BrickWorkflowSession> | null>(PERSISTENCE_COOKIE_NAME, {
+  default: () => null,
+  sameSite: 'lax',
+  path: '/',
+  maxAge: 60 * 60 * 24 * 30
+});
+const resolvedImageStorageKey = computed(() => `${PERSISTENCE_IMAGE_STORAGE_KEY}-${currentUserId.value}`);
 
 const studMapEntries = reactive(studMaps);
 const availableSetIds = Object.keys(studMapEntries) as StudMapId[];
@@ -1060,6 +1118,7 @@ const cropRect = reactive({
   width: 1,
   height: 1
 });
+const persistedCropRect = ref<BrickWorkflowSession['crop'] | null>(null);
 
 const cropOverlayStyle = computed(() => ({
   width: `${cropRect.width * 100}%`,
@@ -1183,6 +1242,142 @@ const handleHsvInput = (key: keyof typeof hsvControls, event: Event) => {
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+const sanitizeCropRect = (rect: Partial<BrickWorkflowSession['crop']> | null) => {
+  const left = clamp(rect?.left ?? cropRect.left, 0, 1);
+  const top = clamp(rect?.top ?? cropRect.top, 0, 1);
+  const width = clamp(rect?.width ?? cropRect.width, MIN_CROP_FRACTION, 1);
+  const height = clamp(rect?.height ?? cropRect.height, MIN_CROP_FRACTION, 1);
+  return {
+    left,
+    top,
+    width: Math.min(width, 1 - left),
+    height: Math.min(height, 1 - top)
+  };
+};
+
+const buildHsvState = (): HsvState => ({
+  hue: hsvControls.hue,
+  saturation: hsvControls.saturation,
+  value: hsvControls.value,
+  brightness: hsvControls.brightness,
+  contrast: hsvControls.contrast
+});
+
+let persistSessionTimeout: ReturnType<typeof setTimeout> | null = null;
+const lastPersistedImageDataByUser: Record<string, string | null> = {};
+
+const persistSessionState = () => {
+  if (!props.enablePersistence || typeof window === 'undefined') {
+    return;
+  }
+  const payload: BrickWorkflowSession = {
+    version: 1,
+    hasImage: Boolean(uploadedImage.value),
+    userId: currentUserId.value,
+    resolution: { width: targetResolution.width, height: targetResolution.height },
+    crop: sanitizeCropRect({ ...cropRect }),
+    hsv: buildHsvState(),
+    pixelType: selectedPixelType.value,
+    highQuality: isHighQualityColorMode.value
+  };
+  brickWorkflowCookie.value = {
+    ...(brickWorkflowCookie.value ?? {}),
+    [currentUserId.value]: payload
+  };
+  if (payload.hasImage && uploadedImage.value) {
+    const lastPersisted = lastPersistedImageDataByUser[currentUserId.value] ?? null;
+    if (uploadedImage.value !== lastPersisted) {
+      try {
+        localStorage.setItem(resolvedImageStorageKey.value, uploadedImage.value);
+        lastPersistedImageDataByUser[currentUserId.value] = uploadedImage.value;
+      } catch (error) {
+        console.warn('ไม่สามารถบันทึกภาพลง localStorage ได้', error);
+      }
+    }
+  } else {
+    try {
+      localStorage.removeItem(resolvedImageStorageKey.value);
+      lastPersistedImageDataByUser[currentUserId.value] = null;
+    } catch (error) {
+      console.warn('ไม่สามารถล้างภาพจาก localStorage ได้', error);
+    }
+  }
+};
+
+const queuePersistSessionState = () => {
+  if (!props.enablePersistence || typeof window === 'undefined') {
+    return;
+  }
+  if (persistSessionTimeout) {
+    clearTimeout(persistSessionTimeout);
+  }
+  persistSessionTimeout = setTimeout(() => {
+    persistSessionTimeout = null;
+    persistSessionState();
+  }, 200);
+};
+
+const applyPersistedCropIfNeeded = () => {
+  if (!persistedCropRect.value || !step1Ready.value) {
+    return false;
+  }
+  const crop = sanitizeCropRect(persistedCropRect.value);
+  cropRect.left = crop.left;
+  cropRect.top = crop.top;
+  cropRect.width = crop.width;
+  cropRect.height = crop.height;
+  persistedCropRect.value = null;
+  syncCropRectToAspect();
+  requestStep2Processing(60);
+  return true;
+};
+
+const restoreFromPersistence = async (): Promise<boolean> => {
+  if (!props.enablePersistence || typeof window === 'undefined') {
+    return false;
+  }
+  const persisted = brickWorkflowCookie.value?.[currentUserId.value];
+  if (!persisted || (persisted.userId && persisted.userId !== currentUserId.value)) {
+    return false;
+  }
+
+  if (persisted.resolution?.width) {
+    targetResolution.width = clampResolutionValue(persisted.resolution.width);
+  }
+  if (persisted.resolution?.height) {
+    targetResolution.height = clampResolutionValue(persisted.resolution.height);
+  }
+  if (persisted.hsv) {
+    hsvControls.hue = persisted.hsv.hue ?? hsvControls.hue;
+    hsvControls.saturation = persisted.hsv.saturation ?? hsvControls.saturation;
+    hsvControls.value = persisted.hsv.value ?? hsvControls.value;
+    hsvControls.brightness = persisted.hsv.brightness ?? hsvControls.brightness;
+    hsvControls.contrast = persisted.hsv.contrast ?? hsvControls.contrast;
+  }
+  if (persisted.pixelType != null) {
+    selectedPixelType.value = persisted.pixelType;
+  }
+  if (persisted.highQuality != null) {
+    isHighQualityColorMode.value = persisted.highQuality;
+  }
+  if (persisted.crop) {
+    persistedCropRect.value = sanitizeCropRect(persisted.crop);
+  }
+
+  if (!persisted.hasImage) {
+    return false;
+  }
+  const storedImage = localStorage.getItem(resolvedImageStorageKey.value);
+  if (storedImage) {
+    lastPersistedImageDataByUser[currentUserId.value] = storedImage;
+    resetWorkflowState();
+    isProcessing.value = true;
+    drawImagePreview(storedImage);
+    return true;
+  }
+  return false;
+};
 
 const finalizeControlPointer = (pointerId?: number) => {
   if (pointerId != null) {
@@ -1329,12 +1524,29 @@ const triggerFilePicker = () => {
   fileInputRef.value?.click();
 };
 
-onMounted(() => {
+onMounted(async () => {
+  const restored = props.enablePersistence ? await restoreFromPersistence() : false;
+  if (restored) {
+    return;
+  }
   if (props.defaultImageSrc) {
     resetWorkflowState();
     isProcessing.value = true;
     drawImagePreview(props.defaultImageSrc);
   } else {
+    applyInitialCrop();
+  }
+});
+
+watch(currentUserId, async () => {
+  if (!props.enablePersistence) {
+    return;
+  }
+  lastPersistedImageDataByUser[currentUserId.value] = null;
+  initialCropApplied.value = false;
+  const restored = await restoreFromPersistence();
+  if (!restored) {
+    resetWorkflowState();
     applyInitialCrop();
   }
 });
@@ -1349,7 +1561,14 @@ watch(
 );
 
 const applyInitialCrop = () => {
-  if (!props.initialCropInteraction || initialCropApplied.value === true) {
+  if (initialCropApplied.value) {
+    return;
+  }
+  if (applyPersistedCropIfNeeded()) {
+    initialCropApplied.value = true;
+    return;
+  }
+  if (!props.initialCropInteraction) {
     return;
   }
   const snapshot = props.initialCropInteraction.rectSnapshot;
@@ -2020,6 +2239,10 @@ const handleModalPaintPointerUp = () => {
   }
 };
 
+const goToCheckout = () => {
+  router.push('/checkout');
+};
+
 const handleGenerateInstructions = async () => {
   if (isGeneratingPdf.value) {
     return;
@@ -2074,7 +2297,6 @@ const buildInstructionPdf = async (isHighQuality: boolean) => {
   }
 
   const dpi = isHighQuality ? HIGH_DPI : LOW_DPI;
-  const chunkSize = isHighQuality ? 20 : 50;
   const totalPlates =
     (targetResolution.width * targetResolution.height) /
     (DEFAULT_PLATE_WIDTH * DEFAULT_PLATE_WIDTH);
@@ -2127,17 +2349,9 @@ const buildInstructionPdf = async (isHighQuality: boolean) => {
   addImageToPdf(titleImg, titlePageCanvas.width, titlePageCanvas.height);
   updateProgress(1, 'สร้างหน้าแนะนำเรียบร้อย');
 
-  let numParts = 1;
   for (let i = 0; i < totalPlates; i++) {
     await sleep(40);
-    if ((i + 1) % chunkSize === 0) {
-      addWatermark(pdf, isHighQuality, APP_WATERMARK);
-      pdf.save(`${PDF_FILENAME_BASE}-Part-${numParts}.pdf`);
-      numParts++;
-      pdf = createPdfInstance();
-    } else {
-      pdf.addPage();
-    }
+    pdf.addPage();
 
     const instructionCanvas = document.createElement('canvas');
     const subPixels = getSubPixelArray(pixelArray, i, targetResolution.width, DEFAULT_PLATE_WIDTH);
@@ -2158,11 +2372,28 @@ const buildInstructionPdf = async (isHighQuality: boolean) => {
   }
 
   addWatermark(pdf, isHighQuality, APP_WATERMARK);
-  const finalName =
-    numParts > 1 ? `${PDF_FILENAME_BASE}-Part-${numParts}.pdf` : `${PDF_FILENAME_BASE}.pdf`;
-  pdf.save(finalName);
+  pdf.save(`${PDF_FILENAME_BASE}.pdf`);
   updateProgress(totalPages, 'สร้างไฟล์สำเร็จ');
 };
+
+watch(
+  () => ({
+    resolution: { ...targetResolution },
+    crop: { ...cropRect },
+    hsv: { ...hsvControls },
+    pixelType: selectedPixelType.value,
+    highQuality: isHighQualityColorMode.value,
+    hasImage: Boolean(uploadedImage.value)
+  }),
+  () => {
+    queuePersistSessionState();
+  },
+  { deep: true }
+);
+
+watch(uploadedImage, () => {
+  queuePersistSessionState();
+});
 
 watch(
   () => [targetResolution.width, targetResolution.height],

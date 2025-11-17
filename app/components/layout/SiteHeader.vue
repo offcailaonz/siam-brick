@@ -44,7 +44,7 @@
         </div>
         <button
           v-else
-          class="text-black rounded-full bg-yellow-400 px-4 py-2 text-sm"
+          class="text-black rounded-full bg-yellow-400 px-4 py-2 text-sm my-1"
           type="button"
           @click="openAuthModal"
         >
@@ -57,10 +57,8 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { useSupabaseClient } from '#imports';
 
-const { user, openAuthModal } = useAuthFlow();
-const supabase = useSupabaseClient();
+const { user, openAuthModal, signOut: signOutFromAuthFlow } = useAuthFlow();
 const signingOut = ref(false);
 
 const userInitial = computed(() => {
@@ -70,7 +68,7 @@ const userInitial = computed(() => {
 
 const signOut = async () => {
   signingOut.value = true;
-  await supabase.auth.signOut();
+  await signOutFromAuthFlow();
   signingOut.value = false;
 };
 </script>

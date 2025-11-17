@@ -1,9 +1,22 @@
-import { useSupabaseUser } from '#imports';
+import { computed, watch } from 'vue';
+import { useSupabaseClient, useSupabaseUser } from '#imports';
 
 export const useAuthFlow = () => {
-  const user = useSupabaseUser();
+  const supabase = useSupabaseClient();
+  const supabaseUser = useSupabaseUser();
+  const user = computed(() => supabaseUser.value);
   const authModalOpen = useState('auth-modal-open', () => false);
   const pendingAction = useState<(() => void) | null>('pending-auth-action', () => null);
+
+  watch(
+    user,
+    (val) => {
+      if (val) {
+        authModalOpen.value = false;
+      }
+    },
+    { immediate: true }
+  );
 
   const openAuthModal = () => {
     authModalOpen.value = true;
@@ -31,6 +44,10 @@ export const useAuthFlow = () => {
     action?.();
   };
 
+  const signOut = async () => {
+    await supabase.auth.signOut();
+  };
+
   return {
     user,
     authModalOpen,
@@ -38,6 +55,7 @@ export const useAuthFlow = () => {
     openAuthModal,
     closeAuthModal,
     requireAuth,
-    handleAuthenticated
+    handleAuthenticated,
+    signOut
   };
 };

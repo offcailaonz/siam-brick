@@ -4,7 +4,7 @@
       class="mx-auto flex max-w-6xl flex-col gap-10 px-6 lg:flex-row lg:items-center"
     >
       <div class="flex-1 space-y-4">
-        <p class="text-sm uppercase tracking-[0.3em] text-amber-400">
+        <p class="text-5xl font-bold uppercase tracking-[0.3em] text-amber-400">
           Coming Soon
         </p>
         <h2 class="text-3xl font-bold">แปลงภาพเป็นโมเดล 3 มิติ</h2>
