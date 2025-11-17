@@ -63,7 +63,10 @@
             class="hidden"
             @change="onFileChange"
           />
-          <div class="gap-3 mt-4">
+          <p class="text-xs text-slate-500">
+            * รองรับไฟล์ JPG/PNG สูงสุด ~10MB
+          </p>
+          <div class="gap-3 mt-3">
             <button
               class="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow"
               type="button"
@@ -71,9 +74,6 @@
             >
               เลือกไฟล์ภาพ
             </button>
-            <p class="text-xs text-slate-500 mt-2">
-              * รองรับไฟล์ JPG/PNG สูงสุด ~10MB
-            </p>
           </div>
           <p v-if="uploadError" class="text-sm text-rose-600">
             {{ uploadError }}
@@ -143,7 +143,11 @@
             v-show="step2Ready"
             ref="step2UpscaledCanvas"
             class="w-full rounded-xl border border-indigo-200 mb-4"
-            style="image-rendering: pixelated; width: 100%; height: auto"
+            :style="{ imageRendering: 'pixelated', width: '100%', height: 'auto', cursor: paintCursor }"
+            @pointerdown.prevent="handlePaintPointerDown"
+            @pointermove.prevent="handlePaintPointerMove"
+            @pointerup="handlePaintPointerUp"
+            @pointerleave="handlePaintPointerUp"
           ></canvas>
           <div class="flex items-center justify-between">
             <div>
@@ -161,6 +165,115 @@
             ความละเอียดปัจจุบัน {{ targetResolution.width }} ×
             {{ targetResolution.height }} Pixel (อัตราขยาย ×{{ SCALING_FACTOR}})
           </p>
+
+          <div v-if="step2Ready" class="mt-3">
+            <button
+              type="button"
+              class="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
+              @click="openEditModal"
+            >
+              แก้ไขภาพ
+            </button>
+          </div>
+
+          <div
+            v-if="step2Ready"
+            class="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-600"
+          >
+            <!-- <div class="relative">
+              <button
+                class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm font-semibold text-indigo-700 shadow-sm"
+                type="button"
+                @click="toggleToolDropdown"
+              >
+                <svg v-if="selectedPaintTool === 'brush'" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <path
+                    d="M15.825.12a.5.5 0 0 1 .132.584c-1.53 3.43-4.743 8.17-7.095 10.64a6.067 6.067 0 0 1-2.373 1.534c-.018.227-.06.538-.16.868-.201.659-.667 1.479-1.708 1.74a8.118 8.118 0 0 1-3.078.132 3.659 3.659 0 0 1-.562-.135 1.382 1.382 0 0 1-.466-.247.714.714 0 0 1-.204-.288.622.622 0 0 1 .004-.443c.095-.245.316-.38.461-.452.394-.197.625-.453.867-.826.095-.144.184-.297.287-.472l.117-.198c.151-.255.326-.54.546-.848.528-.739 1.201-.925 1.746-.896.126.007.243.025.348.048.062-.172.142-.38.238-.608.261-.619.658-1.419 1.187-2.069 2.176-2.67 6.18-6.206 9.117-8.104a.5.5 0 0 1 .596.04z"
+                  />
+                </svg>
+                <svg v-else-if="selectedPaintTool === 'eraser'" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <path
+                    d="M8.086 2.207a2 2 0 0 1 2.828 0l3.879 3.879a2 2 0 0 1 0 2.828l-5.5 5.5A2 2 0 0 1 7.879 15H5.12a2 2 0 0 1-1.414-.586l-2.5-2.5a2 2 0 0 1 0-2.828l6.879-6.879zm.66 11.34L3.453 8.254 1.914 9.793a1 1 0 0 0 0 1.414l2.5 2.5a1 1 0 0 0 .707.293H7.88a1 1 0 0 0 .707-.293l.16-.16z"
+                  />
+                </svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <path
+                    d="M13.354.646a1.207 1.207 0 0 0-1.708 0L8.5 3.793l-.646-.647a.5.5 0 1 0-.708.708L8.293 5l-7.147 7.146A.5.5 0 0 0 1 12.5v1.793l-.854.853a.5.5 0 1 0 .708.707L1.707 15H3.5a.5.5 0 0 0 .354-.146L11 7.707l1.146 1.147a.5.5 0 0 0 .708-.708l-.647-.646 3.147-3.146a1.207 1.207 0 0 0 0-1.708l-2-2zM2 12.707l7-7L10.293 7l-7 7H2v-1.293z"
+                  />
+                </svg>
+                <span>{{ paintToolLabel }}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.25 8.29a.75.75 0 01-.02-1.08z" clip-rule="evenodd" />
+                </svg>
+              </button>
+              <div
+                v-if="isToolDropdownOpen"
+                class="absolute z-10 mt-1 w-44 rounded-lg border border-slate-200 bg-white shadow-lg"
+              >
+                <button
+                  v-for="tool in paintToolOptions"
+                  :key="tool.value"
+                  class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-indigo-50"
+                  type="button"
+                  @click="selectPaintTool(tool.value)"
+                >
+                  <component :is="tool.icon" class="h-4 w-4" />
+                  <span>{{ tool.label }}</span>
+                </button>
+              </div>
+            </div> -->
+
+            <!-- <div class="relative">
+              <button
+                class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm font-semibold text-indigo-700 shadow-sm"
+                type="button"
+                @click="toggleColorDropdown"
+              >
+                <span
+                  class="h-4 w-4 rounded-sm border border-slate-200"
+                  :style="{ backgroundColor: paintColorHex }"
+                ></span>
+                <span class="max-w-[120px] truncate">{{ paintColorLabel }}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.25 8.29a.75.75 0 01-.02-1.08z" clip-rule="evenodd" />
+                </svg>
+              </button>
+              <div
+                v-if="isColorDropdownOpen"
+                class="absolute z-10 mt-1 max-h-64 w-56 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg"
+              >
+                <button
+                  v-for="color in ALL_BRICKLINK_SOLID_COLORS"
+                  :key="color.hex"
+                  type="button"
+                  class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-indigo-50"
+                  @click="selectPaintColor(color.hex)"
+                >
+                  <span class="h-4 w-4 rounded-sm border border-slate-200" :style="{ backgroundColor: color.hex }"></span>
+                  <span class="truncate">{{ color.name }}</span>
+                  <span class="text-[10px] uppercase text-slate-400">{{ color.hex }}</span>
+                </button>
+              </div>
+            </div> -->
+
+            <!-- <button
+              class="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm font-semibold text-rose-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+              type="button"
+              :disabled="!hasPaintOverrides"
+              @click="handleClearPaintOverrides"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path
+                  d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0z"
+                />
+              </svg>
+              ล้างการแก้สี
+            </button> -->
+
+            <!-- <span class="text-[11px] text-slate-500">
+              คลิกที่พรีวิวเพื่อใช้เครื่องมือ Paintbrush/Eraser/Dropper
+            </span> -->
+          </div>
 
           <div class="mt-4">
             <div class="grid gap-3 md:grid-cols-3">
@@ -442,11 +555,199 @@
       </div>
     </section>
   </section>
+
+  <div
+    v-if="isEditModalOpen"
+    class="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/70 p-4"
+    role="dialog"
+    aria-modal="true"
+  >
+    <div class="relative w-full max-w-5xl rounded-2xl bg-white shadow-2xl">
+      <div
+        class="flex items-start justify-between border-b border-slate-200 px-5 py-4"
+      >
+        <div>
+          <h3 class="text-lg font-semibold text-slate-900">
+            แก้ไขสีด้วย Paintbrush/Eraser/Dropper
+          </h3>
+          <p class="text-xs text-slate-500">
+            ขยายภาพเพื่อแตะเลือกพิกเซลได้ง่ายขึ้น
+          </p>
+        </div>
+        <button
+          type="button"
+          class="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-200"
+          @click="cancelEditModal"
+        >
+          ปิด
+        </button>
+      </div>
+
+      <div class="grid gap-4 px-5 py-4 lg:grid-cols-[2fr,1fr]">
+        <div class="border border-slate-200 rounded-xl bg-slate-50/60 p-3">
+          <canvas
+            ref="modalUpscaledCanvas"
+            class="w-full rounded-lg border border-slate-200 bg-white"
+            style="image-rendering: pixelated; width: 100%; height: auto; min-height: 280px"
+            :style="{ imageRendering: 'pixelated', width: '100%', height: 'auto', minHeight: '280px', cursor: paintCursor }"
+            @pointerdown.prevent="handleModalPaintPointerDown"
+            @pointermove.prevent="handleModalPaintPointerMove"
+            @pointerup="handleModalPaintPointerUp"
+            @pointerleave="handleModalPaintPointerUp"
+          ></canvas>
+          <p class="mt-2 text-[11px] text-slate-500">
+            คลิก/ลากเพื่อวาด, ใช้ Dropper เพื่อเลือกสีจากภาพ, กด
+            “บันทึกการแก้สี” เพื่อใช้กับ Step 2
+          </p>
+        </div>
+
+        <div class="space-y-3">
+          <div
+            class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+          >
+            <p class="text-xs font-semibold text-slate-700 mb-2">เครื่องมือ</p>
+            <div class="relative mb-2">
+              <button
+                class="inline-flex w-full items-center justify-between rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm font-semibold text-indigo-700 shadow-sm"
+                type="button"
+                @click="isToolDropdownOpen = !isToolDropdownOpen"
+              >
+                <span class="inline-flex items-center gap-2">
+                  <component
+                    :is="paintToolOptions.find(o => o.value === selectedPaintTool)?.icon"
+                    class="h-4 w-4"
+                  />
+                  <span>{{ paintToolLabel }}</span>
+                </span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.25 8.29a.75.75 0 01-.02-1.08z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </button>
+              <div
+                v-if="isToolDropdownOpen"
+                class="absolute z-50 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg"
+              >
+                <button
+                  v-for="tool in paintToolOptions"
+                  :key="tool.value"
+                  class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-indigo-50"
+                  type="button"
+                  @click="selectPaintTool(tool.value)"
+                >
+                  <component :is="tool.icon" class="h-4 w-4" />
+                  <span>{{ tool.label }}</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="relative">
+              <button
+                class="inline-flex w-full items-center justify-between rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm font-semibold text-indigo-700 shadow-sm"
+                type="button"
+                @click="isColorDropdownOpen = !isColorDropdownOpen"
+              >
+                <span class="inline-flex items-center gap-2">
+                  <span
+                    class="h-4 w-4 rounded-sm border border-slate-200"
+                    :style="{ backgroundColor: paintColorHex }"
+                  ></span>
+                  <span
+                    class="max-w-[140px] truncate"
+                    >{{ paintColorLabel }}</span
+                  >
+                </span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.25 8.29a.75.75 0 01-.02-1.08z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </button>
+              <div
+                v-if="isColorDropdownOpen"
+                class="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg"
+              >
+                <button
+                  v-for="color in ALL_BRICKLINK_SOLID_COLORS"
+                  :key="color.hex"
+                  type="button"
+                  class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-indigo-50"
+                  @click="selectPaintColor(color.hex)"
+                >
+                  <span
+                    class="h-4 w-4 rounded-sm border border-slate-200"
+                    :style="{ backgroundColor: color.hex }"
+                  ></span>
+                  <span class="truncate">{{ color.name }}</span>
+                  <span
+                    class="text-[10px] uppercase text-slate-400"
+                    >{{ color.hex }}</span
+                  >
+                </button>
+              </div>
+            </div>
+
+            <button
+              class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm font-semibold text-rose-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+              type="button"
+              :disabled="!(modalOverrides?.some(v => v != null) || paintOverrides?.some(v => v != null))"
+              @click="clearModalOverrides"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                fill="currentColor"
+                viewBox="0 0 16 16"
+              >
+                <path
+                  d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0z"
+                />
+              </svg>
+              ล้างการแก้สีใน modal
+            </button>
+          </div>
+
+          <div class="flex flex-wrap gap-2">
+            <button
+              class="inline-flex items-center justify-center gap-2 rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-300"
+              type="button"
+              @click="cancelEditModal"
+            >
+              ยกเลิก
+            </button>
+            <button
+              class="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
+              type="button"
+              @click="confirmEditModal"
+            >
+              บันทึกการแก้สี
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { useRouter } from '#imports';
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch, withDefaults } from 'vue';
+import { computed, defineComponent, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch, withDefaults } from 'vue';
 import { studMaps, type StudMapId } from '~/lib/brickArtRemix/studMaps';
 import {
   getPixelArrayFromCanvas,
@@ -523,6 +824,7 @@ const step2Canvas = ref<HTMLCanvasElement | null>(null);
 const step2UpscaledCanvas = ref<HTMLCanvasElement | null>(null);
 const step3Canvas = ref<HTMLCanvasElement | null>(null);
 const step3UpscaledCanvas = ref<HTMLCanvasElement | null>(null);
+const modalUpscaledCanvas = ref<HTMLCanvasElement | null>(null);
 const uploadedImage = ref<string | null>(null);
 const imageDimensions = ref<{ width: number; height: number } | null>(null);
 const uploadError = ref<string | null>(null);
@@ -532,6 +834,17 @@ const step2Error = ref<string | null>(null);
 const step1Ready = ref(false);
 const step2Ready = ref(false);
 const step3Ready = ref(false);
+const paintOverrides = ref<Array<number | null> | null>(null);
+const modalOverrides = ref<Array<number | null> | null>(null);
+const selectedPaintTool = ref<PaintTool>('brush');
+const isToolDropdownOpen = ref(false);
+const isColorDropdownOpen = ref(false);
+const isEditModalOpen = ref(false);
+const paintColorHex = ref('#42c0fb');
+const paintInProgress = ref(false);
+const modalPaintInProgress = ref(false);
+let pendingStep3AfterPaint = false;
+let modalPendingStep3AfterPaint = false;
 const step3Error = ref<string | null>(null);
 const step3QuantizationError = ref<number | null>(null);
 const step3StudUsage = ref<Array<{ hex: string; name?: string; count: number }>>([]);
@@ -550,6 +863,67 @@ const APP_WATERMARK = {
   title: 'Generated by siam-brick.com',
   version: 'siam-brick preview'
 };
+type PaintTool = 'brush' | 'eraser' | 'dropper';
+
+const PaintbrushIcon = defineComponent({
+  name: 'PaintbrushIcon',
+  setup: () =>
+    () =>
+      h(
+        'svg',
+        { xmlns: 'http://www.w3.org/2000/svg', fill: 'currentColor', viewBox: '0 0 16 16' },
+        [
+          h('path', {
+            d: 'M15.825.12a.5.5 0 0 1 .132.584c-1.53 3.43-4.743 8.17-7.095 10.64a6.067 6.067 0 0 1-2.373 1.534c-.018.227-.06.538-.16.868-.201.659-.667 1.479-1.708 1.74a8.118 8.118 0 0 1-3.078.132 3.659 3.659 0 0 1-.562-.135 1.382 1.382 0 0 1-.466-.247.714.714 0 0 1-.204-.288.622.622 0 0 1 .004-.443c.095-.245.316-.38.461-.452.394-.197.625-.453.867-.826.095-.144.184-.297.287-.472l.117-.198c.151-.255.326-.54.546-.848.528-.739 1.201-.925 1.746-.896.126.007.243.025.348.048.062-.172.142-.38.238-.608.261-.619.658-1.419 1.187-2.069 2.176-2.67 6.18-6.206 9.117-8.104a.5.5 0 0 1 .596.04z'
+          })
+        ]
+      )
+});
+
+const EraserIcon = defineComponent({
+  name: 'EraserIcon',
+  setup: () =>
+    () =>
+      h(
+        'svg',
+        { xmlns: 'http://www.w3.org/2000/svg', fill: 'currentColor', viewBox: '0 0 16 16' },
+        [
+          h('path', {
+            d: 'M8.086 2.207a2 2 0 0 1 2.828 0l3.879 3.879a2 2 0 0 1 0 2.828l-5.5 5.5A2 2 0 0 1 7.879 15H5.12a2 2 0 0 1-1.414-.586l-2.5-2.5a2 2 0 0 1 0-2.828l6.879-6.879zm.66 11.34L3.453 8.254 1.914 9.793a1 1 0 0 0 0 1.414l2.5 2.5a1 1 0 0 0 .707.293H7.88a1 1 0 0 0 .707-.293l.16-.16z'
+          })
+        ]
+      )
+});
+
+const DropperIcon = defineComponent({
+  name: 'DropperIcon',
+  setup: () =>
+    () =>
+      h(
+        'svg',
+        { xmlns: 'http://www.w3.org/2000/svg', fill: 'currentColor', viewBox: '0 0 16 16' },
+        [
+          h('path', {
+            d: 'M13.354.646a1.207 1.207 0 0 0-1.708 0L8.5 3.793l-.646-.647a.5.5 0 1 0-.708.708L8.293 5l-7.147 7.146A.5.5 0 0 0 1 12.5v1.793l-.854.853a.5.5 0 1 0 .708.707L1.707 15H3.5a.5.5 0 0 0 .354-.146L11 7.707l1.146 1.147a.5.5 0 0 0 .708-.708l-.647-.646 3.147-3.146a1.207 1.207 0 0 0 0-1.708l-2-2zM2 12.707l7-7L10.293 7l-7 7H2v-1.293z'
+          })
+        ]
+      )
+});
+
+const paintToolOptions: Array<{ value: PaintTool; label: string; icon: any }> = [
+  { value: 'brush', label: 'Paintbrush', icon: PaintbrushIcon },
+  { value: 'eraser', label: 'Eraser', icon: EraserIcon },
+  { value: 'dropper', label: 'Dropper', icon: DropperIcon }
+];
+
+const paintToolLabel = computed(() => paintToolOptions.find((option) => option.value === selectedPaintTool.value)?.label ?? 'Paintbrush');
+const paintColorLabel = computed(() => colorName(paintColorHex.value) ?? paintColorHex.value);
+const hasPaintOverrides = computed(() => paintOverrides.value?.some((channel) => channel != null) ?? false);
+const paintCursor = computed(() => {
+  if (selectedPaintTool.value === 'brush') return 'crosshair';
+  if (selectedPaintTool.value === 'eraser') return 'cell';
+  return 'copy';
+});
 
 const useHighQualityPdf = ref(true);
 const isGeneratingPdf = ref(false);
@@ -568,6 +942,20 @@ const formatNumber = (value: number) => new Intl.NumberFormat('th-TH').format(va
 const colorName = (hex: string) => HEX_TO_COLOR_NAME[hex.toLowerCase()] ?? HEX_TO_COLOR_NAME[hex];
 
 const instructionColorOrder = computed(() => step3StudUsage.value.map((usage) => usage.hex));
+
+const hexToRgb = (hex: string) => {
+  const normalized = hex.replace('#', '');
+  const r = parseInt(normalized.substring(0, 2), 16);
+  const g = parseInt(normalized.substring(2, 4), 16);
+  const b = parseInt(normalized.substring(4, 6), 16);
+  return [r, g, b] as const;
+};
+
+const rgbToHex = (r: number, g: number, b: number) =>
+  `#${[r, g, b]
+    .map((value) => Math.max(0, Math.min(255, Math.round(value))))
+    .map((value) => value.toString(16).padStart(2, '0'))
+    .join('')}`;
 
 const MIN_CROP_FRACTION = Math.max(RESOLUTION_MIN / SERIALIZE_EDGE_LENGTH, 0.05);
 
@@ -726,6 +1114,46 @@ const isPreviewFrameLoading = computed(
     step1Ready.value &&
     (isStep2Processing.value || (step2Ready.value && !step3Ready.value && !step3Error.value))
 );
+const ensurePaintOverrideArray = (length: number) => {
+  if (!paintOverrides.value || paintOverrides.value.length !== length) {
+    paintOverrides.value = new Array(length).fill(null);
+  }
+  if (!modalOverrides.value || modalOverrides.value.length !== length) {
+    modalOverrides.value = new Array(length).fill(null);
+  }
+};
+
+const applyOverridesToPixels = (base: Uint8ClampedArray, overrides = paintOverrides.value) => {
+  if (!overrides || overrides.length !== base.length) {
+    return base;
+  }
+  const merged = Uint8ClampedArray.from(base);
+  for (let i = 0; i < overrides.length; i += 4) {
+    if (overrides[i] == null || overrides[i + 1] == null || overrides[i + 2] == null) {
+      continue;
+    }
+    merged[i] = overrides[i] as number;
+    merged[i + 1] = overrides[i + 1] as number;
+    merged[i + 2] = overrides[i + 2] as number;
+    merged[i + 3] = 255;
+  }
+  return merged;
+};
+
+const getStep2PixelsWithOverrides = (overrides = paintOverrides.value) => {
+  const base = step2PixelData.value;
+  if (!base) {
+    return null;
+  }
+  return applyOverridesToPixels(base, overrides);
+};
+
+const renderModalPreview = () => {
+  const merged = getStep2PixelsWithOverrides(modalOverrides.value ?? paintOverrides.value);
+  if (merged) {
+    renderUpscaledPreviewToTarget(modalUpscaledCanvas, merged);
+  }
+};
 const activeControlPointerIds = new Set<number>();
 let deferredStep2Delay = 120;
 const hasDeferredStep2Request = ref(false);
@@ -940,6 +1368,15 @@ const resetWorkflowState = () => {
   step3QuantizationError.value = null;
   step3StudUsage.value = [];
   step2PixelData.value = null;
+  paintOverrides.value = null;
+  modalOverrides.value = null;
+  isToolDropdownOpen.value = false;
+  isColorDropdownOpen.value = false;
+  isEditModalOpen.value = false;
+  paintInProgress.value = false;
+  modalPaintInProgress.value = false;
+  pendingStep3AfterPaint = false;
+  modalPendingStep3AfterPaint = false;
   cropRect.left = 0;
   cropRect.top = 0;
   cropRect.width = 1;
@@ -1052,6 +1489,70 @@ const requestStep2Processing = (delay = 120) => {
   scheduleStep2Processing(delay);
 };
 
+const renderStep2Preview = (pixels: Uint8ClampedArray, markReady = true) => {
+  const outputCanvas = step2Canvas.value;
+  const upscaledCanvas = step2UpscaledCanvas.value;
+  if (!outputCanvas || !upscaledCanvas) {
+    return;
+  }
+  outputCanvas.width = targetResolution.width;
+  outputCanvas.height = targetResolution.height;
+  drawPixelsOnCanvas(pixels, outputCanvas);
+
+  upscaledCanvas.width = targetResolution.width * SCALING_FACTOR;
+  upscaledCanvas.height = targetResolution.height * SCALING_FACTOR;
+  const upscaledContext = upscaledCanvas.getContext('2d');
+  if (upscaledContext) {
+    upscaledContext.imageSmoothingEnabled = false;
+    upscaledContext.clearRect(0, 0, upscaledCanvas.width, upscaledCanvas.height);
+    upscaledContext.drawImage(
+      outputCanvas,
+      0,
+      0,
+      outputCanvas.width,
+      outputCanvas.height,
+      0,
+      0,
+      upscaledCanvas.width,
+      upscaledCanvas.height
+    );
+  }
+  if (markReady) {
+    step2Ready.value = true;
+  }
+};
+
+const renderUpscaledPreviewToTarget = (targetCanvasRef: typeof step2UpscaledCanvas, pixels: Uint8ClampedArray) => {
+  const targetCanvas = targetCanvasRef.value;
+  if (!targetCanvas) {
+    return;
+  }
+  const baseCanvas = document.createElement('canvas');
+  baseCanvas.width = targetResolution.width;
+  baseCanvas.height = targetResolution.height;
+  drawPixelsOnCanvas(pixels, baseCanvas);
+
+  targetCanvas.width = targetResolution.width * SCALING_FACTOR;
+  targetCanvas.height = targetResolution.height * SCALING_FACTOR;
+  const ctx = targetCanvas.getContext('2d');
+  if (!ctx) {
+    return;
+  }
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
+  ctx.drawImage(
+    baseCanvas,
+    0,
+    0,
+    baseCanvas.width,
+    baseCanvas.height,
+    0,
+    0,
+    targetCanvas.width,
+    targetCanvas.height
+  );
+};
+
 const runStep2Pipeline = () => {
   const sourceCanvas = step1Canvas.value;
   const outputCanvas = step2Canvas.value;
@@ -1090,29 +1591,13 @@ const runStep2Pipeline = () => {
     pixelArray = applyContrastAdjustment(pixelArray, hsvControls.contrast);
     outputCanvas.width = bufferCanvas.width;
     outputCanvas.height = bufferCanvas.height;
-    drawPixelsOnCanvas(pixelArray, outputCanvas);
     step2PixelData.value = Uint8ClampedArray.from(pixelArray);
+    ensurePaintOverrideArray(pixelArray.length);
+    const mergedPixels = applyOverridesToPixels(pixelArray);
+    renderStep2Preview(mergedPixels);
     const upscaledCanvas = step2UpscaledCanvas.value;
     if (upscaledCanvas) {
-      upscaledCanvas.width = targetResolution.width * SCALING_FACTOR;
-      upscaledCanvas.height = targetResolution.height * SCALING_FACTOR;
-      const upscaledContext = upscaledCanvas.getContext('2d');
-      if (upscaledContext) {
-        upscaledContext.imageSmoothingEnabled = false;
-        upscaledContext.clearRect(0, 0, upscaledCanvas.width, upscaledCanvas.height);
-        upscaledContext.drawImage(
-          outputCanvas,
-          0,
-          0,
-          outputCanvas.width,
-          outputCanvas.height,
-          0,
-          0,
-          upscaledCanvas.width,
-          upscaledCanvas.height
-        );
-        step2Ready.value = true;
-      }
+      step2Ready.value = true;
     }
     runStep3Pipeline();
   } catch (error) {
@@ -1123,7 +1608,8 @@ const runStep2Pipeline = () => {
 };
 
 const runStep3Pipeline = () => {
-  if (!step2Ready.value || step2PixelData.value == null) {
+  const sourcePixels = getStep2PixelsWithOverrides();
+  if (!step2Ready.value || sourcePixels == null) {
     step3Ready.value = false;
     return;
   }
@@ -1132,7 +1618,7 @@ const runStep3Pipeline = () => {
     return acc;
   }, {} as Record<string, number>);
   try {
-    const originalPixels = Array.from(step2PixelData.value);
+    const originalPixels = Array.from(sourcePixels);
     const alignedPixels = alignPixelsToStudMap(originalPixels, baseStudMap, ciede2000ColorDistance);
     let quantPixels = Uint8ClampedArray.from(alignedPixels);
     if (!isHighQualityColorMode.value) {
@@ -1157,7 +1643,7 @@ const runStep3Pipeline = () => {
     );
 
     step3QuantizationError.value = getAverageQuantizationError(
-      Array.from(step2PixelData.value),
+      Array.from(sourcePixels),
       alignedPixels,
       ciede2000ColorDistance
     );
@@ -1172,6 +1658,201 @@ const runStep3Pipeline = () => {
     step3Ready.value = false;
     step3Error.value = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดใน Step 3';
   }
+};
+
+const selectPaintTool = (tool: PaintTool) => {
+  selectedPaintTool.value = tool;
+  isToolDropdownOpen.value = false;
+};
+
+const selectPaintColor = (hex: string) => {
+  paintColorHex.value = hex;
+  isColorDropdownOpen.value = false;
+};
+
+const handleClearPaintOverrides = () => {
+  if (!step2PixelData.value) {
+    return;
+  }
+  ensurePaintOverrideArray(step2PixelData.value.length);
+  paintOverrides.value?.fill(null);
+  modalOverrides.value?.fill(null);
+  const refreshed = getStep2PixelsWithOverrides();
+  if (refreshed) {
+    renderStep2Preview(refreshed, false);
+    runStep3Pipeline();
+  }
+};
+
+const toggleToolDropdown = () => {
+  isToolDropdownOpen.value = !isToolDropdownOpen.value;
+  if (isToolDropdownOpen.value) {
+    isColorDropdownOpen.value = false;
+  }
+};
+
+const toggleColorDropdown = () => {
+  isColorDropdownOpen.value = !isColorDropdownOpen.value;
+  if (isColorDropdownOpen.value) {
+    isToolDropdownOpen.value = false;
+  }
+};
+
+const openEditModal = async () => {
+  if (!step2Ready.value || !step2PixelData.value) {
+    return;
+  }
+  ensurePaintOverrideArray(step2PixelData.value.length);
+  modalOverrides.value = Array.from(paintOverrides.value ?? new Array(step2PixelData.value.length).fill(null));
+  isEditModalOpen.value = true;
+  await nextTick();
+  renderModalPreview();
+};
+
+const cancelEditModal = () => {
+  isEditModalOpen.value = false;
+  modalOverrides.value = null;
+  modalPaintInProgress.value = false;
+  modalPendingStep3AfterPaint = false;
+};
+
+const confirmEditModal = () => {
+  if (!step2PixelData.value || !modalOverrides.value) {
+    isEditModalOpen.value = false;
+    return;
+  }
+  paintOverrides.value = Array.from(modalOverrides.value);
+  const merged = getStep2PixelsWithOverrides();
+  if (merged) {
+    renderStep2Preview(merged, false);
+    pendingStep3AfterPaint = true;
+    runStep3Pipeline();
+  }
+  isEditModalOpen.value = false;
+};
+
+const clearModalOverrides = () => {
+  modalOverrides.value?.fill(null);
+  renderModalPreview();
+};
+
+const getStep2PixelIndexFromPointerEvent = (event: PointerEvent, targetCanvasRef: typeof step2UpscaledCanvas) => {
+  const canvas = targetCanvasRef.value;
+  if (!canvas) {
+    return null;
+  }
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const col = Math.floor((x / rect.width) * targetResolution.width);
+  const row = Math.floor((y / rect.height) * targetResolution.height);
+  if (col < 0 || row < 0 || col >= targetResolution.width || row >= targetResolution.height) {
+    return null;
+  }
+  return 4 * (row * targetResolution.width + col);
+};
+
+const applyPaintAtPointer = (
+  event: PointerEvent,
+  targetOverridesRef: typeof paintOverrides,
+  targetCanvasRef: typeof step2UpscaledCanvas,
+  setPending: (value: boolean) => void,
+  paintStateRef: typeof paintInProgress
+) => {
+  if (!step2Ready.value || !step2PixelData.value) {
+    return;
+  }
+  const pixelIndex = getStep2PixelIndexFromPointerEvent(event, targetCanvasRef);
+  if (pixelIndex == null) {
+    return;
+  }
+  const pixels = getStep2PixelsWithOverrides(targetOverridesRef.value ?? paintOverrides.value);
+  if (!pixels) {
+    return;
+  }
+
+  if (selectedPaintTool.value === 'dropper') {
+    const hex = rgbToHex(pixels[pixelIndex], pixels[pixelIndex + 1], pixels[pixelIndex + 2]);
+    paintColorHex.value = hex;
+    return;
+  }
+
+  ensurePaintOverrideArray(step2PixelData.value.length);
+  const overrides = targetOverridesRef.value;
+  if (!overrides) {
+    return;
+  }
+
+  if (selectedPaintTool.value === 'eraser') {
+    overrides[pixelIndex] = null;
+    overrides[pixelIndex + 1] = null;
+    overrides[pixelIndex + 2] = null;
+    overrides[pixelIndex + 3] = null;
+  } else {
+    const [r, g, b] = hexToRgb(paintColorHex.value);
+    overrides[pixelIndex] = r;
+    overrides[pixelIndex + 1] = g;
+    overrides[pixelIndex + 2] = b;
+    overrides[pixelIndex + 3] = 255;
+  }
+  const merged = getStep2PixelsWithOverrides(overrides);
+  if (merged) {
+    if (targetCanvasRef === step2UpscaledCanvas) {
+      renderStep2Preview(merged, false);
+    } else {
+      renderModalPreview();
+    }
+    setPending(true);
+  }
+};
+
+const handlePaintPointerDown = (event: PointerEvent) => {
+  if (!step2Ready.value || isEditModalOpen.value) {
+    return;
+  }
+  paintInProgress.value = true;
+  applyPaintAtPointer(event, paintOverrides, step2UpscaledCanvas, (v) => (pendingStep3AfterPaint = v), paintInProgress);
+};
+
+const handlePaintPointerMove = (event: PointerEvent) => {
+  if (!paintInProgress.value) {
+    return;
+  }
+  applyPaintAtPointer(event, paintOverrides, step2UpscaledCanvas, (v) => (pendingStep3AfterPaint = v), paintInProgress);
+};
+
+const handlePaintPointerUp = () => {
+  if (!paintInProgress.value) {
+    return;
+  }
+  paintInProgress.value = false;
+  if (pendingStep3AfterPaint) {
+    runStep3Pipeline();
+    pendingStep3AfterPaint = false;
+  }
+};
+
+const handleModalPaintPointerDown = (event: PointerEvent) => {
+  if (!step2Ready.value || !isEditModalOpen.value) {
+    return;
+  }
+  modalPaintInProgress.value = true;
+  applyPaintAtPointer(event, modalOverrides, modalUpscaledCanvas, (v) => (modalPendingStep3AfterPaint = v), modalPaintInProgress);
+};
+
+const handleModalPaintPointerMove = (event: PointerEvent) => {
+  if (!modalPaintInProgress.value) {
+    return;
+  }
+  applyPaintAtPointer(event, modalOverrides, modalUpscaledCanvas, (v) => (modalPendingStep3AfterPaint = v), modalPaintInProgress);
+};
+
+const handleModalPaintPointerUp = () => {
+  if (!modalPaintInProgress.value) {
+    return;
+  }
+  modalPaintInProgress.value = false;
+  // ไม่รัน step3 ทันที ปล่อยให้กดบันทึก
 };
 
 const handleGenerateInstructions = async () => {

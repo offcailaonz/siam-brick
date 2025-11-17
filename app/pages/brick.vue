@@ -1,7 +1,7 @@
 <template>
   <div class="brick-bg--content">
     <div
-      class="min-h-[calc(100vh-64px-68px)] mx-auto my-auto flex max-w-6xl flex-col space-y-6 px-4 py-6 lg:py-10"
+      class="min-h-[calc(100vh-64px-68px)] mx-auto my-auto flex max-w-6xl flex-col px-4 py-6 lg:py-10"
     >
       <BrickArtRemixApp />
     </div>
