@@ -9,11 +9,10 @@
             Checkout
           </p>
           <h1 class="mt-1 text-2xl font-bold text-slate-900">
-            เข้าสู่ขั้นตอนชำระเงิน
+            จ่ายเงินให้เสร็จใน 3 ขั้นตอน
           </h1>
           <p class="mt-2 text-sm text-slate-600">
-            เมื่อตั้งค่าทุก Step เสร็จแล้ว สามารถกดปุ่ม Checkout จากหน้าสร้างโมเสกเพื่อมาที่หน้านี้
-            เพื่อส่งข้อมูลสั่งซื้อและเตรียมลิงก์ชำระเงิน
+            ตรวจรูป · เลือกแพ็กเกจ · ส่งข้อมูลให้ทีมงานเตรียมลิงก์จ่าย ได้ไฟล์/ชุดตัวต่อเร็วขึ้น
           </p>
         </div>
 
@@ -22,16 +21,16 @@
             <div v-if="finalPreview" class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
               <div class="flex items-center justify-between gap-3">
                 <div>
-                  <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">ตัวอย่างงานของคุณ</p>
-                  <p class="text-sm text-slate-600">ภาพ Step 3 ล่าสุด (รวมการแก้ไขแล้ว)</p>
+                  <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">ตรวจสอบรูป</p>
+                  <p class="text-sm text-slate-600">พรีวิว Step 3 ล่าสุด (รวมการแก้สีแล้ว)</p>
                 </div>
-                <span class="rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700">Preview</span>
+                <span class="rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700">พร้อมสั่ง</span>
               </div>
               <div class="mt-3 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
                 <img :src="finalPreview" alt="Final preview" class="w-full max-h-[420px] object-contain bg-white" />
               </div>
               <p class="mt-2 text-xs text-slate-500">
-                หากต้องการแก้ไขเพิ่มเติม โปรดกลับไปที่ Step 3 แล้วสร้างใหม่ จากนั้นค่อยกลับมาชำระเงิน
+                ถ้าอยากแก้อีกครั้ง กดกลับไป Step 3 ก่อน แล้วค่อยกลับมาชำระเงิน
               </p>
             </div>
 
@@ -42,11 +41,10 @@
                 </div>
                 <div class="space-y-1">
                   <p class="text-sm font-semibold text-slate-900">
-                    ตรวจสอบไฟล์จาก Step 3 ให้สมบูรณ์
+                    ตรวจสอบไฟล์จาก Step 3
                   </p>
                   <p class="text-sm text-slate-600">
-                    ใช้ตัวอย่าง PDF และรายการสีที่ระบบสร้างเพื่อยืนยันว่าต้องการสั่งซื้อชุดเต็มหรือเฉพาะไฟล์คำสั่ง
-                    (ปรับแก้ภาพให้เรียบร้อยก่อนกด Checkout)
+                    ดูสีที่ใช้และตัวอย่าง PDF ให้จบก่อนสั่ง จะได้ไม่มีการแก้ทีหลัง
                   </p>
                 </div>
               </div>
@@ -62,8 +60,8 @@
                     เลือกแพ็กเกจที่ต้องการ
                   </p>
                   <p class="text-sm text-slate-600">
-                    - ชุดเต็ม (ฐาน + ตัวต่อครบตาม Bill of Materials)<br>
-                    - เฉพาะไฟล์ PDF คำสั่งประกอบความละเอียดสูง
+                    • ชุดเต็ม: ฐาน + ตัวต่อครบตาม Bill of Materials<br>
+                    • เฉพาะไฟล์: PDF คำสั่งประกอบความละเอียดสูง
                   </p>
                 </div>
               </div>
@@ -76,12 +74,49 @@
                 </div>
                 <div class="space-y-1">
                   <p class="text-sm font-semibold text-slate-900">
-                    ยืนยันการชำระเงินและจัดส่ง
+                    ส่งข้อมูลเพื่อรับลิงก์ชำระเงิน
                   </p>
                   <p class="text-sm text-slate-600">
-                    ระบบกำลังเชื่อมต่อช่องทางจ่ายออนไลน์ ระหว่างนี้ทีมงานจะส่งลิงก์ชำระหรือใบโอนให้ตามข้อมูลติดต่อที่คุณระบุ
-                    พร้อมแจ้งระยะเวลาจัดส่งหลังยืนยันออเดอร์
+                    ทีมงานจะส่งลิงก์จ่าย/เลขบัญชี ตามช่องทางที่คุณสะดวก และแจ้งเวลาจัดส่งทันที
                   </p>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="user" class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+              <div class="flex items-center justify-between gap-2">
+                <div>
+                  <p class="text-sm font-semibold text-slate-900">ออเดอร์ของฉัน</p>
+                  <p class="text-xs text-slate-500">5 รายการล่าสุด</p>
+                </div>
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
+                  :disabled="myOrdersLoading"
+                  @click="loadMyOrders"
+                >
+                  รีเฟรช
+                </button>
+              </div>
+              <p v-if="myOrdersError" class="mt-2 text-xs text-rose-600">โหลดออเดอร์ไม่สำเร็จ: {{ myOrdersError }}</p>
+              <div v-else class="mt-3 space-y-2">
+                <div v-if="myOrdersLoading" class="text-sm text-slate-500">กำลังโหลด...</div>
+                <div v-else-if="myOrders.length === 0" class="text-sm text-slate-500">ยังไม่มีออเดอร์</div>
+                <div
+                  v-else
+                  v-for="order in myOrders"
+                  :key="order.id"
+                  class="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2"
+                >
+                  <div class="flex-1">
+                    <p class="text-sm font-semibold text-slate-900">#{{ order.id }}</p>
+                    <p class="text-xs text-slate-500">
+                      อัปเดต {{ formatDateTime(order.updated_at || order.created_at) }}
+                    </p>
+                  </div>
+                  <span class="ml-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold" :class="statusBadge(order.status).color">
+                    {{ statusBadge(order.status).text }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -90,16 +125,16 @@
           <aside class="space-y-4">
             <div class="rounded-xl border border-amber-100 bg-amber-50 px-4 py-4 shadow-inner">
               <p class="text-sm font-semibold text-amber-900">
-                สิ่งที่ช่วยให้ปิดออเดอร์เร็วขึ้น
+                เตรียมข้อมูลนี้ให้ครบ จ่ายได้ไว
               </p>
               <ul class="mt-3 space-y-2 text-sm text-amber-900/90">
                 <li class="flex gap-2">
                   <span class="mt-1 h-2 w-2 rounded-full bg-amber-500"></span>
-                  จำนวนแผ่นฐาน/สัดส่วน studs จาก Step 3 และชื่อสีที่ใช้
+                  จำนวนแผ่นฐาน/สัดส่วน studs จาก Step 3 + ชื่อสีที่ใช้
                 </li>
                 <li class="flex gap-2">
                   <span class="mt-1 h-2 w-2 rounded-full bg-amber-500"></span>
-                  ต้องการสั่งชุดเต็มหรือเฉพาะไฟล์ PDF
+                  ต้องการสั่งชุดเต็ม หรือเฉพาะไฟล์ PDF
                 </li>
                 <li class="flex gap-2">
                   <span class="mt-1 h-2 w-2 rounded-full bg-amber-500"></span>
@@ -111,7 +146,7 @@
                 </li>
               </ul>
               <p class="mt-3 rounded-lg border border-amber-100 bg-white px-3 py-2 text-xs text-amber-800">
-                ระบบเก็บข้อมูลการสั่งซื้อและชำระเงินจริงจะถูกเชื่อมต่อเข้ามาภายหลัง ช่วงนี้สามารถใช้หน้านี้เป็นขั้นตอนอ้างอิงและแจ้งรายละเอียดกับทีมงานได้
+                ระบบจ่ายออนไลน์กำลังเชื่อมต่อ ระหว่างนี้แจ้งข้อมูลกับทีมงานเพื่อรับลิงก์จ่ายได้ทันที
               </p>
               <div class="mt-4 flex flex-wrap gap-3 items-center">
                 <NuxtLink
@@ -136,10 +171,46 @@
                 >
                   เข้าสู่ระบบ/บันทึกงาน
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M6.146 11.354a.5.5 0 0 1 0-.708L8.793 8 6.146 5.354a.5.5 0 1 1 .708-.708l3 3a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0"/>
+                  <path d="M6.146 11.354a.5.5 0 0 1 0-.708L8.793 8 6.146 5.354a.5.5 0 1 1 .708-.708l3 3a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0"/>
                   </svg>
                 </button>
               </div>
+            </div>
+
+            <div class="rounded-xl border border-emerald-100 bg-white px-4 py-4 shadow-sm">
+              <div class="flex items-center justify-between gap-2">
+                <div>
+                  <p class="text-sm font-semibold text-slate-900">สร้างคำสั่งซื้อ</p>
+                  <p class="text-xs text-slate-500">ล็อกออเดอร์ไว้ แล้วทีมจะส่งลิงก์จ่ายให้</p>
+                </div>
+                <span
+                  v-if="orderSuccess"
+                  class="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700"
+                >
+                  #{{ orderSuccess.id }}
+                </span>
+              </div>
+              <div class="mt-3 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
+                  :disabled="isCreatingOrder"
+                  @click="handleCreateOrder"
+                >
+                  <span v-if="isCreatingOrder">กำลังสร้างออเดอร์…</span>
+                  <span v-else>สร้างออเดอร์/ขอลิงก์จ่าย</span>
+                </button>
+                <NuxtLink
+                  to="/brick"
+                  class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                >
+                  กลับไปแก้ภาพ
+                </NuxtLink>
+              </div>
+              <p v-if="orderError" class="mt-2 text-xs text-rose-600">{{ orderError }}</p>
+              <p v-else-if="orderSuccess" class="mt-2 text-xs text-emerald-600">
+                บันทึกออเดอร์แล้ว ทีมงานจะติดต่อพร้อมลิงก์ชำระเงิน/เลขบัญชีตามช่องทางที่ระบุ
+              </p>
             </div>
           </aside>
         </div>
@@ -149,8 +220,15 @@
 </template>
 
 <script setup lang="ts">
-const { openAuthModal, user } = useAuthFlow();
+const { openAuthModal, user, requireAuth } = useAuthFlow();
+const { recordPendingPaymentOrder, fetchMyOrders } = useOrders();
 const finalPreview = useState<string | null>('brick-final-step3-preview', () => null);
+const isCreatingOrder = ref(false);
+const orderError = ref<string | null>(null);
+const orderSuccess = ref<{ id: string | number } | null>(null);
+const myOrders = ref<Array<Record<string, any>>>([]);
+const myOrdersLoading = ref(false);
+const myOrdersError = ref<string | null>(null);
 
 onMounted(() => {
   // fallback for hard refresh: try sessionStorage (ไม่ใช้ cookie)
@@ -167,6 +245,79 @@ onMounted(() => {
     console.warn('ไม่สามารถอ่านภาพจาก sessionStorage/localStorage ได้', error);
   }
 });
+
+const formatDateTime = (value: string | null | undefined) => {
+  if (!value) return '-';
+  try {
+    return new Intl.DateTimeFormat('th-TH', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    }).format(new Date(value));
+  } catch (error) {
+    return value;
+  }
+};
+
+const statusBadge = (status: string | null | undefined) => {
+  if (!status) return { text: 'รอชำระเงิน', color: 'bg-amber-50 text-amber-700 border-amber-200' };
+  const s = String(status).toLowerCase();
+  if (s.includes('paid') || s.includes('สำเร็จ')) return { text: status, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+  if (s.includes('ship')) return { text: status, color: 'bg-blue-50 text-blue-700 border-blue-200' };
+  if (s.includes('cancel')) return { text: status, color: 'bg-slate-100 text-slate-600 border-slate-200' };
+  return { text: status, color: 'bg-amber-50 text-amber-700 border-amber-200' };
+};
+
+const loadMyOrders = async () => {
+  if (!user.value?.id) return;
+  myOrdersLoading.value = true;
+  myOrdersError.value = null;
+  try {
+    myOrders.value = await fetchMyOrders(user.value.id, 5);
+  } catch (error: any) {
+    myOrdersError.value = error?.message ?? 'ไม่สามารถโหลดออเดอร์ของคุณได้';
+  } finally {
+    myOrdersLoading.value = false;
+  }
+};
+
+watch(
+  () => user.value?.id,
+  (next) => {
+    if (next) {
+      loadMyOrders();
+    } else {
+      myOrders.value = [];
+    }
+  },
+  { immediate: true }
+);
+
+const handleCreateOrder = async () => {
+  orderError.value = null;
+  if (!user.value) {
+    requireAuth(() => handleCreateOrder());
+    return;
+  }
+  if (!finalPreview.value) {
+    orderError.value = 'ยังไม่มีรูป Step 3 กรุณากลับไปสร้างก่อน';
+    return;
+  }
+  isCreatingOrder.value = true;
+  try {
+    const data = await recordPendingPaymentOrder({
+      userId: user.value.id,
+      previewUrl: finalPreview.value,
+      source: 'checkout'
+    });
+    orderSuccess.value = { id: data?.id ?? 'new' };
+    await loadMyOrders();
+  } catch (error: any) {
+    orderError.value = error?.message ?? 'ไม่สามารถสร้างออเดอร์ได้';
+    console.error('create order error', error);
+  } finally {
+    isCreatingOrder.value = false;
+  }
+};
 </script>
 <style lang="scss">
 @mixin brick-bg($color, $hue: 0deg) {
