@@ -1102,6 +1102,8 @@ const loadDataUrlToCanvas = async (
         resolve(null);
         return;
       }
+      // ปิด smoothing เพื่อไม่ให้สีปนกันเวลาย่อ/ขยายรูปจาก API
+      ctx.imageSmoothingEnabled = false;
       canvas.width = targetWidth;
       canvas.height = targetHeight;
       ctx.clearRect(0, 0, targetWidth, targetHeight);
@@ -1196,6 +1198,7 @@ const applyRestoredStep3BaseIfNeeded = () => {
   }
   applyingRestoredStep3 = true;
   const dataUrl = pendingRestoredStep3Base.value;
+  const isApiStudPreview = !props.initialStep3Base && props.initialStep3Preview === dataUrl;
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => {
@@ -1210,18 +1213,32 @@ const applyRestoredStep3BaseIfNeeded = () => {
       return;
     }
     ctx.clearRect(0, 0, baseCanvas.width, baseCanvas.height);
+    // ปิด smoothing เพื่อใช้ค่าพิกเซลดิบจาก API preview ไม่ให้สีปน
+    ctx.imageSmoothingEnabled = false;
     ctx.drawImage(img, 0, 0, baseCanvas.width, baseCanvas.height);
     const quantPixels = new Uint8ClampedArray(ctx.getImageData(0, 0, baseCanvas.width, baseCanvas.height).data);
     step3QuantPixels.value = quantPixels;
     step3QuantPixelsBase.value = Uint8ClampedArray.from(quantPixels);
     drawPixelsOnCanvas(quantPixels, step3Canvas.value);
-    drawStudImageOnCanvas(
-      quantPixels,
-      targetResolution.width,
-      SCALING_FACTOR,
-      step3UpscaledCanvas.value,
-      selectedPixelType.value
-    );
+    if (isApiStudPreview) {
+      // ถ้า preview จาก API เป็นภาพ stud อยู่แล้ว ให้ใช้ภาพนี้เป็น upscaled preview โดยตรง ไม่ต้องซ้อน stud รอบสอง
+      const upCtx = step3UpscaledCanvas.value.getContext('2d');
+      if (upCtx) {
+        upCtx.imageSmoothingEnabled = false;
+        step3UpscaledCanvas.value.width = img.width;
+        step3UpscaledCanvas.value.height = img.height;
+        upCtx.clearRect(0, 0, img.width, img.height);
+        upCtx.drawImage(img, 0, 0, img.width, img.height);
+      }
+    } else {
+      drawStudImageOnCanvas(
+        quantPixels,
+        targetResolution.width,
+        SCALING_FACTOR,
+        step3UpscaledCanvas.value,
+        selectedPixelType.value
+      );
+    }
     const basePixelsForError = step2PixelData.value ? Array.from(step2PixelData.value) : Array.from(quantPixels);
     step3QuantizationError.value = getAverageQuantizationError(
       basePixelsForError,
