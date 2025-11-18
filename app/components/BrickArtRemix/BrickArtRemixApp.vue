@@ -391,8 +391,14 @@
               ref="step3UpscaledCanvas"
               class="w-full rounded-xl border border-emerald-200 mb-4"
               style="image-rendering: pixelated; width: 100%; height: auto"
-              v-show="step3Ready"
+              v-show="step3Ready && !showApiStep3Preview"
             ></canvas>
+            <img
+              v-if="showApiStep3Preview && apiStep3Preview"
+              :src="apiStep3Preview || undefined"
+              alt="Step 3 preview from order"
+              class="w-full rounded-xl border border-emerald-200 mb-4 bg-white object-contain"
+            />
             <div class="flex items-center justify-between">
               <div>
                 <h3 class="text-lg font-semibold text-slate-900">
@@ -560,10 +566,11 @@
               <button
                 class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
                 type="button"
-                :disabled="!step3Ready || isStep2Processing"
+                :disabled="!step3Ready || isStep2Processing || isCreatingCheckoutOrder"
                 @click="goToCheckout"
               >
-                <span>ชำระเงิน เพื่อรับชุดเต็ม</span>
+                <span v-if="isCreatingCheckoutOrder">กำลังสร้างออเดอร์...</span>
+                <span v-else>ชำระเงิน เพื่อรับชุดเต็ม</span>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="16"
@@ -582,6 +589,7 @@
         </article>
       </div>
     </section>
+    <p v-if="checkoutOrderError" class="mt-2 text-sm text-rose-600">{{ checkoutOrderError }}</p>
   </section>
 
   <Teleport to="body">
@@ -751,7 +759,7 @@
 </template>
 
 <script setup lang="ts">
-import { useAuthFlow, useCookie, useRouter } from '#imports';
+import { useAuthFlow, useCookie, useRouter, useState, useOrders } from '#imports';
 import { computed, defineComponent, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch, withDefaults } from 'vue';
 import { studMaps, type StudMapId } from '~/lib/brickArtRemix/studMaps';
 import {
@@ -842,18 +850,25 @@ const props = withDefaults(
     defaultImageSrc?: string | null;
     initialCropInteraction?: CropInteractionState | null;
     enablePersistence?: boolean;
+    editingOrderId?: string | number | null;
+    initialStep3Preview?: string | null;
+    initialStep3Base?: string | null;
   }>(),
   {
     showStep4: true,
     redirectOnUpload: null,
     defaultImageSrc: null,
     initialCropInteraction: null,
-    enablePersistence: false
+    enablePersistence: false,
+    editingOrderId: null,
+    initialStep3Preview: null,
+    initialStep3Base: null
   }
 );
 
 const router = useRouter();
-const { user } = useAuthFlow();
+const { user, requireAuth } = useAuthFlow();
+const { recordPendingPaymentOrder, updateOrderAssets } = useOrders();
 const currentUserId = computed(() => user.value?.id ?? 'guest');
 const brickWorkflowCookie = useCookie<Record<string, BrickWorkflowSession> | null>(PERSISTENCE_COOKIE_NAME, {
   default: () => null,
@@ -905,6 +920,14 @@ const modalQuantPixels = ref<Uint8ClampedArray | null>(null);
 const step3QuantPixels = ref<Uint8ClampedArray | null>(null); // current edited image
 const step3QuantPixelsBase = ref<Uint8ClampedArray | null>(null); // original quantized image from step 2
 const finalStep3Preview = useState<string | null>('brick-final-step3-preview', () => null);
+const originalImageForOrder = useState<string | null>('brick-original-image', () => null);
+const cropInteractionForOrder = useState<CropInteractionState | null>('brick-crop-interaction', () => null);
+const isCreatingCheckoutOrder = ref(false);
+const checkoutOrderError = ref<string | null>(null);
+const shouldSkipPersistence = computed(() => Boolean(props.editingOrderId || props.defaultImageSrc));
+const initialOrderPreviewApplied = ref(false);
+const apiStep3Preview = computed(() => props.initialStep3Preview ?? null);
+const showApiStep3Preview = ref<boolean>(Boolean(props.editingOrderId && apiStep3Preview.value));
 const pendingRestoredStep3Base = ref<string | null>(null);
 const restoredStep3Applied = ref(false);
 const persistedStep3BaseHash = ref<string | null>(null);
@@ -960,6 +983,39 @@ const persistStepImages = (payload: Partial<Omit<StepImageSnapshot, 'v' | 'userI
     userId: currentUserId.value
   };
   stepImagesCookie.value = { ...existing, [currentUserId.value]: next };
+};
+const persistCropForOrder = () => {
+  cropInteractionForOrder.value = {
+    active: false,
+    type: null,
+    startX: 0,
+    startY: 0,
+    containerWidth: cropInteraction.containerWidth,
+    containerHeight: cropInteraction.containerHeight,
+    rectSnapshot: {
+      left: cropRect.left,
+      top: cropRect.top,
+      width: cropRect.width,
+      height: cropRect.height
+    }
+  };
+};
+
+const clearLocalMosaicPersistence = () => {
+  try {
+    sessionStorage.removeItem(STEP3_FINAL_PREVIEW_STORAGE);
+    localStorage.removeItem(STEP3_FINAL_PREVIEW_STORAGE);
+    sessionStorage.removeItem(STEP3_FINAL_BASE_STORAGE);
+    localStorage.removeItem(STEP3_FINAL_BASE_STORAGE);
+    const storageKey = `${PERSISTENCE_IMAGE_STORAGE_KEY}-${currentUserId.value}`;
+    localStorage.removeItem(storageKey);
+    localStorage.removeItem(`${PERSISTENCE_IMAGE_STORAGE_KEY}-guest`);
+  } catch (error) {
+    console.warn('ไม่สามารถล้างข้อมูล preview ใน storage ได้', error);
+  }
+  brickWorkflowCookie.value = null;
+  stepImagesCookie.value = null;
+  step3HashCookie.value = null;
 };
 const persistFinalStep3Preview = (preview: string | null, baseDataUrl?: string | null, baseSourceHash?: string | null) => {
   finalStep3Preview.value = preview;
@@ -1066,6 +1122,7 @@ const restoreFromStepImages = async (snapshot: StepImageSnapshot): Promise<boole
   }
   initialCropApplied.value = true;
   uploadedImage.value = snapshot.step1;
+  originalImageForOrder.value = snapshot.step1 ?? null;
   imageDimensions.value = { width: step1Result.width, height: step1Result.height };
   step1Ready.value = true;
 
@@ -1549,7 +1606,14 @@ const clampResolutionValue = (value: number) => {
   return Math.min(Math.max(rounded || RESOLUTION_MIN, RESOLUTION_MIN), RESOLUTION_MAX);
 };
 
+const markApiPreviewDirty = () => {
+  if (props.editingOrderId && showApiStep3Preview.value) {
+    showApiStep3Preview.value = false;
+  }
+};
+
 const handleResolutionInput = (axis: 'width' | 'height', event: Event) => {
+  markApiPreviewDirty();
   const numericValue = Number((event.target as HTMLInputElement).value);
   if (!Number.isNaN(numericValue)) {
     targetResolution[axis] = numericValue;
@@ -1557,6 +1621,7 @@ const handleResolutionInput = (axis: 'width' | 'height', event: Event) => {
 };
 
 const handleHsvInput = (key: keyof typeof hsvControls, event: Event) => {
+  markApiPreviewDirty();
   const numericValue = Number((event.target as HTMLInputElement).value);
   if (!Number.isNaN(numericValue)) {
     hsvControls[key] = numericValue;
@@ -1701,6 +1766,14 @@ const restoreFromPersistence = async (): Promise<boolean> => {
   }
   const stepImageSnapshot = stepImagesCookie.value?.[currentUserId.value];
   if (stepImageSnapshot?.userId === currentUserId.value) {
+    if (props.editingOrderId) {
+      if (props.initialStep3Preview) {
+        stepImageSnapshot.step3Preview = props.initialStep3Preview;
+      }
+      if (props.initialStep3Base && !stepImageSnapshot.step3Base) {
+        stepImageSnapshot.step3Base = props.initialStep3Base;
+      }
+    }
     resetWorkflowState({ clearPersistedPreview: false });
     const restoredFromCookie = await restoreFromStepImages(stepImageSnapshot);
     if (restoredFromCookie) {
@@ -1876,6 +1949,7 @@ const endCropInteraction = () => {
   cropInteraction.type = null;
   window.removeEventListener('pointermove', handleCropPointerMove);
   window.removeEventListener('pointerup', endCropInteraction);
+  markApiPreviewDirty();
   scheduleStep2Processing(80);
 };
 
@@ -1894,12 +1968,24 @@ const triggerFilePicker = () => {
 };
 
 onMounted(async () => {
-  const restored = props.enablePersistence ? await restoreFromPersistence() : false;
-  if (restored) {
-    return;
+  if (!shouldSkipPersistence.value) {
+    const restored = props.enablePersistence ? await restoreFromPersistence() : false;
+    if (restored && !props.editingOrderId) {
+      return;
+    }
+  }
+  if (props.initialStep3Preview && !initialOrderPreviewApplied.value) {
+    finalStep3Preview.value = props.initialStep3Preview;
+    initialOrderPreviewApplied.value = true;
+    persistFinalStep3Preview(props.initialStep3Preview, props.initialStep3Base ?? undefined);
+    if (props.editingOrderId) {
+      step3Ready.value = true;
+      showApiStep3Preview.value = true;
+    }
   }
   if (props.defaultImageSrc) {
-    resetWorkflowState();
+    const hasApiStep3 = Boolean(props.initialStep3Preview || props.initialStep3Base);
+    resetWorkflowState({ clearPersistedPreview: !hasApiStep3, preserveRestoredStep3: hasApiStep3 });
     isProcessing.value = true;
     drawImagePreview(props.defaultImageSrc);
   } else {
@@ -1908,7 +1994,7 @@ onMounted(async () => {
 });
 
 watch(currentUserId, async () => {
-  if (!props.enablePersistence) {
+  if (!props.enablePersistence || shouldSkipPersistence.value) {
     return;
   }
   lastPersistedImageDataByUser[currentUserId.value] = null;
@@ -1927,6 +2013,54 @@ watch(
       applyInitialCrop();
     }
   }
+);
+
+watch(
+  () => [cropRect.left, cropRect.top, cropRect.width, cropRect.height],
+  () => {
+    persistCropForOrder();
+  }
+);
+
+watch(
+  () => props.defaultImageSrc,
+  (next) => {
+    if (!next) return;
+    initialCropApplied.value = false;
+    const hasApiStep3 = Boolean(props.initialStep3Preview || props.initialStep3Base);
+    resetWorkflowState({ clearPersistedPreview: !hasApiStep3, preserveRestoredStep3: hasApiStep3 });
+    isProcessing.value = true;
+    drawImagePreview(next);
+  }
+);
+
+watch(
+  () => props.initialStep3Preview,
+  (next) => {
+    if (!next) return;
+    finalStep3Preview.value = next;
+    initialOrderPreviewApplied.value = true;
+    persistFinalStep3Preview(next, props.initialStep3Base ?? undefined);
+    if (props.editingOrderId) {
+      step3Ready.value = true;
+      showApiStep3Preview.value = true;
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => props.initialStep3Base,
+  (next) => {
+    if (!next) return;
+    pendingRestoredStep3Base.value = next;
+    restoredStep3Applied.value = false;
+    suspendStep3Persistence.value = true;
+    if (props.editingOrderId && props.initialStep3Preview) {
+      showApiStep3Preview.value = true;
+    }
+  },
+  { immediate: true }
 );
 
 const applyInitialCrop = () => {
@@ -1949,14 +2083,16 @@ const applyInitialCrop = () => {
   }
   Object.assign(cropInteraction, props.initialCropInteraction);
   initialCropApplied.value = true;
+  persistCropForOrder();
   scheduleStep2Processing(100);
 };
 
-const resetWorkflowState = (options: { clearPersistedPreview?: boolean } = {}) => {
-  const { clearPersistedPreview = true } = options;
+const resetWorkflowState = (options: { clearPersistedPreview?: boolean; preserveRestoredStep3?: boolean } = {}) => {
+  const { clearPersistedPreview = true, preserveRestoredStep3 = false } = options;
   step1Ready.value = false;
   step2Ready.value = false;
   step3Ready.value = false;
+  initialCropApplied.value = false;
   step2Error.value = null;
   step3Error.value = null;
   isStep2Processing.value = false;
@@ -1989,15 +2125,21 @@ const resetWorkflowState = (options: { clearPersistedPreview?: boolean } = {}) =
     persistFinalStep3Preview(null);
     step3HashCookie.value = null;
     clearStepImagesForUser();
+    originalImageForOrder.value = null;
+    cropInteractionForOrder.value = null;
   }
-  pendingRestoredStep3Base.value = null;
-  restoredStep3Applied.value = false;
-  applyingRestoredStep3 = false;
-  persistedStep3BaseHash.value = null;
-  persistedStep3SourceHash.value = null;
-  lastGeneratedStep3BaseHash.value = null;
-  lastGeneratedStep3SourceHash.value = null;
-  suspendStep3Persistence.value = false;
+  if (!preserveRestoredStep3) {
+    pendingRestoredStep3Base.value = null;
+    restoredStep3Applied.value = false;
+    applyingRestoredStep3 = false;
+    persistedStep3BaseHash.value = null;
+    persistedStep3SourceHash.value = null;
+    lastGeneratedStep3BaseHash.value = null;
+    lastGeneratedStep3SourceHash.value = null;
+    suspendStep3Persistence.value = false;
+  } else {
+    suspendStep3Persistence.value = true;
+  }
 };
 
 const normalizeCanvasPixels = (canvas: HTMLCanvasElement) => {
@@ -2031,6 +2173,7 @@ const drawImagePreview = (src: string) => {
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     normalizeCanvasPixels(canvas);
     uploadedImage.value = canvas.toDataURL('image/png', 0.92);
+    originalImageForOrder.value = uploadedImage.value;
     persistStepImages({
       step1: uploadedImage.value,
       step2: null,
@@ -2047,8 +2190,9 @@ const drawImagePreview = (src: string) => {
     cropRect.width = 1;
     cropRect.height = 1;
     syncCropRectToAspect();
-    applyInitialCrop();
-    nextTick().then(() => scheduleStep2Processing(10));
+    persistCropForOrder();
+  applyInitialCrop();
+  nextTick().then(() => scheduleStep2Processing(10));
     isProcessing.value = false;
   };
   img.onerror = () => {
@@ -2270,7 +2414,9 @@ const runStep3Pipeline = () => {
     const baseSourceHash = hashUint8Array(quantPixels);
     lastGeneratedStep3SourceHash.value = baseSourceHash;
     lastGeneratedStep3BaseHash.value = hashString(baseCanvasDataUrl);
-    const shouldSkipPersist = suspendStep3Persistence.value && pendingRestoredStep3Base.value;
+    const shouldSkipPersist =
+      (suspendStep3Persistence.value && pendingRestoredStep3Base.value) ||
+      (props.editingOrderId && showApiStep3Preview.value && apiStep3Preview.value);
     if (!shouldSkipPersist) {
       persistFinalStep3Preview(step3Upscaled.toDataURL('image/png', 0.92), baseCanvasDataUrl, baseSourceHash);
     }
@@ -2499,6 +2645,7 @@ const applyPaintAtPointer = (
   setPending: (value: boolean) => void,
   paintStateRef: typeof paintInProgress
 ) => {
+  markApiPreviewDirty();
   const pixelIndex = getStep2PixelIndexFromPointerEvent(event, targetCanvasRef);
   if (pixelIndex == null) {
     return;
@@ -2644,9 +2791,62 @@ const handleModalPaintPointerUp = () => {
   }
 };
 
-const goToCheckout = () => {
-  router.push('/checkout');
+const goToCheckout = async () => {
+  checkoutOrderError.value = null;
+  if (isCreatingCheckoutOrder.value) {
+    return;
+  }
+  if (!user.value) {
+    requireAuth(() => goToCheckout());
+    return;
+  }
+  if (!finalStep3Preview.value) {
+    checkoutOrderError.value = 'ยังไม่มีภาพตัวอย่าง กรุณาสร้าง Step 3 ให้เสร็จ';
+    return;
+  }
+  isCreatingCheckoutOrder.value = true;
+  try {
+    let orderId = props.editingOrderId ?? null;
+    if (orderId) {
+      await updateOrderAssets(
+        orderId,
+        {
+          previewUrl: finalStep3Preview.value,
+          source: 'brick:edit',
+          cropInteraction: cropInteractionForOrder.value ?? null,
+          originalImage: originalImageForOrder.value ?? uploadedImage.value ?? null
+        },
+        user.value.id
+      );
+    } else {
+      const data = await recordPendingPaymentOrder({
+        userId: user.value.id,
+        previewUrl: finalStep3Preview.value,
+        source: 'checkout',
+        cropInteraction: cropInteractionForOrder.value ?? null,
+        originalImage: originalImageForOrder.value ?? uploadedImage.value ?? null
+      });
+      orderId = data?.id ?? null;
+    }
+    clearLocalMosaicPersistence();
+    if (orderId) {
+      router.push(`/checkout?id=${orderId}`);
+    } else {
+      router.push('/checkout');
+    }
+  } catch (error: any) {
+    checkoutOrderError.value = error?.message ?? 'ไม่สามารถสร้างออเดอร์ได้';
+  } finally {
+    isCreatingCheckoutOrder.value = false;
+  }
 };
+
+defineExpose({
+  goToCheckout,
+  step3Ready,
+  isStep2Processing,
+  isCreatingCheckoutOrder
+});
 
 const handleGenerateInstructions = async () => {
   if (isGeneratingPdf.value) {
@@ -2858,6 +3058,7 @@ watch(
       targetResolution.height = clampedHeight;
     }
     syncCropRectToAspect();
+    markApiPreviewDirty();
     requestStep2Processing();
   }
 );
@@ -2865,17 +3066,20 @@ watch(
 watch(
   () => [hsvControls.hue, hsvControls.saturation, hsvControls.value, hsvControls.brightness, hsvControls.contrast],
   () => {
+    markApiPreviewDirty();
     requestStep2Processing();
   }
 );
 
 watch(selectedPixelType, () => {
+  markApiPreviewDirty();
   if (step2Ready.value) {
     runStep3Pipeline();
   }
 });
 
 watch(isHighQualityColorMode, () => {
+  markApiPreviewDirty();
   if (step2Ready.value) {
     runStep3Pipeline();
   }

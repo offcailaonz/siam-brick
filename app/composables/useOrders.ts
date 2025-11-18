@@ -6,6 +6,8 @@ type OrderPayload = {
   source?: string;
   totalAmount?: number | null;
   paymentReference?: string | null;
+  cropInteraction?: Record<string, any> | null;
+  originalImage?: string | null;
 };
 
 export const useOrders = () => {
@@ -19,6 +21,12 @@ export const useOrders = () => {
       source: payload.source ?? 'checkout'
     };
 
+    if (payload.cropInteraction !== undefined) {
+      insertPayload.crop_interaction = payload.cropInteraction;
+    }
+    if (payload.originalImage !== undefined) {
+      insertPayload.original_image = payload.originalImage;
+    }
     if (payload.totalAmount !== undefined) {
       insertPayload.total_amount = payload.totalAmount;
     }
@@ -36,20 +44,63 @@ export const useOrders = () => {
     return data;
   };
 
-  const fetchMyOrders = async (userId: string, limit = 10) => {
-    const { data, error } = await supabase
+  const updateOrderAssets = async (
+    orderId: string | number,
+    payload: Pick<OrderPayload, 'previewUrl' | 'source' | 'cropInteraction' | 'originalImage'>,
+    userId?: string
+  ) => {
+    const updatePayload: Record<string, any> = {};
+    if (payload.previewUrl !== undefined) updatePayload.preview_url = payload.previewUrl;
+    if (payload.source !== undefined) updatePayload.source = payload.source;
+    if (payload.cropInteraction !== undefined) updatePayload.crop_interaction = payload.cropInteraction;
+    if (payload.originalImage !== undefined) updatePayload.original_image = payload.originalImage;
+
+    let query = supabase.from('orders').update(updatePayload).eq('id', orderId);
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    const { data, error } = await query.select().single();
+    if (error) throw error;
+    return data;
+  };
+
+  const fetchMyOrders = async (userId: string, options?: { page?: number; pageSize?: number }) => {
+    const page = Math.max(1, options?.page ?? 1);
+    const pageSize = Math.max(1, options?.pageSize ?? 5);
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { data, error, count } = await supabase
       .from('orders')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .range(from, to);
 
     if (error) throw error;
-    return data ?? [];
+    return {
+      items: data ?? [],
+      total: count ?? data?.length ?? 0,
+      page,
+      pageSize
+    };
+  };
+
+  const fetchOrderById = async (orderId: string | number, userId?: string) => {
+    let query = supabase.from('orders').select('*').eq('id', orderId).limit(1);
+    // เพิ่มกรอง user_id หากส่งมา ให้ตรงกับ RLS ที่จำกัดของผู้ใช้
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    const { data, error } = await query.maybeSingle();
+    if (error) throw error;
+    return data;
   };
 
   return {
     recordPendingPaymentOrder,
-    fetchMyOrders
+    updateOrderAssets,
+    fetchMyOrders,
+    fetchOrderById
   };
 };

@@ -3,129 +3,110 @@
     <main
       class="min-h-[calc(100vh-68px-68px)] mx-auto my-auto flex max-w-5xl flex-col px-4 py-10 lg:py-14 text-slate-800"
     >
-      <section class="rounded-2xl border border-slate-200 bg-white/90 shadow-sm overflow-hidden">
-        <div class="border-b border-slate-200 bg-slate-50/80 px-5 py-4">
-          <p class="text-xs font-semibold uppercase tracking-wide text-amber-600">
-            Checkout
-          </p>
-          <h1 class="mt-1 text-2xl font-bold text-slate-900">
-            จ่ายเงินให้เสร็จใน 3 ขั้นตอน
-          </h1>
-          <p class="mt-2 text-sm text-slate-600">
-            ตรวจรูป · เลือกแพ็กเกจ · ส่งข้อมูลให้ทีมงานเตรียมลิงก์จ่าย ได้ไฟล์/ชุดตัวต่อเร็วขึ้น
-          </p>
+      <section
+        class="rounded-2xl border border-slate-200 bg-white/90 shadow-sm overflow-hidden"
+      >
+        <div
+          class="flex justify-between border-b border-slate-200 bg-slate-50/80 px-5 py-4"
+        >
+          <div class="">
+            <p
+              class="text-xs font-semibold uppercase tracking-wide text-amber-600"
+            >
+              Checkout
+            </p>
+            <h1 class="mt-1 text-2xl font-bold text-slate-900">
+              จ่ายเงินให้เสร็จใน 3 ขั้นตอน
+            </h1>
+            <p class="mt-2 text-sm text-slate-600">
+              ตรวจรูป · เลือกแพ็กเกจ · ส่งข้อมูลให้ทีมงานเตรียมลิงก์จ่าย
+              ได้ไฟล์/ชุดตัวต่อเร็วขึ้น
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-3 py-4">
+            <NuxtLink
+              :to="brickLink"
+              class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+            >
+              กลับไปแก้ภาพ
+            </NuxtLink>
+            <button
+              type="button"
+              class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
+              :disabled="isCreatingOrder"
+              @click="handleCreateOrder"
+            >
+              <span v-if="isCreatingOrder">กำลังสร้างออเดอร์…</span>
+              <span v-else>ชำระเงิน</span>
+            </button>
+          </div>
         </div>
 
         <div class="grid gap-6 px-5 py-6 lg:grid-cols-[1.6fr,1fr]">
           <div class="space-y-4">
-            <div v-if="finalPreview" class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+            <div
+              v-if="checkoutPreview"
+              class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
+            >
               <div class="flex items-center justify-between gap-3">
                 <div>
-                  <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">ตรวจสอบรูป</p>
-                  <p class="text-sm text-slate-600">พรีวิว Step 3 ล่าสุด (รวมการแก้สีแล้ว)</p>
+                  <p
+                    class="text-xs font-semibold uppercase tracking-wide text-indigo-600"
+                  >
+                    ตรวจสอบรูป
+                  </p>
+                  <p class="text-sm text-slate-600">
+                    พรีวิว Step 3 ล่าสุด (รวมการแก้สีแล้ว)
+                  </p>
                 </div>
-                <span class="rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700">พร้อมสั่ง</span>
+                <span
+                  class="rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700"
+                  >พร้อมสั่ง</span
+                >
               </div>
-              <div class="mt-3 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                <img :src="finalPreview" alt="Final preview" class="w-full max-h-[420px] object-contain bg-white" />
+              <div
+                class="mt-3 overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
+              >
+                <img
+                  :src="checkoutPreview"
+                  alt="Final preview"
+                  class="w-full max-h-[420px] object-contain bg-white"
+                />
               </div>
               <p class="mt-2 text-xs text-slate-500">
                 ถ้าอยากแก้อีกครั้ง กดกลับไป Step 3 ก่อน แล้วค่อยกลับมาชำระเงิน
               </p>
             </div>
-
-            <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-              <div class="flex items-start gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 font-semibold">
-                  1
-                </div>
-                <div class="space-y-1">
-                  <p class="text-sm font-semibold text-slate-900">
-                    ตรวจสอบไฟล์จาก Step 3
-                  </p>
-                  <p class="text-sm text-slate-600">
-                    ดูสีที่ใช้และตัวอย่าง PDF ให้จบก่อนสั่ง จะได้ไม่มีการแก้ทีหลัง
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-              <div class="flex items-start gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 font-semibold">
-                  2
-                </div>
-                <div class="space-y-1">
-                  <p class="text-sm font-semibold text-slate-900">
-                    เลือกแพ็กเกจที่ต้องการ
-                  </p>
-                  <p class="text-sm text-slate-600">
-                    • ชุดเต็ม: ฐาน + ตัวต่อครบตาม Bill of Materials<br>
-                    • เฉพาะไฟล์: PDF คำสั่งประกอบความละเอียดสูง
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-              <div class="flex items-start gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 font-semibold">
-                  3
-                </div>
-                <div class="space-y-1">
-                  <p class="text-sm font-semibold text-slate-900">
-                    ส่งข้อมูลเพื่อรับลิงก์ชำระเงิน
-                  </p>
-                  <p class="text-sm text-slate-600">
-                    ทีมงานจะส่งลิงก์จ่าย/เลขบัญชี ตามช่องทางที่คุณสะดวก และแจ้งเวลาจัดส่งทันที
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div v-if="user" class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-              <div class="flex items-center justify-between gap-2">
+            <div
+              v-else-if="isPreviewLoading"
+              class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm animate-pulse"
+            >
+              <div class="flex items-center justify-between gap-3">
                 <div>
-                  <p class="text-sm font-semibold text-slate-900">ออเดอร์ของฉัน</p>
-                  <p class="text-xs text-slate-500">5 รายการล่าสุด</p>
+                  <p
+                    class="text-xs font-semibold uppercase tracking-wide text-indigo-600"
+                  >
+                    กำลังโหลดพรีวิว
+                  </p>
+                  <p class="text-sm text-slate-600">
+                    ดึงรูปจากออเดอร์ที่ลิงก์มา...
+                  </p>
                 </div>
-                <button
-                  type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
-                  :disabled="myOrdersLoading"
-                  @click="loadMyOrders"
+                <span
+                  class="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-600"
+                  >loading</span
                 >
-                  รีเฟรช
-                </button>
               </div>
-              <p v-if="myOrdersError" class="mt-2 text-xs text-rose-600">โหลดออเดอร์ไม่สำเร็จ: {{ myOrdersError }}</p>
-              <div v-else class="mt-3 space-y-2">
-                <div v-if="myOrdersLoading" class="text-sm text-slate-500">กำลังโหลด...</div>
-                <div v-else-if="myOrders.length === 0" class="text-sm text-slate-500">ยังไม่มีออเดอร์</div>
-                <div
-                  v-else
-                  v-for="order in myOrders"
-                  :key="order.id"
-                  class="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2"
-                >
-                  <div class="flex-1">
-                    <p class="text-sm font-semibold text-slate-900">#{{ order.id }}</p>
-                    <p class="text-xs text-slate-500">
-                      อัปเดต {{ formatDateTime(order.updated_at || order.created_at) }}
-                    </p>
-                  </div>
-                  <span class="ml-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold" :class="statusBadge(order.status).color">
-                    {{ statusBadge(order.status).text }}
-                  </span>
-                </div>
-              </div>
+              <div class="mt-3 h-64 rounded-lg bg-slate-100"></div>
             </div>
           </div>
 
           <aside class="space-y-4">
-            <div class="rounded-xl border border-amber-100 bg-amber-50 px-4 py-4 shadow-inner">
+            <div
+              class="rounded-xl border border-amber-100 bg-amber-50 px-4 py-4 shadow-inner h-full"
+            >
               <p class="text-sm font-semibold text-amber-900">
-                เตรียมข้อมูลนี้ให้ครบ จ่ายได้ไว
+                สินค้าที่จะได้รับ
               </p>
               <ul class="mt-3 space-y-2 text-sm text-amber-900/90">
                 <li class="flex gap-2">
@@ -145,72 +126,6 @@
                   ที่อยู่จัดส่ง/จังหวัด (สำหรับคำนวณค่าขนส่ง)
                 </li>
               </ul>
-              <p class="mt-3 rounded-lg border border-amber-100 bg-white px-3 py-2 text-xs text-amber-800">
-                ระบบจ่ายออนไลน์กำลังเชื่อมต่อ ระหว่างนี้แจ้งข้อมูลกับทีมงานเพื่อรับลิงก์จ่ายได้ทันที
-              </p>
-              <div class="mt-4 flex flex-wrap gap-3 items-center">
-                <NuxtLink
-                  to="/brick"
-                  class="rounded-full border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-900 shadow-sm hover:bg-amber-50"
-                >
-                  กลับไปแก้ไขภาพ
-                </NuxtLink>
-                <template v-if="user">
-                  <div class="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-800 shadow-sm">
-                    <span class="h-6 w-6 rounded-full bg-emerald-600 text-white flex items-center justify-center">
-                      {{ user.email?.charAt(0)?.toUpperCase() || 'U' }}
-                    </span>
-                    <span>เข้าสู่ระบบแล้ว · {{ user.email }}</span>
-                  </div>
-                </template>
-                <button
-                  v-else
-                  type="button"
-                  class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow"
-                  @click="openAuthModal"
-                >
-                  เข้าสู่ระบบ/บันทึกงาน
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                  <path d="M6.146 11.354a.5.5 0 0 1 0-.708L8.793 8 6.146 5.354a.5.5 0 1 1 .708-.708l3 3a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <div class="rounded-xl border border-emerald-100 bg-white px-4 py-4 shadow-sm">
-              <div class="flex items-center justify-between gap-2">
-                <div>
-                  <p class="text-sm font-semibold text-slate-900">สร้างคำสั่งซื้อ</p>
-                  <p class="text-xs text-slate-500">ล็อกออเดอร์ไว้ แล้วทีมจะส่งลิงก์จ่ายให้</p>
-                </div>
-                <span
-                  v-if="orderSuccess"
-                  class="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700"
-                >
-                  #{{ orderSuccess.id }}
-                </span>
-              </div>
-              <div class="mt-3 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
-                  :disabled="isCreatingOrder"
-                  @click="handleCreateOrder"
-                >
-                  <span v-if="isCreatingOrder">กำลังสร้างออเดอร์…</span>
-                  <span v-else>สร้างออเดอร์/ขอลิงก์จ่าย</span>
-                </button>
-                <NuxtLink
-                  to="/brick"
-                  class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-                >
-                  กลับไปแก้ภาพ
-                </NuxtLink>
-              </div>
-              <p v-if="orderError" class="mt-2 text-xs text-rose-600">{{ orderError }}</p>
-              <p v-else-if="orderSuccess" class="mt-2 text-xs text-emerald-600">
-                บันทึกออเดอร์แล้ว ทีมงานจะติดต่อพร้อมลิงก์ชำระเงิน/เลขบัญชีตามช่องทางที่ระบุ
-              </p>
             </div>
           </aside>
         </div>
@@ -220,29 +135,79 @@
 </template>
 
 <script setup lang="ts">
+const route = useRoute();
 const { openAuthModal, user, requireAuth } = useAuthFlow();
-const { recordPendingPaymentOrder, fetchMyOrders } = useOrders();
+const { recordPendingPaymentOrder, fetchMyOrders, fetchOrderById, updateOrderAssets } = useOrders();
+const workflowCookie = useCookie<Record<string, any> | null>('brick-workflow', { sameSite: 'lax', path: '/' });
+const stepImagesCookie = useCookie<Record<string, any> | null>('brick-step-images', { sameSite: 'lax', path: '/' });
+const step3HashCookie = useCookie<Record<string, any> | null>('brick-step3-hash', { sameSite: 'lax', path: '/' });
+const selectedOrderId = computed(() => (route.query.id ? String(route.query.id) : null));
+const hasLinkedOrder = computed(() => Boolean(selectedOrderId.value));
 const finalPreview = useState<string | null>('brick-final-step3-preview', () => null);
+const originalImage = useState<string | null>('brick-original-image', () => null);
+const cropInteractionForOrder = useState<Record<string, any> | null>('brick-crop-interaction', () => null);
 const isCreatingOrder = ref(false);
 const orderError = ref<string | null>(null);
 const orderSuccess = ref<{ id: string | number } | null>(null);
 const myOrders = ref<Array<Record<string, any>>>([]);
 const myOrdersLoading = ref(false);
 const myOrdersError = ref<string | null>(null);
+const selectedOrder = ref<Record<string, any> | null>(null);
+const selectedOrderLoading = ref(false);
+const selectedOrderError = ref<string | null>(null);
+const linkedOrderPreview = computed(() => {
+  if (!hasLinkedOrder.value) return null;
+  const preview = selectedOrder.value?.preview_url || selectedOrder.value?.preview;
+  if (typeof preview !== 'string') return null;
+  const trimmed = preview.trim();
+  return trimmed || null;
+});
+const checkoutPreview = computed(() => linkedOrderPreview.value ?? finalPreview.value ?? null);
+const latestOrder = computed(() => (hasLinkedOrder.value ? selectedOrder.value : myOrders.value?.[0] ?? null));
+const isPreviewLoading = computed(() => hasLinkedOrder.value && (selectedOrderLoading.value || (!selectedOrder.value && !selectedOrderError.value)));
+const currentOrderId = computed(() => selectedOrderId.value ?? orderSuccess.value?.id ?? latestOrder.value?.id ?? null);
+const brickLink = computed(() => (currentOrderId.value ? `/brick?id=${currentOrderId.value}` : '/brick'));
 
-onMounted(() => {
-  // fallback for hard refresh: try sessionStorage (ไม่ใช้ cookie)
+const clearLocalMosaicPersistence = () => {
   try {
-    if (!finalPreview.value) {
-      const stored =
-        sessionStorage.getItem('brick-step3-final-preview') ??
-        localStorage.getItem('brick-step3-final-preview');
-      if (stored) {
-        finalPreview.value = stored;
-      }
+    sessionStorage.removeItem('brick-step3-final-preview');
+    localStorage.removeItem('brick-step3-final-preview');
+    sessionStorage.removeItem('brick-step3-final-base');
+    localStorage.removeItem('brick-step3-final-base');
+    const storageKey = `brick-workflow-image-${user.value?.id ?? 'guest'}`;
+    localStorage.removeItem(storageKey);
+    localStorage.removeItem('brick-workflow-image-guest');
+  } catch (error) {
+    console.warn('ไม่สามารถล้างข้อมูล preview ใน storage ได้', error);
+  }
+  workflowCookie.value = null;
+  stepImagesCookie.value = null;
+  step3HashCookie.value = null;
+};
+
+const restorePreviewFromStorage = () => {
+  try {
+    if (finalPreview.value) return;
+    const stored =
+      sessionStorage.getItem('brick-step3-final-preview') ?? localStorage.getItem('brick-step3-final-preview');
+    if (stored) {
+      finalPreview.value = stored;
     }
   } catch (error) {
     console.warn('ไม่สามารถอ่านภาพจาก sessionStorage/localStorage ได้', error);
+  }
+};
+
+onMounted(() => {
+  // หากมี id ให้โหลดจาก API ทันที เพื่อใช้ข้อมูลจริง
+  if (hasLinkedOrder.value) {
+    finalPreview.value = null; // เคลียร์ค่าเดิมเพื่อรอข้อมูลจากฐาน
+    if (user.value?.id) {
+      loadSelectedOrder();
+    }
+  } else {
+    // fallback for hard refresh: try sessionStorage (ไม่ใช้ cookie)
+    restorePreviewFromStorage();
   }
 });
 
@@ -258,6 +223,16 @@ const formatDateTime = (value: string | null | undefined) => {
   }
 };
 
+const formatCurrency = (value: number | string | null | undefined) => {
+  const num = Number(value);
+  if (Number.isNaN(num)) return '—';
+  return new Intl.NumberFormat('th-TH', {
+    style: 'currency',
+    currency: 'THB',
+    maximumFractionDigits: 0
+  }).format(num);
+};
+
 const statusBadge = (status: string | null | undefined) => {
   if (!status) return { text: 'รอชำระเงิน', color: 'bg-amber-50 text-amber-700 border-amber-200' };
   const s = String(status).toLowerCase();
@@ -267,16 +242,62 @@ const statusBadge = (status: string | null | undefined) => {
   return { text: status, color: 'bg-amber-50 text-amber-700 border-amber-200' };
 };
 
+const isPending = (status: string | null | undefined) => {
+  if (!status) return true;
+  const s = String(status).toLowerCase();
+  return s.includes('pending') || s.includes('รอชำระ') || s.includes('unpaid');
+};
+
+const paymentLink = (order: Record<string, any>) => {
+  const ref = order?.payment_ref || order?.payment_link;
+  if (typeof ref !== 'string') return null;
+  const trimmed = ref.trim();
+  if (!trimmed) return null;
+  const looksLikeUrl = /^https?:\/\//i.test(trimmed);
+  return looksLikeUrl ? trimmed : null;
+};
+
 const loadMyOrders = async () => {
   if (!user.value?.id) return;
   myOrdersLoading.value = true;
   myOrdersError.value = null;
   try {
-    myOrders.value = await fetchMyOrders(user.value.id, 5);
+    const result = await fetchMyOrders(user.value.id, { page: 1, pageSize: 5 });
+    myOrders.value = result.items;
   } catch (error: any) {
     myOrdersError.value = error?.message ?? 'ไม่สามารถโหลดออเดอร์ของคุณได้';
   } finally {
     myOrdersLoading.value = false;
+  }
+};
+
+const loadSelectedOrder = async () => {
+  if (!user.value?.id || !selectedOrderId.value) {
+    selectedOrder.value = null;
+    selectedOrderError.value = null;
+    return;
+  }
+  selectedOrderLoading.value = true;
+  selectedOrderError.value = null;
+  try {
+    const data = await fetchOrderById(selectedOrderId.value, user.value.id);
+    if (!data) {
+      selectedOrderError.value = 'ไม่พบออเดอร์จากลิงก์นี้';
+      selectedOrder.value = null;
+    } else {
+      selectedOrder.value = data;
+      if (data.original_image !== undefined) {
+        originalImage.value = data.original_image;
+      }
+      if (data.crop_interaction !== undefined) {
+        cropInteractionForOrder.value = data.crop_interaction;
+      }
+    }
+  } catch (error: any) {
+    selectedOrderError.value = error?.message ?? 'ไม่สามารถโหลดออเดอร์ที่ลิงก์มาได้';
+    selectedOrder.value = null;
+  } finally {
+    selectedOrderLoading.value = false;
   }
 };
 
@@ -285,11 +306,36 @@ watch(
   (next) => {
     if (next) {
       loadMyOrders();
+      loadSelectedOrder();
     } else {
       myOrders.value = [];
+      selectedOrder.value = null;
     }
   },
   { immediate: true }
+);
+
+watch(
+  () => linkedOrderPreview.value,
+  (next) => {
+    if (!hasLinkedOrder.value) return;
+    finalPreview.value = next ?? null;
+  }
+);
+
+watch(
+  () => selectedOrderId.value,
+  (next) => {
+    if (!next && !finalPreview.value) {
+      restorePreviewFromStorage();
+    }
+    if (user.value?.id && selectedOrderId.value) {
+      loadSelectedOrder();
+    } else {
+      selectedOrder.value = null;
+      selectedOrderError.value = null;
+    }
+  }
 );
 
 const handleCreateOrder = async () => {
@@ -298,19 +344,37 @@ const handleCreateOrder = async () => {
     requireAuth(() => handleCreateOrder());
     return;
   }
-  if (!finalPreview.value) {
+  if (!checkoutPreview.value) {
     orderError.value = 'ยังไม่มีรูป Step 3 กรุณากลับไปสร้างก่อน';
     return;
   }
   isCreatingOrder.value = true;
   try {
-    const data = await recordPendingPaymentOrder({
-      userId: user.value.id,
-      previewUrl: finalPreview.value,
-      source: 'checkout'
-    });
-    orderSuccess.value = { id: data?.id ?? 'new' };
+    let data: any = null;
+    if (hasLinkedOrder.value && selectedOrderId.value) {
+      data = await updateOrderAssets(
+        selectedOrderId.value,
+        {
+          previewUrl: checkoutPreview.value,
+          source: 'checkout:linked',
+          cropInteraction: cropInteractionForOrder.value ?? null,
+          originalImage: originalImage.value ?? null
+        },
+        user.value.id
+      );
+      orderSuccess.value = { id: selectedOrderId.value };
+    } else {
+      data = await recordPendingPaymentOrder({
+        userId: user.value.id,
+        previewUrl: checkoutPreview.value,
+        source: 'checkout',
+        cropInteraction: cropInteractionForOrder.value ?? null,
+        originalImage: originalImage.value ?? null
+      });
+      orderSuccess.value = { id: data?.id ?? 'new' };
+    }
     await loadMyOrders();
+    clearLocalMosaicPersistence();
   } catch (error: any) {
     orderError.value = error?.message ?? 'ไม่สามารถสร้างออเดอร์ได้';
     console.error('create order error', error);

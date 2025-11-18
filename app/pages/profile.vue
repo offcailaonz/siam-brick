@@ -16,7 +16,7 @@
           </div>
         </header>
 
-        <div class="grid gap-6 px-5 py-6 lg:grid-cols-[1.4fr,1fr]">
+        <div class="grid gap-6 px-5 py-6">
           <div class="space-y-4">
             <div class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
               <div class="flex items-center justify-between gap-2">
@@ -103,47 +103,63 @@
                     <span>ยอดรวม</span>
                     <span class="font-semibold text-slate-900">{{ formatCurrency(order.total_amount) }}</span>
                   </div>
+                  <div v-if="isPending(order.status)" class="mt-3 flex flex-wrap items-center gap-2">
+                    <template v-if="paymentLink(order)">
+                      <a
+                        :href="paymentLink(order)"
+                        target="_blank"
+                        rel="noopener"
+                        class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
+                      >
+                        ไปชำระเงิน
+                      </a>
+                      <p class="text-xs text-slate-500">เปิดลิงก์จ่ายในหน้าต่างใหม่</p>
+                    </template>
+                    <template v-else>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <NuxtLink
+                          :to="`/brick?id=${order.id}`"
+                          class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                        >
+                          แก้ไขรูปภาพ
+                        </NuxtLink>
+                        <NuxtLink
+                          :to="`/checkout?id=${order.id}`"
+                          class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
+                        >
+                          ชำระเงิน
+                        </NuxtLink>
+                      </div>
+                      <p class="text-xs text-slate-500">
+                        {{ order.payment_ref ? `เลขอ้างอิงการจ่าย: ${order.payment_ref}` : 'ยังไม่มีลิงก์จ่าย ทีมงานจะติดต่อให้ชำระ' }}
+                      </p>
+                    </template>
+                  </div>
+                </div>
+                <div v-if="myOrdersTotal > myOrdersPageSize" class="flex items-center justify-between pt-2 text-xs text-slate-600">
+                  <span>หน้า {{ myOrdersPage }} / {{ myOrdersTotalPages }}</span>
+                  <div class="flex items-center gap-2">
+                    <button
+                      type="button"
+                      class="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 disabled:opacity-50"
+                      :disabled="myOrdersLoading || myOrdersPage === 1"
+                      @click="goPage('prev')"
+                    >
+                      ก่อนหน้า
+                    </button>
+                    <button
+                      type="button"
+                      class="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 disabled:opacity-50"
+                      :disabled="myOrdersLoading || myOrdersPage === myOrdersTotalPages"
+                      @click="goPage('next')"
+                    >
+                      ถัดไป
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-
-          <aside class="space-y-4">
-            <div class="rounded-xl border border-indigo-100 bg-white px-4 py-4 shadow-sm">
-              <p class="text-sm font-semibold text-slate-900">จัดการบัญชี</p>
-              <p class="text-xs text-slate-500 mt-1">เข้าดูข้อมูลและอัปเดตได้ที่นี่</p>
-              <div class="mt-3 space-y-2 text-sm text-slate-700">
-                <p>• ดูสถานะออเดอร์ล่าสุด</p>
-                <p>• ตรวจสอบอีเมลและเวลาล็อกอิน</p>
-                <p>• ถ้าเจอปัญหาแจ้งทีมงานได้ทันที</p>
-              </div>
-              <div class="mt-4 flex flex-wrap gap-3">
-                <NuxtLink
-                  to="/checkout"
-                  class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-                >
-                  กลับไป Checkout
-                </NuxtLink>
-                <button
-                  v-if="user"
-                  type="button"
-                  class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60"
-                  :disabled="myOrdersLoading"
-                  @click="handleRefreshOrders"
-                >
-                  รีเฟรชออเดอร์
-                </button>
-                <button
-                  v-else
-                  type="button"
-                  class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow"
-                  @click="openAuthModal"
-                >
-                  เข้าสู่ระบบ
-                </button>
-              </div>
-            </div>
-          </aside>
         </div>
       </section>
     </main>
@@ -157,6 +173,10 @@ const { fetchMyOrders } = useOrders();
 const myOrders = ref<Array<Record<string, any>>>([]);
 const myOrdersLoading = ref(false);
 const myOrdersError = ref<string | null>(null);
+const myOrdersTotal = ref(0);
+const myOrdersPage = ref(1);
+const myOrdersPageSize = 5;
+const myOrdersTotalPages = computed(() => Math.max(1, Math.ceil(myOrdersTotal.value / myOrdersPageSize)));
 
 const userInitial = computed(() => user.value?.email?.charAt(0)?.toUpperCase() || 'U');
 
@@ -187,12 +207,29 @@ const formatCurrency = (value: number | string | null | undefined) => {
   return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', maximumFractionDigits: 0 }).format(num);
 };
 
+const isPending = (status: string | null | undefined) => {
+  if (!status) return true;
+  const s = String(status).toLowerCase();
+  return s.includes('pending') || s.includes('รอชำระ') || s.includes('unpaid');
+};
+
+const paymentLink = (order: Record<string, any>) => {
+  const ref = order?.payment_ref || order?.payment_link;
+  if (typeof ref !== 'string') return null;
+  const trimmed = ref.trim();
+  if (!trimmed) return null;
+  const looksLikeUrl = /^https?:\/\//i.test(trimmed);
+  return looksLikeUrl ? trimmed : null;
+};
+
 const loadMyOrders = async () => {
   if (!user.value?.id) return;
   myOrdersLoading.value = true;
   myOrdersError.value = null;
   try {
-    myOrders.value = await fetchMyOrders(user.value.id, 5);
+    const result = await fetchMyOrders(user.value.id, { page: myOrdersPage.value, pageSize: myOrdersPageSize });
+    myOrders.value = result.items;
+    myOrdersTotal.value = result.total;
   } catch (error: any) {
     myOrdersError.value = error?.message ?? 'ไม่สามารถโหลดออเดอร์ของคุณได้';
   } finally {
@@ -206,6 +243,17 @@ const handleRefreshOrders = async () => {
     return;
   }
   await loadMyOrders();
+};
+
+const goPage = async (direction: 'prev' | 'next') => {
+  if (direction === 'prev' && myOrdersPage.value > 1) {
+    myOrdersPage.value -= 1;
+    await loadMyOrders();
+  }
+  if (direction === 'next' && myOrdersPage.value < myOrdersTotalPages.value) {
+    myOrdersPage.value += 1;
+    await loadMyOrders();
+  }
 };
 
 watch(
