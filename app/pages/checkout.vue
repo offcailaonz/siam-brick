@@ -19,6 +19,22 @@
 
         <div class="grid gap-6 px-5 py-6 lg:grid-cols-[1.6fr,1fr]">
           <div class="space-y-4">
+            <div v-if="finalPreview" class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">ตัวอย่างงานของคุณ</p>
+                  <p class="text-sm text-slate-600">ภาพ Step 3 ล่าสุด (รวมการแก้ไขแล้ว)</p>
+                </div>
+                <span class="rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700">Preview</span>
+              </div>
+              <div class="mt-3 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                <img :src="finalPreview" alt="Final preview" class="w-full max-h-[420px] object-contain bg-white" />
+              </div>
+              <p class="mt-2 text-xs text-slate-500">
+                หากต้องการแก้ไขเพิ่มเติม โปรดกลับไปที่ Step 3 แล้วสร้างใหม่ จากนั้นค่อยกลับมาชำระเงิน
+              </p>
+            </div>
+
             <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
               <div class="flex items-start gap-3">
                 <div class="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 font-semibold">
@@ -134,6 +150,23 @@
 
 <script setup lang="ts">
 const { openAuthModal, user } = useAuthFlow();
+const finalPreview = useState<string | null>('brick-final-step3-preview', () => null);
+
+onMounted(() => {
+  // fallback for hard refresh: try sessionStorage (ไม่ใช้ cookie)
+  try {
+    if (!finalPreview.value) {
+      const stored =
+        sessionStorage.getItem('brick-step3-final-preview') ??
+        localStorage.getItem('brick-step3-final-preview');
+      if (stored) {
+        finalPreview.value = stored;
+      }
+    }
+  } catch (error) {
+    console.warn('ไม่สามารถอ่านภาพจาก sessionStorage/localStorage ได้', error);
+  }
+});
 </script>
 <style lang="scss">
 @mixin brick-bg($color, $hue: 0deg) {

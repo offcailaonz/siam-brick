@@ -491,10 +491,10 @@
           <div class="flex items-center justify-between flex-wrap gap-3">
             <div>
               <h3 class="text-lg font-semibold text-slate-900">
-                Step 4 – ดาวน์โหลดคำสั่งประกอบ (PDF)
+                Step 4 – ชำระเงินเพื่อปลดล็อก PDF เต็ม + รับอุปกรณ์ครบเซต
               </h3>
-              <p class="text-xs text-slate-500 mt-1">
-                ไฟล์ที่สร้างจะมีหน้าแนะนำ + หน้าสำหรับแต่ละแผ่น 16×16 stud
+              <p class="text-xs text-slate-600 mt-1">
+                ได้ทั้งคู่มือต่อทุกหน้า พร้อมชุดตัวต่อ ฐานต่อ และกรอบตัวต่อภาพ
               </p>
             </div>
             <span
@@ -504,8 +504,36 @@
             >
           </div>
 
-          <div class="mt-4 flex flex-wrap items-center gap-4 justify-between">
-            <label
+          <div v-if="isGeneratingPdf" class="mt-4 space-y-2">
+            <div class="h-2 w-full rounded-full bg-white/60">
+              <div
+                class="h-2 rounded-full bg-amber-500 transition-all duration-200"
+                :style="{ width: pdfProgressPercent + '%' }"
+              ></div>
+            </div>
+            <p class="text-xs font-medium text-amber-900">
+              {{ pdfProgressLabel || 'กำลังเตรียมไฟล์...' }}
+            </p>
+          </div>
+
+          <p
+            v-else-if="pdfError"
+            class="text-sm text-rose-600 mt-3"
+            style="height: 36px;"
+          >
+            {{ pdfError }}
+          </p>
+          <p
+            v-else-if="pdfSuccessMessage"
+            class="text-sm text-emerald-600 mt-3"
+            style="height: 36px;"
+          >
+            {{ pdfSuccessMessage }}
+          </p>
+          <p v-else style="height: 36px;"></p>
+
+          <div class="mt-4 flex flex-wrap items-center gap-4 justify-end">
+            <!-- <label
               class="inline-flex items-center gap-2 text-sm text-slate-700"
             >
               <input
@@ -517,11 +545,11 @@
                 export แบบ <strong>High quality</strong> ({{ HIGH_DPI }} DPI,
                 ไฟล์เดียว)
               </span>
-            </label>
+            </label> -->
 
-            <div>
+            <div class="flex flex-wrap gap-3">
               <button
-                class="rounded-full bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
+                class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-white px-4 py-2 text-sm font-semibold text-amber-800 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
                 type="button"
                 :disabled="!step3Ready || isGeneratingPdf || isStep2Processing"
                 @click="handleGenerateInstructions"
@@ -529,14 +557,13 @@
                 <span v-if="isGeneratingPdf">กำลังสร้างไฟล์…</span>
                 <span v-else>ดาวน์โหลดตัวอย่าง PDF</span>
               </button>
-
               <button
-                class="ms-3 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
+                class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
                 type="button"
                 :disabled="!step3Ready || isStep2Processing"
                 @click="goToCheckout"
               >
-                <span>ไปหน้าชำระเงิน</span>
+                <span>ชำระเงิน เพื่อรับชุดเต็ม</span>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="16"
@@ -552,32 +579,6 @@
               </button>
             </div>
           </div>
-
-          <p class="text-xs text-slate-500 mt-2">
-            * ต้องทำ Step 3 ให้เสร็จก่อนจึงจะสร้าง PDF ได้
-          </p>
-
-          <div v-if="isGeneratingPdf" class="mt-4 space-y-2">
-            <div class="h-2 w-full rounded-full bg-white/60">
-              <div
-                class="h-2 rounded-full bg-amber-500 transition-all duration-200"
-                :style="{ width: pdfProgressPercent + '%' }"
-              ></div>
-            </div>
-            <p class="text-xs font-medium text-amber-900">
-              {{ pdfProgressLabel || 'กำลังเตรียมไฟล์...' }}
-            </p>
-          </div>
-
-          <p v-if="pdfError" class="text-sm text-rose-600 mt-3">
-            {{ pdfError }}
-          </p>
-          <p
-            v-else-if="pdfSuccessMessage"
-            class="text-sm text-emerald-600 mt-3"
-          >
-            {{ pdfSuccessMessage }}
-          </p>
         </article>
       </div>
     </section>
@@ -818,8 +819,20 @@ type BrickWorkflowSession = {
   highQuality: boolean;
 };
 
+type StepImageSnapshot = {
+  v: 1;
+  userId: string;
+  step1: string | null;
+  step2: string | null;
+  step3Base: string | null;
+  step3Preview: string | null;
+  baseHash?: string | null;
+  srcHash?: string | null;
+};
+
 const PERSISTENCE_COOKIE_NAME = 'brick-workflow';
 const PERSISTENCE_IMAGE_STORAGE_KEY = 'brick-workflow-image';
+const STEP_IMAGES_COOKIE = 'brick-step-images';
 
 const props = withDefaults(
   defineProps<{
@@ -848,6 +861,21 @@ const brickWorkflowCookie = useCookie<Record<string, BrickWorkflowSession> | nul
   path: '/',
   maxAge: 60 * 60 * 24 * 30
 });
+const stepImagesCookie = useCookie<Record<string, StepImageSnapshot> | null>(STEP_IMAGES_COOKIE, {
+  default: () => null,
+  sameSite: 'lax',
+  path: '/',
+  maxAge: 60 * 60 * 24 * 30
+});
+const step3HashCookie = useCookie<{ v: 1; userId: string; baseHash: string | null; srcHash: string | null } | null>(
+  STEP3_HASH_COOKIE,
+  {
+    default: () => null,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 30
+  }
+);
 const resolvedImageStorageKey = computed(() => `${PERSISTENCE_IMAGE_STORAGE_KEY}-${currentUserId.value}`);
 
 const studMapEntries = reactive(studMaps);
@@ -876,6 +904,296 @@ const modalOverrides = ref<Array<number | null> | null>(null);
 const modalQuantPixels = ref<Uint8ClampedArray | null>(null);
 const step3QuantPixels = ref<Uint8ClampedArray | null>(null); // current edited image
 const step3QuantPixelsBase = ref<Uint8ClampedArray | null>(null); // original quantized image from step 2
+const finalStep3Preview = useState<string | null>('brick-final-step3-preview', () => null);
+const pendingRestoredStep3Base = ref<string | null>(null);
+const restoredStep3Applied = ref(false);
+const persistedStep3BaseHash = ref<string | null>(null);
+const persistedStep3SourceHash = ref<string | null>(null);
+const lastGeneratedStep3BaseHash = ref<string | null>(null);
+const lastGeneratedStep3SourceHash = ref<string | null>(null);
+const suspendStep3Persistence = ref(false);
+const hashString = (value: string) => {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return `h${hash >>> 0}`;
+};
+const hashUint8Array = (arr: Uint8Array | Uint8ClampedArray | null) => {
+  if (!arr) return null;
+  let hash = 0;
+  for (let i = 0; i < arr.length; i++) {
+    hash = (hash << 5) - hash + arr[i];
+    hash |= 0;
+  }
+  return `a${hash >>> 0}`;
+};
+const clearStepImagesForUser = () => {
+  if (!stepImagesCookie.value?.[currentUserId.value]) {
+    return;
+  }
+  const next = { ...(stepImagesCookie.value ?? {}) };
+  delete next[currentUserId.value];
+  stepImagesCookie.value = Object.keys(next).length > 0 ? next : null;
+};
+const persistStepImages = (payload: Partial<Omit<StepImageSnapshot, 'v' | 'userId'>>) => {
+  if (!props.enablePersistence) {
+    return;
+  }
+  const existing = stepImagesCookie.value ?? {};
+  const current: StepImageSnapshot =
+    existing[currentUserId.value] ?? {
+      v: 1,
+      userId: currentUserId.value,
+      step1: null,
+      step2: null,
+      step3Base: null,
+      step3Preview: null,
+      baseHash: null,
+      srcHash: null
+    };
+  const next: StepImageSnapshot = {
+    ...current,
+    ...payload,
+    v: 1,
+    userId: currentUserId.value
+  };
+  stepImagesCookie.value = { ...existing, [currentUserId.value]: next };
+};
+const persistFinalStep3Preview = (preview: string | null, baseDataUrl?: string | null, baseSourceHash?: string | null) => {
+  finalStep3Preview.value = preview;
+  if (typeof window === 'undefined') {
+    return;
+  }
+  const isClear = !preview && !baseDataUrl && baseSourceHash === undefined;
+  const baseHash = baseDataUrl
+    ? hashString(baseDataUrl)
+    : isClear
+      ? null
+      : lastGeneratedStep3BaseHash.value ?? persistedStep3BaseHash.value ?? null;
+  const sourceHash = baseSourceHash ?? (isClear ? null : lastGeneratedStep3SourceHash.value ?? persistedStep3SourceHash.value ?? null);
+  lastGeneratedStep3BaseHash.value = baseHash;
+  persistedStep3BaseHash.value = baseHash;
+  lastGeneratedStep3SourceHash.value = sourceHash;
+  persistedStep3SourceHash.value = sourceHash;
+  if (baseHash || sourceHash) {
+    step3HashCookie.value = { v: 1, userId: currentUserId.value, baseHash, srcHash: sourceHash };
+  } else {
+    step3HashCookie.value = null;
+  }
+  try {
+    if (preview) {
+      sessionStorage.setItem(STEP3_FINAL_PREVIEW_STORAGE, preview);
+    } else {
+      sessionStorage.removeItem(STEP3_FINAL_PREVIEW_STORAGE);
+    }
+  } catch (error) {
+    console.warn('ไม่สามารถบันทึก/ล้างภาพตัวอย่างจาก sessionStorage ได้', error);
+  }
+  try {
+    if (preview) {
+      localStorage.setItem(STEP3_FINAL_PREVIEW_STORAGE, preview);
+    } else {
+      localStorage.removeItem(STEP3_FINAL_PREVIEW_STORAGE);
+    }
+  } catch (error) {
+    console.warn('ไม่สามารถบันทึก/ล้างภาพตัวอย่างจาก localStorage ได้', error);
+  }
+  const base = baseDataUrl ?? null;
+  try {
+    if (base) {
+      sessionStorage.setItem(STEP3_FINAL_BASE_STORAGE, base);
+    } else {
+      sessionStorage.removeItem(STEP3_FINAL_BASE_STORAGE);
+    }
+  } catch (error) {
+    console.warn('ไม่สามารถบันทึก/ล้าง base step3 ไปที่ sessionStorage ได้', error);
+  }
+  try {
+    if (base) {
+      localStorage.setItem(STEP3_FINAL_BASE_STORAGE, base);
+    } else {
+      localStorage.removeItem(STEP3_FINAL_BASE_STORAGE);
+    }
+  } catch (error) {
+    console.warn('ไม่สามารถบันทึก/ล้าง base step3 ไปที่ localStorage ได้', error);
+  }
+  persistStepImages({
+    step3Base: base,
+    step3Preview: preview,
+    baseHash,
+    srcHash: sourceHash ?? null
+  });
+};
+const loadDataUrlToCanvas = async (
+  canvas: HTMLCanvasElement | null,
+  dataUrl: string | null,
+  width?: number,
+  height?: number
+): Promise<{ pixels: Uint8ClampedArray; width: number; height: number } | null> => {
+  if (!canvas || !dataUrl) {
+    return null;
+  }
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const targetWidth = width ?? img.width;
+      const targetHeight = height ?? img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(null);
+        return;
+      }
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      ctx.clearRect(0, 0, targetWidth, targetHeight);
+      ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+      resolve({ pixels: getPixelArrayFromCanvas(canvas), width: img.width, height: img.height });
+    };
+    img.onerror = () => resolve(null);
+    img.src = dataUrl;
+  });
+};
+const restoreFromStepImages = async (snapshot: StepImageSnapshot): Promise<boolean> => {
+  if (!snapshot.step1 || !snapshot.step2 || !snapshot.step3Base) {
+    return false;
+  }
+  const step1Result = await loadDataUrlToCanvas(step1Canvas.value, snapshot.step1);
+  if (!step1Result) {
+    return false;
+  }
+  initialCropApplied.value = true;
+  uploadedImage.value = snapshot.step1;
+  imageDimensions.value = { width: step1Result.width, height: step1Result.height };
+  step1Ready.value = true;
+
+  const step2Result = await loadDataUrlToCanvas(
+    step2Canvas.value,
+    snapshot.step2,
+    targetResolution.width,
+    targetResolution.height
+  );
+  if (!step2Result) {
+    return false;
+  }
+  step2PixelData.value = Uint8ClampedArray.from(step2Result.pixels);
+  renderUpscaledPreviewToTarget(step2UpscaledCanvas, step2Result.pixels);
+  step2Ready.value = true;
+  step2Error.value = null;
+
+  const step3Result = await loadDataUrlToCanvas(
+    step3Canvas.value,
+    snapshot.step3Base,
+    targetResolution.width,
+    targetResolution.height
+  );
+  if (!step3Result) {
+    return false;
+  }
+  step3QuantPixels.value = Uint8ClampedArray.from(step3Result.pixels);
+  step3QuantPixelsBase.value = Uint8ClampedArray.from(step3Result.pixels);
+  drawStudImageOnCanvas(
+    step3Result.pixels,
+    targetResolution.width,
+    SCALING_FACTOR,
+    step3UpscaledCanvas.value,
+    selectedPixelType.value
+  );
+  const baseHash = snapshot.baseHash ?? hashString(step3Canvas.value?.toDataURL('image/png', 0.92) ?? snapshot.step3Base);
+  const srcHash = snapshot.srcHash ?? hashUint8Array(step3Result.pixels);
+  persistFinalStep3Preview(
+    snapshot.step3Preview ?? step3UpscaledCanvas.value?.toDataURL('image/png', 0.92) ?? null,
+    snapshot.step3Base,
+    srcHash ?? undefined
+  );
+  step3QuantizationError.value = getAverageQuantizationError(
+    step2PixelData.value ? Array.from(step2PixelData.value) : Array.from(step3Result.pixels),
+    Array.from(step3Result.pixels),
+    ciede2000ColorDistance
+  );
+  const usageMap = getUsedPixelsStudMap(step3Result.pixels);
+  step3StudUsage.value = Object.entries(usageMap)
+    .map(([hex, count]) => ({ hex, count, name: colorName(hex) ?? hex }))
+    .sort((a, b) => b.count - a.count);
+  if (!userPaintColorTouched.value && step3StudUsage.value.length > 0) {
+    paintColorHex.value = step3StudUsage.value[0].hex;
+  }
+  step3Error.value = null;
+  step3Ready.value = true;
+  isProcessing.value = false;
+  step3HashCookie.value = baseHash || srcHash ? { v: 1, userId: currentUserId.value, baseHash, srcHash: srcHash ?? null } : null;
+  return true;
+};
+let applyingRestoredStep3 = false;
+const applyRestoredStep3BaseIfNeeded = () => {
+  if (!pendingRestoredStep3Base.value || restoredStep3Applied.value || applyingRestoredStep3) {
+    if (suspendStep3Persistence.value) {
+      suspendStep3Persistence.value = false;
+    }
+    return;
+  }
+  if (!step3Canvas.value || !step3UpscaledCanvas.value) {
+    return;
+  }
+  applyingRestoredStep3 = true;
+  const dataUrl = pendingRestoredStep3Base.value;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    pendingRestoredStep3Base.value = null;
+    restoredStep3Applied.value = true;
+    applyingRestoredStep3 = false;
+    const baseCanvas = document.createElement('canvas');
+    baseCanvas.width = targetResolution.width;
+    baseCanvas.height = targetResolution.height;
+    const ctx = baseCanvas.getContext('2d');
+    if (!ctx) {
+      return;
+    }
+    ctx.clearRect(0, 0, baseCanvas.width, baseCanvas.height);
+    ctx.drawImage(img, 0, 0, baseCanvas.width, baseCanvas.height);
+    const quantPixels = new Uint8ClampedArray(ctx.getImageData(0, 0, baseCanvas.width, baseCanvas.height).data);
+    step3QuantPixels.value = quantPixels;
+    step3QuantPixelsBase.value = step3QuantPixelsBase.value ?? Uint8ClampedArray.from(quantPixels);
+    drawPixelsOnCanvas(quantPixels, step3Canvas.value);
+    drawStudImageOnCanvas(
+      quantPixels,
+      targetResolution.width,
+      SCALING_FACTOR,
+      step3UpscaledCanvas.value,
+      selectedPixelType.value
+    );
+    const basePixelsForError = step2PixelData.value ? Array.from(step2PixelData.value) : Array.from(quantPixels);
+    step3QuantizationError.value = getAverageQuantizationError(
+      basePixelsForError,
+      Array.from(quantPixels),
+      ciede2000ColorDistance
+    );
+    const usageMap = getUsedPixelsStudMap(quantPixels);
+    step3StudUsage.value = Object.entries(usageMap)
+      .map(([hex, count]) => ({ hex, count, name: colorName(hex) ?? hex }))
+      .sort((a, b) => b.count - a.count);
+    if (!userPaintColorTouched.value && step3StudUsage.value.length > 0) {
+      paintColorHex.value = step3StudUsage.value[0].hex;
+    }
+    persistFinalStep3Preview(
+      step3UpscaledCanvas.value.toDataURL('image/png', 0.92),
+      baseCanvas.toDataURL('image/png', 0.92)
+    );
+    step3Ready.value = true;
+    step3Error.value = null;
+    suspendStep3Persistence.value = false;
+  };
+  img.onerror = () => {
+    applyingRestoredStep3 = false;
+    restoredStep3Applied.value = true;
+    pendingRestoredStep3Base.value = null;
+    suspendStep3Persistence.value = false;
+  };
+  img.src = dataUrl;
+};
 const modalBaseQuantPixels = ref<Uint8ClampedArray | null>(null); // baseline for current modal session (original)
 let modalRenderTimeout: ReturnType<typeof setTimeout> | null = null;
 const selectedPaintTool = ref<PaintTool>('brush');
@@ -902,11 +1220,15 @@ const RESOLUTION_STEP = 16;
 const SCALING_FACTOR = 30;
 const SPARSE_COLOR_THRESHOLD = 10;
 const PDF_FILENAME_BASE = 'Siam-Brick-Instructions';
+const PREVIEW_CLEAR_PAGE_COUNT = 2; // page 1-2 clear; rest blurred
 const APP_WATERMARK = {
   ...DEFAULT_WATERMARK,
   title: 'Generated by siam-brick.com',
   version: 'siam-brick preview'
 };
+const STEP3_FINAL_PREVIEW_STORAGE = 'brick-step3-final-preview';
+const STEP3_FINAL_BASE_STORAGE = 'brick-step3-final-base';
+const STEP3_HASH_COOKIE = 'brick-step3-hash';
 type PaintTool = 'brush' | 'eraser' | 'dropper';
 
 const PaintbrushIcon = defineComponent({
@@ -1302,6 +1624,7 @@ const persistSessionState = () => {
     } catch (error) {
       console.warn('ไม่สามารถล้างภาพจาก localStorage ได้', error);
     }
+    clearStepImagesForUser();
   }
 };
 
@@ -1337,6 +1660,14 @@ const restoreFromPersistence = async (): Promise<boolean> => {
   if (!props.enablePersistence || typeof window === 'undefined') {
     return false;
   }
+  const cookieHash = step3HashCookie.value;
+  if (cookieHash?.userId === currentUserId.value) {
+    persistedStep3BaseHash.value = cookieHash.baseHash ?? null;
+    persistedStep3SourceHash.value = cookieHash.srcHash ?? null;
+  } else {
+    persistedStep3BaseHash.value = null;
+    persistedStep3SourceHash.value = null;
+  }
   const persisted = brickWorkflowCookie.value?.[currentUserId.value];
   if (!persisted || (persisted.userId && persisted.userId !== currentUserId.value)) {
     return false;
@@ -1368,12 +1699,50 @@ const restoreFromPersistence = async (): Promise<boolean> => {
   if (!persisted.hasImage) {
     return false;
   }
+  const stepImageSnapshot = stepImagesCookie.value?.[currentUserId.value];
+  if (stepImageSnapshot?.userId === currentUserId.value) {
+    resetWorkflowState({ clearPersistedPreview: false });
+    const restoredFromCookie = await restoreFromStepImages(stepImageSnapshot);
+    if (restoredFromCookie) {
+      lastPersistedImageDataByUser[currentUserId.value] = stepImageSnapshot.step1 ?? null;
+      return true;
+    }
+    resetWorkflowState({ clearPersistedPreview: false });
+  }
   const storedImage = localStorage.getItem(resolvedImageStorageKey.value);
   if (storedImage) {
     lastPersistedImageDataByUser[currentUserId.value] = storedImage;
-    resetWorkflowState();
+    resetWorkflowState({ clearPersistedPreview: false });
     isProcessing.value = true;
     drawImagePreview(storedImage);
+    try {
+      const persistedPreview =
+        sessionStorage.getItem(STEP3_FINAL_PREVIEW_STORAGE) ??
+        localStorage.getItem(STEP3_FINAL_PREVIEW_STORAGE);
+      if (persistedPreview) {
+        persistFinalStep3Preview(persistedPreview);
+      }
+      const persistedBase =
+        sessionStorage.getItem(STEP3_FINAL_BASE_STORAGE) ??
+        localStorage.getItem(STEP3_FINAL_BASE_STORAGE);
+      if (persistedBase) {
+        pendingRestoredStep3Base.value = persistedBase;
+        restoredStep3Applied.value = false;
+        persistedStep3BaseHash.value = hashString(persistedBase);
+        if (!persistedStep3SourceHash.value && step3HashCookie.value?.srcHash) {
+          persistedStep3SourceHash.value = step3HashCookie.value.srcHash;
+        }
+        suspendStep3Persistence.value = true;
+        step3HashCookie.value = {
+          v: 1,
+          userId: currentUserId.value,
+          baseHash: persistedStep3BaseHash.value,
+          srcHash: persistedStep3SourceHash.value ?? null
+        };
+      }
+    } catch (error) {
+      console.warn('ไม่สามารถโหลดภาพตัวอย่างจาก sessionStorage/localStorage ได้', error);
+    }
     return true;
   }
   return false;
@@ -1583,7 +1952,8 @@ const applyInitialCrop = () => {
   scheduleStep2Processing(100);
 };
 
-const resetWorkflowState = () => {
+const resetWorkflowState = (options: { clearPersistedPreview?: boolean } = {}) => {
+  const { clearPersistedPreview = true } = options;
   step1Ready.value = false;
   step2Ready.value = false;
   step3Ready.value = false;
@@ -1615,6 +1985,19 @@ const resetWorkflowState = () => {
   cropRect.top = 0;
   cropRect.width = 1;
   cropRect.height = 1;
+  if (clearPersistedPreview) {
+    persistFinalStep3Preview(null);
+    step3HashCookie.value = null;
+    clearStepImagesForUser();
+  }
+  pendingRestoredStep3Base.value = null;
+  restoredStep3Applied.value = false;
+  applyingRestoredStep3 = false;
+  persistedStep3BaseHash.value = null;
+  persistedStep3SourceHash.value = null;
+  lastGeneratedStep3BaseHash.value = null;
+  lastGeneratedStep3SourceHash.value = null;
+  suspendStep3Persistence.value = false;
 };
 
 const normalizeCanvasPixels = (canvas: HTMLCanvasElement) => {
@@ -1648,6 +2031,14 @@ const drawImagePreview = (src: string) => {
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     normalizeCanvasPixels(canvas);
     uploadedImage.value = canvas.toDataURL('image/png', 0.92);
+    persistStepImages({
+      step1: uploadedImage.value,
+      step2: null,
+      step3Base: null,
+      step3Preview: null,
+      baseHash: null,
+      srcHash: null
+    });
     imageDimensions.value = { width: img.width, height: img.height };
     step1Ready.value = true;
     step2Ready.value = false;
@@ -1732,6 +2123,7 @@ const renderStep2Preview = (pixels: Uint8ClampedArray, markReady = true) => {
   outputCanvas.width = targetResolution.width;
   outputCanvas.height = targetResolution.height;
   drawPixelsOnCanvas(pixels, outputCanvas);
+  persistStepImages({ step2: outputCanvas.toDataURL('image/png', 0.92) });
 
   upscaledCanvas.width = targetResolution.width * SCALING_FACTOR;
   upscaledCanvas.height = targetResolution.height * SCALING_FACTOR;
@@ -1858,7 +2250,6 @@ const runStep3Pipeline = () => {
     if (!isHighQualityColorMode.value) {
       quantPixels = replaceSparseColors(quantPixels, SPARSE_COLOR_THRESHOLD, ciede2000ColorDistance);
     }
-
     const step3BaseCanvas = step3Canvas.value;
     const step3Upscaled = step3UpscaledCanvas.value;
     if (!step3BaseCanvas || !step3Upscaled) {
@@ -1875,6 +2266,14 @@ const runStep3Pipeline = () => {
       step3Upscaled,
       selectedPixelType.value
     );
+    const baseCanvasDataUrl = step3BaseCanvas.toDataURL('image/png', 0.92);
+    const baseSourceHash = hashUint8Array(quantPixels);
+    lastGeneratedStep3SourceHash.value = baseSourceHash;
+    lastGeneratedStep3BaseHash.value = hashString(baseCanvasDataUrl);
+    const shouldSkipPersist = suspendStep3Persistence.value && pendingRestoredStep3Base.value;
+    if (!shouldSkipPersist) {
+      persistFinalStep3Preview(step3Upscaled.toDataURL('image/png', 0.92), baseCanvasDataUrl, baseSourceHash);
+    }
     step3QuantPixels.value = quantPixels;
     if (!step3QuantPixelsBase.value) {
       step3QuantPixelsBase.value = Uint8ClampedArray.from(quantPixels);
@@ -1894,9 +2293,10 @@ const runStep3Pipeline = () => {
 
     step3Error.value = null;
     step3Ready.value = true;
+    applyRestoredStep3BaseIfNeeded();
   } catch (err) {
     step3Ready.value = false;
-  step3Error.value = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดใน Step 3';
+    step3Error.value = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดใน Step 3';
   }
 };
 
@@ -2017,6 +2417,11 @@ const confirmEditModal = () => {
         SCALING_FACTOR,
         step3Upscaled,
         selectedPixelType.value
+      );
+      persistFinalStep3Preview(
+        step3Upscaled.toDataURL('image/png', 0.92),
+        step3BaseCanvas.toDataURL('image/png', 0.92),
+        lastGeneratedStep3SourceHash.value
       );
     }
     const basePixelsForError = step2PixelData.value ? Array.from(step2PixelData.value) : Array.from(step3QuantPixels.value);
@@ -2346,8 +2751,41 @@ const buildInstructionPdf = async (isHighQuality: boolean) => {
     pdf.addImage(canvasData, 'PNG', offsetX, offsetY, drawWidth, drawHeight);
   };
 
+  const blurCanvasForPreview = (source: HTMLCanvasElement) => {
+    // aggressively destroy detail: heavy downscale + strong blur + washed-out overlay
+    const downscaleFactor = 0.08;
+    const minSize = 8;
+    const downscaleCanvas = document.createElement('canvas');
+    downscaleCanvas.width = Math.max(Math.round(source.width * downscaleFactor), minSize);
+    downscaleCanvas.height = Math.max(Math.round(source.height * downscaleFactor), minSize);
+    const downCtx = downscaleCanvas.getContext('2d');
+    if (!downCtx) {
+      return source.toDataURL('image/png', 1.0);
+    }
+    downCtx.imageSmoothingEnabled = true;
+    downCtx.drawImage(source, 0, 0, downscaleCanvas.width, downscaleCanvas.height);
+
+    const blurCanvas = document.createElement('canvas');
+    blurCanvas.width = source.width;
+    blurCanvas.height = source.height;
+    const blurCtx = blurCanvas.getContext('2d');
+    if (!blurCtx) {
+      return source.toDataURL('image/png', 1.0);
+    }
+    blurCtx.imageSmoothingEnabled = true;
+    blurCtx.filter = 'blur(18px) saturate(0.12) contrast(0.25)';
+    blurCtx.drawImage(downscaleCanvas, 0, 0, source.width, source.height);
+    blurCtx.filter = 'none';
+    blurCtx.fillStyle = 'rgba(255,255,255,0.32)';
+    blurCtx.fillRect(0, 0, blurCanvas.width, blurCanvas.height);
+    setCanvasDpi(blurCanvas, dpi);
+    return blurCanvas.toDataURL('image/png', 1.0);
+  };
+
   addImageToPdf(titleImg, titlePageCanvas.width, titlePageCanvas.height);
   updateProgress(1, 'สร้างหน้าแนะนำเรียบร้อย');
+
+  let currentPageNumber = 1; // title page already added
 
   for (let i = 0; i < totalPlates; i++) {
     await sleep(40);
@@ -2366,9 +2804,13 @@ const buildInstructionPdf = async (isHighQuality: boolean) => {
       null
     );
     setCanvasDpi(instructionCanvas, dpi);
-    const instructionImg = instructionCanvas.toDataURL('image/png', 1.0);
+    currentPageNumber += 1;
+    const isPreviewPage = currentPageNumber <= PREVIEW_CLEAR_PAGE_COUNT;
+    const instructionImg = isPreviewPage
+      ? instructionCanvas.toDataURL('image/png', 1.0)
+      : blurCanvasForPreview(instructionCanvas);
     addImageToPdf(instructionImg, instructionCanvas.width, instructionCanvas.height);
-    updateProgress(i + 2, `กำลังวาดแผ่นที่ ${i + 1}/${totalPlates}`);
+    updateProgress(i + 2, `กำลังวาดแผ่นที่ ${i + 1}/${totalPlates}${isPreviewPage ? '' : ' (ตัวอย่างเบลอ)'}`);
   }
 
   addWatermark(pdf, isHighQuality, APP_WATERMARK);
@@ -2394,6 +2836,15 @@ watch(
 watch(uploadedImage, () => {
   queuePersistSessionState();
 });
+
+watch(
+  () => hsvControls.value,
+  (newValue, oldValue) => {
+    if (newValue !== oldValue && hasPaintOverrides.value) {
+      handleClearPaintOverrides();
+    }
+  }
+);
 
 watch(
   () => [targetResolution.width, targetResolution.height],
