@@ -1213,7 +1213,7 @@ const applyRestoredStep3BaseIfNeeded = () => {
     ctx.drawImage(img, 0, 0, baseCanvas.width, baseCanvas.height);
     const quantPixels = new Uint8ClampedArray(ctx.getImageData(0, 0, baseCanvas.width, baseCanvas.height).data);
     step3QuantPixels.value = quantPixels;
-    step3QuantPixelsBase.value = step3QuantPixelsBase.value ?? Uint8ClampedArray.from(quantPixels);
+    step3QuantPixelsBase.value = Uint8ClampedArray.from(quantPixels);
     drawPixelsOnCanvas(quantPixels, step3Canvas.value);
     drawStudImageOnCanvas(
       quantPixels,
@@ -2044,6 +2044,10 @@ watch(
     if (props.editingOrderId) {
       step3Ready.value = true;
       showApiStep3Preview.value = true;
+      if (!props.initialStep3Base && !restoredStep3Applied.value) {
+        pendingRestoredStep3Base.value = next;
+        suspendStep3Persistence.value = true;
+      }
     }
   },
   { immediate: true }
@@ -2517,7 +2521,8 @@ const openEditModal = async () => {
   if (!step2Ready.value || !step2PixelData.value || !step3Ready.value || !step3QuantPixels.value) {
     return;
   }
-  const baseline = step3QuantPixelsBase.value ?? step3QuantPixels.value;
+  const baseline =
+    (showApiStep3Preview.value && step3QuantPixels.value) || step3QuantPixelsBase.value || step3QuantPixels.value;
   modalBaseQuantPixels.value = Uint8ClampedArray.from(baseline);
   ensurePaintOverrideArray(baseline.length);
   modalOverrides.value = buildOverridesFromCurrent(step3QuantPixels.value, baseline);
