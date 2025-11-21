@@ -51,6 +51,7 @@
         :initial-crop-interaction="initialCropInteraction"
         :default-image-src="initialImageSrc"
         :editing-order-id="orderId"
+        :initial-step2-preview="initialStep2Preview"
         :initial-step3-preview="initialStep3Preview"
         :initial-step3-base="initialStep3Base"
       />
@@ -69,12 +70,14 @@ const orderLoading = ref(false);
 const orderError = ref<string | null>(null);
 const initialImageSrc = ref<string | null>(null);
 const initialCropInteraction = ref<any | null>(null);
+const initialStep2Preview = ref<string | null>(null);
 const initialStep3Preview = ref<string | null>(null);
 const initialStep3Base = ref<string | null>(null);
 const savingEdits = ref(false);
 const saveMessage = ref<string | null>(null);
 const lastLoadedKey = ref<string | null>(null);
 
+const step2PreviewForOrder = useState<string | null>('brick-step2-preview', () => null);
 const finalPreview = useState<string | null>('brick-final-step3-preview', () => null);
 const originalImageForOrder = useState<string | null>('brick-original-image', () => null);
 const cropInteractionForOrder = useState<Record<string, any> | null>('brick-crop-interaction', () => null);
@@ -96,8 +99,10 @@ const loadOrderForEdit = async (force = false) => {
   orderError.value = null;
   initialImageSrc.value = null;
   initialCropInteraction.value = null;
+  initialStep2Preview.value = null;
   initialStep3Preview.value = null;
   initialStep3Base.value = null;
+  step2PreviewForOrder.value = null;
   try {
     const data = await fetchOrderById(orderId.value, user.value.id);
     if (!data) {
@@ -111,8 +116,10 @@ const loadOrderForEdit = async (force = false) => {
       (typeof data.step3_base === 'string' && data.step3_base) ||
       null;
     initialStep3Base.value = apiStep3Base;
-    initialStep3Preview.value = data.preview_url || null;
-    finalPreview.value = data.preview_url || null;
+    initialStep2Preview.value = data.preview_url || null;
+    step2PreviewForOrder.value = data.preview_url || null;
+    initialStep3Preview.value = null;
+    finalPreview.value = null;
     originalImageForOrder.value = data.original_image || null;
     cropInteractionForOrder.value = data.crop_interaction || null;
     saveMessage.value = null;
@@ -144,12 +151,16 @@ const handleSaveEdits = async (): Promise<boolean> => {
     saveMessage.value = 'ยังไม่มีภาพตัวอย่าง กรุณาสร้าง Step 3 ให้เสร็จ';
     return false;
   }
+  if (!step2PreviewForOrder.value) {
+    saveMessage.value = 'ยังไม่มีภาพ Step 2 หลังแก้ไข กรุณาบันทึกอีกครั้ง';
+    return false;
+  }
   savingEdits.value = true;
   try {
     await updateOrderAssets(
       orderId.value,
       {
-        previewUrl: finalPreview.value,
+        previewUrl: step2PreviewForOrder.value,
         source: 'brick:edit',
         cropInteraction: cropInteractionForOrder.value ?? null,
         originalImage: originalImageForOrder.value ?? null

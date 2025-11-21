@@ -77,10 +77,10 @@
                 ถ้าอยากแก้อีกครั้ง กดกลับไป Step 3 ก่อน แล้วค่อยกลับมาชำระเงิน
               </p>
             </div>
-            <div
-              v-else-if="isPreviewLoading"
-              class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm animate-pulse"
-            >
+          <div
+            v-else-if="isPreviewLoading"
+            class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm animate-pulse"
+          >
               <div class="flex items-center justify-between gap-3">
                 <div>
                   <p
@@ -98,6 +98,13 @@
                 >
               </div>
               <div class="mt-3 h-64 rounded-lg bg-slate-100"></div>
+            </div>
+            <div
+              v-else-if="studPreviewError"
+              class="rounded-xl border border-rose-100 bg-rose-50 px-4 py-4 shadow-sm"
+            >
+              <p class="text-sm font-semibold text-rose-700">โหลดพรีวิวจาก Step 2 ไม่สำเร็จ</p>
+              <p class="text-xs text-rose-600 mt-1">{{ studPreviewError }}</p>
             </div>
           </div>
 
@@ -135,14 +142,22 @@
 </template>
 
 <script setup lang="ts">
+import { alignPixelsToStudMap, drawStudImageOnCanvas, replaceSparseColors, rgbToHex } from '~/lib/brickArtRemix/algo';
+import { ALL_BRICKLINK_SOLID_COLORS, PIXEL_TYPE_OPTIONS } from '~/lib/brickArtRemix/bricklinkColors';
+
 const route = useRoute();
 const { openAuthModal, user, requireAuth } = useAuthFlow();
 const { recordPendingPaymentOrder, fetchMyOrders, fetchOrderById, updateOrderAssets } = useOrders();
-const workflowCookie = useCookie<Record<string, any> | null>('brick-workflow', { sameSite: 'lax', path: '/' });
-const stepImagesCookie = useCookie<Record<string, any> | null>('brick-step-images', { sameSite: 'lax', path: '/' });
-const step3HashCookie = useCookie<Record<string, any> | null>('brick-step3-hash', { sameSite: 'lax', path: '/' });
+const stepImagesCookie = ref<Record<string, any> | null>(null);
+const step3HashCookie = ref<Record<string, any> | null>(null);
+const STEP2_PREVIEW_STORAGE = 'brick-step2-preview';
+const STUD_COLOR_SET = new Set(ALL_BRICKLINK_SOLID_COLORS.map((c) => c.hex.toLowerCase()));
+const SCALING_FACTOR = 30;
+const SPARSE_COLOR_THRESHOLD = 10;
+const DEFAULT_PIXEL_TYPE = PIXEL_TYPE_OPTIONS[0]?.number ?? 3024;
 const selectedOrderId = computed(() => (route.query.id ? String(route.query.id) : null));
 const hasLinkedOrder = computed(() => Boolean(selectedOrderId.value));
+const step2Preview = useState<string | null>('brick-step2-preview', () => null);
 const finalPreview = useState<string | null>('brick-final-step3-preview', () => null);
 const originalImage = useState<string | null>('brick-original-image', () => null);
 const cropInteractionForOrder = useState<Record<string, any> | null>('brick-crop-interaction', () => null);
@@ -155,38 +170,52 @@ const myOrdersError = ref<string | null>(null);
 const selectedOrder = ref<Record<string, any> | null>(null);
 const selectedOrderLoading = ref(false);
 const selectedOrderError = ref<string | null>(null);
-const linkedOrderPreview = computed(() => {
+const linkedOrderStep2Preview = computed(() => {
   if (!hasLinkedOrder.value) return null;
   const preview = selectedOrder.value?.preview_url || selectedOrder.value?.preview;
   if (typeof preview !== 'string') return null;
   const trimmed = preview.trim();
   return trimmed || null;
 });
-const checkoutPreview = computed(() => linkedOrderPreview.value ?? finalPreview.value ?? null);
+const step2PreviewSource = computed(() => linkedOrderStep2Preview.value ?? step2Preview.value ?? null);
+const studPreview = ref<string | null>(null);
+const studPreviewError = ref<string | null>(null);
+const studPreviewLoading = ref(false);
+const checkoutPreview = computed(() => studPreview.value ?? finalPreview.value ?? null);
 const latestOrder = computed(() => (hasLinkedOrder.value ? selectedOrder.value : myOrders.value?.[0] ?? null));
-const isPreviewLoading = computed(() => hasLinkedOrder.value && (selectedOrderLoading.value || (!selectedOrder.value && !selectedOrderError.value)));
+const isPreviewLoading = computed(
+  () =>
+    (hasLinkedOrder.value && (selectedOrderLoading.value || (!selectedOrder.value && !selectedOrderError.value))) ||
+    studPreviewLoading.value
+);
 const currentOrderId = computed(() => selectedOrderId.value ?? orderSuccess.value?.id ?? latestOrder.value?.id ?? null);
 const brickLink = computed(() => (currentOrderId.value ? `/brick?id=${currentOrderId.value}` : '/brick'));
 
 const clearLocalMosaicPersistence = () => {
   try {
+    sessionStorage.removeItem(STEP2_PREVIEW_STORAGE);
+    localStorage.removeItem(STEP2_PREVIEW_STORAGE);
     sessionStorage.removeItem('brick-step3-final-preview');
     localStorage.removeItem('brick-step3-final-preview');
     sessionStorage.removeItem('brick-step3-final-base');
     localStorage.removeItem('brick-step3-final-base');
-    const storageKey = `brick-workflow-image-${user.value?.id ?? 'guest'}`;
-    localStorage.removeItem(storageKey);
-    localStorage.removeItem('brick-workflow-image-guest');
   } catch (error) {
     console.warn('ไม่สามารถล้างข้อมูล preview ใน storage ได้', error);
   }
-  workflowCookie.value = null;
+  step2Preview.value = null;
+  studPreview.value = null;
   stepImagesCookie.value = null;
   step3HashCookie.value = null;
 };
 
 const restorePreviewFromStorage = () => {
   try {
+    if (!step2Preview.value) {
+      const step2Stored = sessionStorage.getItem(STEP2_PREVIEW_STORAGE) ?? localStorage.getItem(STEP2_PREVIEW_STORAGE);
+      if (step2Stored) {
+        step2Preview.value = step2Stored;
+      }
+    }
     if (finalPreview.value) return;
     const stored =
       sessionStorage.getItem('brick-step3-final-preview') ?? localStorage.getItem('brick-step3-final-preview');
@@ -195,6 +224,176 @@ const restorePreviewFromStorage = () => {
     }
   } catch (error) {
     console.warn('ไม่สามารถอ่านภาพจาก sessionStorage/localStorage ได้', error);
+  }
+};
+
+const loadImagePixels = async (
+  src: string
+): Promise<{ pixels: Uint8ClampedArray; width: number; height: number } | null> => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, img.width);
+      canvas.height = Math.max(1, img.height);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(null);
+        return;
+      }
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      resolve({ pixels: new Uint8ClampedArray(data), width: canvas.width, height: canvas.height });
+    };
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+};
+
+const pivotRgbToLinear = (value: number) => {
+  const channel = value / 255;
+  return channel > 0.04045 ? Math.pow((channel + 0.055) / 1.055, 2.4) : channel / 12.92;
+};
+
+const rgbToLab = (rgb: number[]) => {
+  const [r, g, b] = rgb.map((channel) => pivotRgbToLinear(channel));
+  const x = r * 0.4124564 + g * 0.3575761 + b * 0.1804375;
+  const y = r * 0.2126729 + g * 0.7151522 + b * 0.072175;
+  const z = r * 0.0193339 + g * 0.119192 + b * 0.9503041;
+
+  const refX = 0.95047;
+  const refY = 1.0;
+  const refZ = 1.08883;
+
+  const fx = x / refX;
+  const fy = y / refY;
+  const fz = z / refZ;
+
+  const epsilon = 216 / 24389;
+  const kappa = 24389 / 27;
+
+  const pivot = (t: number) => (t > epsilon ? Math.pow(t, 1 / 3) : (kappa * t + 16) / 116);
+
+  const fxCube = pivot(fx);
+  const fyCube = pivot(fy);
+  const fzCube = pivot(fz);
+
+  const L = 116 * fyCube - 16;
+  const a = 500 * (fxCube - fyCube);
+  const bLab = 200 * (fxCube - fzCube);
+  return [L, a, bLab];
+};
+
+const ciede2000ColorDistance = (rgb1: number[] | Uint8ClampedArray, rgb2: number[] | Uint8ClampedArray) => {
+  const lab1 = rgbToLab(Array.from(rgb1.slice(0, 3)));
+  const lab2 = rgbToLab(Array.from(rgb2.slice(0, 3)));
+
+  const [L1, a1, b1] = lab1;
+  const [L2, a2, b2] = lab2;
+
+  const avgLp = (L1 + L2) / 2;
+  const C1 = Math.sqrt(a1 * a1 + b1 * b1);
+  const C2 = Math.sqrt(a2 * a2 + b2 * b2);
+  const avgC = (C1 + C2) / 2;
+  const G = 0.5 * (1 - Math.sqrt(Math.pow(avgC, 7) / (Math.pow(avgC, 7) + Math.pow(25, 7))));
+  const a1p = (1 + G) * a1;
+  const a2p = (1 + G) * a2;
+  const C1p = Math.sqrt(a1p * a1p + b1 * b1);
+  const C2p = Math.sqrt(a2p * a2p + b2 * b2);
+  const avgCp = (C1p + C2p) / 2;
+
+  const h1p = Math.atan2(b1, a1p) + (Math.atan2(b1, a1p) < 0 ? 2 * Math.PI : 0);
+  const h2p = Math.atan2(b2, a2p) + (Math.atan2(b2, a2p) < 0 ? 2 * Math.PI : 0);
+
+  let deltahp = h2p - h1p;
+  if (C1p * C2p === 0) {
+    deltahp = 0;
+  } else if (Math.abs(deltahp) > Math.PI) {
+    deltahp += deltahp > 0 ? -2 * Math.PI : 2 * Math.PI;
+  }
+
+  const deltaLp = L2 - L1;
+  const deltaCp = C2p - C1p;
+  const deltaHp = 2 * Math.sqrt(C1p * C2p) * Math.sin(deltahp / 2);
+
+  const avgHp =
+    Math.abs(h1p - h2p) > Math.PI
+      ? (h1p + h2p + 2 * Math.PI) / 2
+      : (h1p + h2p) / 2;
+
+  const T =
+    1 -
+    0.17 * Math.cos(avgHp - Math.PI / 6) +
+    0.24 * Math.cos(2 * avgHp) +
+    0.32 * Math.cos(3 * avgHp + Math.PI / 30) -
+    0.2 * Math.cos(4 * avgHp - (63 * Math.PI) / 180);
+  const deltaTheta = ((30 * Math.PI) / 180) * Math.exp(-Math.pow((avgHp - (275 * Math.PI) / 180) / ((25 * Math.PI) / 180), 2));
+  const Rc = 2 * Math.sqrt(Math.pow(avgCp, 7) / (Math.pow(avgCp, 7) + Math.pow(25, 7)));
+  const Sl = 1 + (0.015 * Math.pow(avgLp - 50, 2)) / Math.sqrt(20 + Math.pow(avgLp - 50, 2));
+  const Sc = 1 + 0.045 * avgCp;
+  const Sh = 1 + 0.015 * avgCp * T;
+  const Rt = -Math.sin(2 * deltaTheta) * Rc;
+  return Math.sqrt(
+    Math.pow(deltaLp / Sl, 2) +
+    Math.pow(deltaCp / Sc, 2) +
+    Math.pow(deltaHp / Sh, 2) +
+    Rt * (deltaCp / Sc) * (deltaHp / Sh)
+  );
+};
+
+const isAlreadyStudPalette = (pixels: Uint8ClampedArray) => {
+  for (let i = 0; i < pixels.length; i += 4) {
+    const hex = rgbToHex(pixels[i], pixels[i + 1], pixels[i + 2]).toLowerCase();
+    if (!STUD_COLOR_SET.has(hex)) {
+      return false;
+    }
+  }
+  return true;
+};
+
+const buildStudPreviewFromStep2 = async (src: string): Promise<string | null> => {
+  const loaded = await loadImagePixels(src);
+  if (!loaded) {
+    return null;
+  }
+  const { pixels, width, height } = loaded;
+  const baseStudMap = ALL_BRICKLINK_SOLID_COLORS.reduce((acc, color) => {
+    acc[color.hex] = Number.MAX_SAFE_INTEGER;
+    return acc;
+  }, {} as Record<string, number>);
+  const alreadyStud = isAlreadyStudPalette(pixels);
+  const aligned = alreadyStud ? pixels : Uint8ClampedArray.from(alignPixelsToStudMap(Array.from(pixels), baseStudMap, ciede2000ColorDistance));
+  const quantPixels = alreadyStud ? pixels : replaceSparseColors(aligned, SPARSE_COLOR_THRESHOLD, ciede2000ColorDistance);
+  const studCanvas = document.createElement('canvas');
+  drawStudImageOnCanvas(quantPixels, width, SCALING_FACTOR, studCanvas, DEFAULT_PIXEL_TYPE);
+  return studCanvas.toDataURL('image/png', 0.92);
+};
+
+let studPreviewTaskId = 0;
+const updateStudPreviewFromStep2 = async (src: string | null) => {
+  const currentTask = ++studPreviewTaskId;
+  studPreviewError.value = null;
+  if (!src) {
+    studPreviewLoading.value = false;
+    studPreview.value = null;
+    return;
+  }
+  studPreviewLoading.value = true;
+  const preview = await buildStudPreviewFromStep2(src);
+  if (currentTask !== studPreviewTaskId) {
+    return;
+  }
+  studPreviewLoading.value = false;
+  if (preview) {
+    studPreview.value = preview;
+  } else {
+    studPreview.value = null;
+    studPreviewError.value = 'ไม่สามารถแปลงภาพ Step 2 เป็นพรีวิวตัวต่อได้';
   }
 };
 
@@ -210,6 +409,25 @@ onMounted(() => {
     restorePreviewFromStorage();
   }
 });
+
+watch(
+  () => step2PreviewSource.value,
+  (next) => {
+    updateStudPreviewFromStep2(next);
+    if (hasLinkedOrder.value) {
+      finalPreview.value = null;
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => finalPreview.value,
+  (next) => {
+    if (step2PreviewSource.value) return;
+    studPreview.value = next ?? null;
+  }
+);
 
 const formatDateTime = (value: string | null | undefined) => {
   if (!value) return '-';
@@ -292,6 +510,9 @@ const loadSelectedOrder = async () => {
       if (data.crop_interaction !== undefined) {
         cropInteractionForOrder.value = data.crop_interaction;
       }
+      if (data.preview_url !== undefined) {
+        step2Preview.value = data.preview_url || null;
+      }
     }
   } catch (error: any) {
     selectedOrderError.value = error?.message ?? 'ไม่สามารถโหลดออเดอร์ที่ลิงก์มาได้';
@@ -316,14 +537,6 @@ watch(
 );
 
 watch(
-  () => linkedOrderPreview.value,
-  (next) => {
-    if (!hasLinkedOrder.value) return;
-    finalPreview.value = next ?? null;
-  }
-);
-
-watch(
   () => selectedOrderId.value,
   (next) => {
     if (!next && !finalPreview.value) {
@@ -344,6 +557,10 @@ const handleCreateOrder = async () => {
     requireAuth(() => handleCreateOrder());
     return;
   }
+  if (!step2PreviewSource.value) {
+    orderError.value = 'ยังไม่มีรูป Step 2 กรุณากลับไปสร้างก่อน';
+    return;
+  }
   if (!checkoutPreview.value) {
     orderError.value = 'ยังไม่มีรูป Step 3 กรุณากลับไปสร้างก่อน';
     return;
@@ -355,7 +572,7 @@ const handleCreateOrder = async () => {
       data = await updateOrderAssets(
         selectedOrderId.value,
         {
-          previewUrl: checkoutPreview.value,
+          previewUrl: step2PreviewSource.value,
           source: 'checkout:linked',
           cropInteraction: cropInteractionForOrder.value ?? null,
           originalImage: originalImage.value ?? null
@@ -366,7 +583,7 @@ const handleCreateOrder = async () => {
     } else {
       data = await recordPendingPaymentOrder({
         userId: user.value.id,
-        previewUrl: checkoutPreview.value,
+        previewUrl: step2PreviewSource.value,
         source: 'checkout',
         cropInteraction: cropInteractionForOrder.value ?? null,
         originalImage: originalImage.value ?? null

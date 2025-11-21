@@ -87,13 +87,13 @@
                 :min="RESOLUTION_MIN"
                 :max="RESOLUTION_MAX"
                 :step="RESOLUTION_STEP"
-                class="mt-2 w-full"
-                :value="targetResolution.width"
-                @pointerdown="handleControlPointerDown"
-                @pointerup="handleControlPointerUp"
-                @pointercancel="handleControlPointerUp"
-                @input="handleResolutionInput('width', $event)"
-              />
+              class="mt-2 w-full"
+              :value="targetResolution.width"
+              @pointerdown="handleResolutionPointerDown($event)"
+              @pointerup="handleControlPointerUp"
+              @pointercancel="handleControlPointerUp"
+              @input="handleResolutionInput('width', $event)"
+            />
               <span class="text-xs text-slate-500"
                 >{{ targetResolution.width }} pixel</span
               >
@@ -105,13 +105,13 @@
                 :min="RESOLUTION_MIN"
                 :max="RESOLUTION_MAX"
                 :step="RESOLUTION_STEP"
-                class="mt-2 w-full"
-                :value="targetResolution.height"
-                @pointerdown="handleControlPointerDown"
-                @pointerup="handleControlPointerUp"
-                @pointercancel="handleControlPointerUp"
-                @input="handleResolutionInput('height', $event)"
-              />
+              class="mt-2 w-full"
+              :value="targetResolution.height"
+              @pointerdown="handleResolutionPointerDown($event)"
+              @pointerup="handleControlPointerUp"
+              @pointercancel="handleControlPointerUp"
+              @input="handleResolutionInput('height', $event)"
+            />
               <span class="text-xs text-slate-500"
                 >{{ targetResolution.height }} pixel</span
               >
@@ -161,6 +161,38 @@
             ความละเอียดปัจจุบัน {{ targetResolution.width }} ×
             {{ targetResolution.height }} Pixel (อัตราขยาย ×{{ SCALING_FACTOR}})
           </p>
+
+          <div
+            v-if="step2Ready"
+            class="mt-3 flex flex-wrap items-center gap-2"
+          >
+            <button
+              type="button"
+              class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
+              @click="openEditModal"
+        >
+          แก้ไขสี (Step 2)
+        </button>
+        <button
+          v-if="hasPixelRemap"
+              type="button"
+              class="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50"
+              @click="clearPixelColorRemap"
+          >
+            ล้างการ remap สี
+          </button>
+        <button
+          v-if="hasStep2Edits"
+          type="button"
+          class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+          @click="resetStep2Edits"
+        >
+          ล้างการแก้ไขกลับต้นฉบับ
+        </button>
+      </div>
+      <p v-if="hasPixelRemap" class="text-xs text-indigo-700 mt-1">
+        กำลังใช้การ remap สีหลังจากปรับโทน/แก้สีพิกเซล
+      </p>
 
           <!-- <div v-if="step2Ready" class="mt-3">
             <button
@@ -419,18 +451,6 @@
               {{ targetResolution.height }} Pixel | Quantization error:
               {{ step3QuantizationError?.toFixed(3) ?? '0.000' }}
             </p>
-            <div
-              class="mt-3 flex flex-wrap items-center gap-2"
-              v-if="step3Ready"
-            >
-              <button
-                type="button"
-                class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
-                @click="openEditModal"
-              >
-                แก้ไขภาพตัวต่อ
-              </button>
-            </div>
             <p
               v-else-if="step3Ready && isStep2Processing"
               class="text-xs text-indigo-500"
@@ -589,7 +609,9 @@
         </article>
       </div>
     </section>
-    <p v-if="checkoutOrderError" class="mt-2 text-sm text-rose-600">{{ checkoutOrderError }}</p>
+    <p v-if="checkoutOrderError" class="mt-2 text-sm text-rose-600">
+      {{ checkoutOrderError }}
+    </p>
   </section>
 
   <Teleport to="body">
@@ -635,8 +657,8 @@
               @pointerleave="handleModalPaintPointerUp"
             ></canvas>
             <p class="mt-2 text-[11px] text-slate-500">
-              คลิก/ลากเพื่อวาด, ใช้ Dropper เพื่อเลือกสีจากภาพ, กด
-              “บันทึกการแก้สี” เพื่อใช้กับ Step 2
+              คลิก/ลากเพื่อ remap สี, ใช้ Dropper เพื่อเลือกสีจากภาพ แล้วกด
+              “บันทึกการ remap สี” เพื่อใช้กับ Step 2 ก่อนเข้าสู่ Step 3
             </p>
           </div>
 
@@ -712,13 +734,13 @@
                     <span class="truncate">{{ color.name }}</span>
                   </button>
                 </div>
-              </div>
+                </div>
 
               <button
                 class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm font-semibold text-rose-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
                 type="button"
-                :disabled="!(modalOverrides?.some(v => v != null) || paintOverrides?.some(v => v != null))"
-                @click="clearModalOverrides"
+                :disabled="!hasModalPixelRemap"
+                @click="clearModalRemap"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -731,7 +753,7 @@
                     d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0z"
                   />
                 </svg>
-                ล้างการแก้สีใน modal
+                ล้างการ remap สีใน modal
               </button>
             </div>
 
@@ -744,11 +766,11 @@
                 ยกเลิก
               </button>
               <button
-                class="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
-                type="button"
-                @click="confirmEditModal"
-              >
-                บันทึกการแก้สี
+              class="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
+              type="button"
+              @click="confirmEditModal"
+            >
+                บันทึกการ remap สี
               </button>
             </div>
           </div>
@@ -759,7 +781,7 @@
 </template>
 
 <script setup lang="ts">
-import { useAuthFlow, useCookie, useRouter, useState, useOrders } from '#imports';
+import { useAuthFlow, useRouter, useState, useOrders } from '#imports';
 import { computed, defineComponent, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch, withDefaults } from 'vue';
 import { studMaps, type StudMapId } from '~/lib/brickArtRemix/studMaps';
 import {
@@ -825,6 +847,7 @@ type BrickWorkflowSession = {
   hsv: HsvState;
   pixelType: number;
   highQuality: boolean;
+  pixelColorRemap?: PixelColorRemap;
 };
 
 type StepImageSnapshot = {
@@ -838,8 +861,9 @@ type StepImageSnapshot = {
   srcHash?: string | null;
 };
 
-const PERSISTENCE_COOKIE_NAME = 'brick-workflow';
-const PERSISTENCE_IMAGE_STORAGE_KEY = 'brick-workflow-image';
+type PixelColorReplacement = [number, number, number, number?];
+type PixelColorRemap = Record<string, PixelColorReplacement>;
+
 const STEP_IMAGES_COOKIE = 'brick-step-images';
 
 const props = withDefaults(
@@ -851,6 +875,7 @@ const props = withDefaults(
     initialCropInteraction?: CropInteractionState | null;
     enablePersistence?: boolean;
     editingOrderId?: string | number | null;
+    initialStep2Preview?: string | null;
     initialStep3Preview?: string | null;
     initialStep3Base?: string | null;
   }>(),
@@ -861,6 +886,7 @@ const props = withDefaults(
     initialCropInteraction: null,
     enablePersistence: false,
     editingOrderId: null,
+    initialStep2Preview: null,
     initialStep3Preview: null,
     initialStep3Base: null
   }
@@ -870,29 +896,7 @@ const router = useRouter();
 const { user, requireAuth } = useAuthFlow();
 const { recordPendingPaymentOrder, updateOrderAssets } = useOrders();
 const currentUserId = computed(() => user.value?.id ?? 'guest');
-const brickWorkflowCookie = useCookie<Record<string, BrickWorkflowSession> | null>(PERSISTENCE_COOKIE_NAME, {
-  default: () => null,
-  sameSite: 'lax',
-  path: '/',
-  maxAge: 60 * 60 * 24 * 30
-});
-const stepImagesCookie = useCookie<Record<string, StepImageSnapshot> | null>(STEP_IMAGES_COOKIE, {
-  default: () => null,
-  sameSite: 'lax',
-  path: '/',
-  maxAge: 60 * 60 * 24 * 30
-});
-const step3HashCookie = useCookie<{ v: 1; userId: string; baseHash: string | null; srcHash: string | null } | null>(
-  STEP3_HASH_COOKIE,
-  {
-    default: () => null,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 60 * 24 * 30
-  }
-);
-const resolvedImageStorageKey = computed(() => `${PERSISTENCE_IMAGE_STORAGE_KEY}-${currentUserId.value}`);
-
+const stepImagesCookie = ref<Record<string, StepImageSnapshot> | null>(null);
 const studMapEntries = reactive(studMaps);
 const availableSetIds = Object.keys(studMapEntries) as StudMapId[];
 const selectedSetId = ref<StudMapId>(availableSetIds[0]);
@@ -914,11 +918,15 @@ const step2Error = ref<string | null>(null);
 const step1Ready = ref(false);
 const step2Ready = ref(false);
 const step3Ready = ref(false);
+const useStep2PixelsAsSource = ref(false);
 const paintOverrides = ref<Array<number | null> | null>(null);
-const modalOverrides = ref<Array<number | null> | null>(null);
-const modalQuantPixels = ref<Uint8ClampedArray | null>(null);
+const pixelColorRemap = ref<PixelColorRemap>({});
+const modalPixelColorRemap = ref<PixelColorRemap | null>(null);
+const modalBaseStep2Pixels = ref<Uint8ClampedArray | null>(null);
+const modalPreviewPixels = ref<Uint8ClampedArray | null>(null);
 const step3QuantPixels = ref<Uint8ClampedArray | null>(null); // current edited image
 const step3QuantPixelsBase = ref<Uint8ClampedArray | null>(null); // original quantized image from step 2
+const step2PreviewForOrder = useState<string | null>('brick-step2-preview', () => null);
 const finalStep3Preview = useState<string | null>('brick-final-step3-preview', () => null);
 const originalImageForOrder = useState<string | null>('brick-original-image', () => null);
 const cropInteractionForOrder = useState<CropInteractionState | null>('brick-crop-interaction', () => null);
@@ -927,7 +935,7 @@ const checkoutOrderError = ref<string | null>(null);
 const shouldSkipPersistence = computed(() => Boolean(props.editingOrderId || props.defaultImageSrc));
 const initialOrderPreviewApplied = ref(false);
 const apiStep3Preview = computed(() => props.initialStep3Preview ?? null);
-const showApiStep3Preview = ref<boolean>(Boolean(props.editingOrderId && apiStep3Preview.value));
+const showApiStep3Preview = ref<boolean>(Boolean(props.editingOrderId && apiStep3Preview.value && !props.initialStep2Preview));
 const pendingRestoredStep3Base = ref<string | null>(null);
 const restoredStep3Applied = ref(false);
 const persistedStep3BaseHash = ref<string | null>(null);
@@ -935,6 +943,7 @@ const persistedStep3SourceHash = ref<string | null>(null);
 const lastGeneratedStep3BaseHash = ref<string | null>(null);
 const lastGeneratedStep3SourceHash = ref<string | null>(null);
 const suspendStep3Persistence = ref(false);
+const shouldSkipInitialStep2Run = ref(false);
 const hashString = (value: string) => {
   let hash = 0;
   for (let i = 0; i < value.length; i++) {
@@ -952,37 +961,14 @@ const hashUint8Array = (arr: Uint8Array | Uint8ClampedArray | null) => {
   }
   return `a${hash >>> 0}`;
 };
+const logStep3 = (message: string, data?: Record<string, any>) => {
+  console.log('[Step 3 Preview]', message, data ?? '');
+};
 const clearStepImagesForUser = () => {
-  if (!stepImagesCookie.value?.[currentUserId.value]) {
-    return;
-  }
-  const next = { ...(stepImagesCookie.value ?? {}) };
-  delete next[currentUserId.value];
-  stepImagesCookie.value = Object.keys(next).length > 0 ? next : null;
+  return;
 };
 const persistStepImages = (payload: Partial<Omit<StepImageSnapshot, 'v' | 'userId'>>) => {
-  if (!props.enablePersistence) {
-    return;
-  }
-  const existing = stepImagesCookie.value ?? {};
-  const current: StepImageSnapshot =
-    existing[currentUserId.value] ?? {
-      v: 1,
-      userId: currentUserId.value,
-      step1: null,
-      step2: null,
-      step3Base: null,
-      step3Preview: null,
-      baseHash: null,
-      srcHash: null
-    };
-  const next: StepImageSnapshot = {
-    ...current,
-    ...payload,
-    v: 1,
-    userId: currentUserId.value
-  };
-  stepImagesCookie.value = { ...existing, [currentUserId.value]: next };
+  return;
 };
 const persistCropForOrder = () => {
   cropInteractionForOrder.value = {
@@ -1001,23 +987,44 @@ const persistCropForOrder = () => {
   };
 };
 
+const persistStep2Preview = (preview: string | null) => {
+  step2PreviewForOrder.value = preview;
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    if (preview) {
+      sessionStorage.setItem(STEP2_PREVIEW_STORAGE, preview);
+      localStorage.setItem(STEP2_PREVIEW_STORAGE, preview);
+    } else {
+      sessionStorage.removeItem(STEP2_PREVIEW_STORAGE);
+      localStorage.removeItem(STEP2_PREVIEW_STORAGE);
+    }
+  } catch (error) {
+    console.warn('ไม่สามารถบันทึก/ล้างภาพ Step 2 ลง storage ได้', error);
+  }
+};
+
 const clearLocalMosaicPersistence = () => {
   try {
+    sessionStorage.removeItem(STEP2_PREVIEW_STORAGE);
+    localStorage.removeItem(STEP2_PREVIEW_STORAGE);
     sessionStorage.removeItem(STEP3_FINAL_PREVIEW_STORAGE);
     localStorage.removeItem(STEP3_FINAL_PREVIEW_STORAGE);
     sessionStorage.removeItem(STEP3_FINAL_BASE_STORAGE);
     localStorage.removeItem(STEP3_FINAL_BASE_STORAGE);
-    const storageKey = `${PERSISTENCE_IMAGE_STORAGE_KEY}-${currentUserId.value}`;
-    localStorage.removeItem(storageKey);
-    localStorage.removeItem(`${PERSISTENCE_IMAGE_STORAGE_KEY}-guest`);
   } catch (error) {
     console.warn('ไม่สามารถล้างข้อมูล preview ใน storage ได้', error);
   }
-  brickWorkflowCookie.value = null;
+  persistStep2Preview(null);
   stepImagesCookie.value = null;
-  step3HashCookie.value = null;
 };
 const persistFinalStep3Preview = (preview: string | null, baseDataUrl?: string | null, baseSourceHash?: string | null) => {
+  logStep3('persistFinalStep3Preview', {
+    hasPreview: Boolean(preview),
+    hasBase: Boolean(baseDataUrl),
+    baseHash: baseSourceHash ?? lastGeneratedStep3SourceHash.value ?? null
+  });
   finalStep3Preview.value = preview;
   if (typeof window === 'undefined') {
     return;
@@ -1033,11 +1040,6 @@ const persistFinalStep3Preview = (preview: string | null, baseDataUrl?: string |
   persistedStep3BaseHash.value = baseHash;
   lastGeneratedStep3SourceHash.value = sourceHash;
   persistedStep3SourceHash.value = sourceHash;
-  if (baseHash || sourceHash) {
-    step3HashCookie.value = { v: 1, userId: currentUserId.value, baseHash, srcHash: sourceHash };
-  } else {
-    step3HashCookie.value = null;
-  }
   try {
     if (preview) {
       sessionStorage.setItem(STEP3_FINAL_PREVIEW_STORAGE, preview);
@@ -1115,7 +1117,7 @@ const loadDataUrlToCanvas = async (
   });
 };
 const restoreFromStepImages = async (snapshot: StepImageSnapshot): Promise<boolean> => {
-  if (!snapshot.step1 || !snapshot.step2 || !snapshot.step3Base) {
+  if (!snapshot.step1 || !snapshot.step2) {
     return false;
   }
   const step1Result = await loadDataUrlToCanvas(step1Canvas.value, snapshot.step1);
@@ -1141,52 +1143,65 @@ const restoreFromStepImages = async (snapshot: StepImageSnapshot): Promise<boole
   renderUpscaledPreviewToTarget(step2UpscaledCanvas, step2Result.pixels);
   step2Ready.value = true;
   step2Error.value = null;
+  useStep2PixelsAsSource.value = true;
+  persistStep2Preview(snapshot.step2);
 
-  const step3Result = await loadDataUrlToCanvas(
-    step3Canvas.value,
-    snapshot.step3Base,
-    targetResolution.width,
-    targetResolution.height
-  );
-  if (!step3Result) {
-    return false;
-  }
-  step3QuantPixels.value = Uint8ClampedArray.from(step3Result.pixels);
-  step3QuantPixelsBase.value = Uint8ClampedArray.from(step3Result.pixels);
-  drawStudImageOnCanvas(
-    step3Result.pixels,
-    targetResolution.width,
-    SCALING_FACTOR,
-    step3UpscaledCanvas.value,
-    selectedPixelType.value
-  );
-  const baseHash = snapshot.baseHash ?? hashString(step3Canvas.value?.toDataURL('image/png', 0.92) ?? snapshot.step3Base);
-  const srcHash = snapshot.srcHash ?? hashUint8Array(step3Result.pixels);
-  persistFinalStep3Preview(
-    snapshot.step3Preview ?? step3UpscaledCanvas.value?.toDataURL('image/png', 0.92) ?? null,
-    snapshot.step3Base,
-    srcHash ?? undefined
-  );
-  step3QuantizationError.value = getAverageQuantizationError(
-    step2PixelData.value ? Array.from(step2PixelData.value) : Array.from(step3Result.pixels),
-    Array.from(step3Result.pixels),
-    ciede2000ColorDistance
-  );
-  const usageMap = getUsedPixelsStudMap(step3Result.pixels);
-  step3StudUsage.value = Object.entries(usageMap)
-    .map(([hex, count]) => ({ hex, count, name: colorName(hex) ?? hex }))
-    .sort((a, b) => b.count - a.count);
-  if (!userPaintColorTouched.value && step3StudUsage.value.length > 0) {
-    paintColorHex.value = step3StudUsage.value[0].hex;
+  const hasStep3Base = Boolean(snapshot.step3Base);
+  if (hasStep3Base) {
+    const step3Result = await loadDataUrlToCanvas(
+      step3Canvas.value,
+      snapshot.step3Base,
+      targetResolution.width,
+      targetResolution.height
+    );
+    if (!step3Result) {
+      return false;
+    }
+    step3QuantPixels.value = Uint8ClampedArray.from(step3Result.pixels);
+    step3QuantPixelsBase.value = Uint8ClampedArray.from(step3Result.pixels);
+    drawStudImageOnCanvas(
+      step3Result.pixels,
+      targetResolution.width,
+      SCALING_FACTOR,
+      step3UpscaledCanvas.value,
+      selectedPixelType.value
+    );
+    const baseHash = snapshot.baseHash ?? hashString(step3Canvas.value?.toDataURL('image/png', 0.92) ?? snapshot.step3Base);
+    const srcHash = snapshot.srcHash ?? hashUint8Array(step3Result.pixels);
+    persistFinalStep3Preview(
+      snapshot.step3Preview ?? step3UpscaledCanvas.value?.toDataURL('image/png', 0.92) ?? null,
+      snapshot.step3Base,
+      srcHash ?? undefined
+    );
+    step3QuantizationError.value = getAverageQuantizationError(
+      step2PixelData.value ? Array.from(step2PixelData.value) : Array.from(step3Result.pixels),
+      Array.from(step3Result.pixels),
+      ciede2000ColorDistance
+    );
+    const usageMap = getUsedPixelsStudMap(step3Result.pixels);
+    step3StudUsage.value = Object.entries(usageMap)
+      .map(([hex, count]) => ({ hex, count, name: colorName(hex) ?? hex }))
+      .sort((a, b) => b.count - a.count);
+    if (!userPaintColorTouched.value && step3StudUsage.value.length > 0) {
+      paintColorHex.value = step3StudUsage.value[0].hex;
+    }
+    step3Error.value = null;
+    step3Ready.value = true;
+    isProcessing.value = false;
+    return true;
   }
   step3Error.value = null;
-  step3Ready.value = true;
-  isProcessing.value = false;
-  step3HashCookie.value = baseHash || srcHash ? { v: 1, userId: currentUserId.value, baseHash, srcHash: srcHash ?? null } : null;
+  step3Ready.value = false;
+  runStep3Pipeline();
   return true;
 };
 let applyingRestoredStep3 = false;
 const applyRestoredStep3BaseIfNeeded = () => {
+  logStep3('applyRestoredStep3BaseIfNeeded: check', {
+    pending: Boolean(pendingRestoredStep3Base.value),
+    restoredStep3Applied: restoredStep3Applied.value,
+    applyingRestoredStep3
+  });
   if (!pendingRestoredStep3Base.value || restoredStep3Applied.value || applyingRestoredStep3) {
     if (suspendStep3Persistence.value) {
       suspendStep3Persistence.value = false;
@@ -1202,6 +1217,11 @@ const applyRestoredStep3BaseIfNeeded = () => {
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => {
+    logStep3('applyRestoredStep3BaseIfNeeded: loaded image', {
+      isApiStudPreview,
+      width: img.width,
+      height: img.height
+    });
     pendingRestoredStep3Base.value = null;
     restoredStep3Applied.value = true;
     applyingRestoredStep3 = false;
@@ -1216,7 +1236,11 @@ const applyRestoredStep3BaseIfNeeded = () => {
     // ปิด smoothing เพื่อใช้ค่าพิกเซลดิบจาก API preview ไม่ให้สีปน
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(img, 0, 0, baseCanvas.width, baseCanvas.height);
-    const quantPixels = new Uint8ClampedArray(ctx.getImageData(0, 0, baseCanvas.width, baseCanvas.height).data);
+    const extractedPixels = new Uint8ClampedArray(ctx.getImageData(0, 0, baseCanvas.width, baseCanvas.height).data);
+    const quantPixels =
+      isApiStudPreview && !isAlreadyStudPalette(extractedPixels)
+        ? quantizeToStudPalette(extractedPixels)
+        : extractedPixels;
     step3QuantPixels.value = quantPixels;
     step3QuantPixelsBase.value = Uint8ClampedArray.from(quantPixels);
     drawPixelsOnCanvas(quantPixels, step3Canvas.value);
@@ -1252,6 +1276,10 @@ const applyRestoredStep3BaseIfNeeded = () => {
     if (!userPaintColorTouched.value && step3StudUsage.value.length > 0) {
       paintColorHex.value = step3StudUsage.value[0].hex;
     }
+    logStep3('applyRestoredStep3BaseIfNeeded: applied', {
+      quantizationError: step3QuantizationError.value,
+      colorCount: step3StudUsage.value.length
+    });
     persistFinalStep3Preview(
       step3UpscaledCanvas.value.toDataURL('image/png', 0.92),
       baseCanvas.toDataURL('image/png', 0.92)
@@ -1268,8 +1296,6 @@ const applyRestoredStep3BaseIfNeeded = () => {
   };
   img.src = dataUrl;
 };
-const modalBaseQuantPixels = ref<Uint8ClampedArray | null>(null); // baseline for current modal session (original)
-let modalRenderTimeout: ReturnType<typeof setTimeout> | null = null;
 const selectedPaintTool = ref<PaintTool>('brush');
 const isToolDropdownOpen = ref(false);
 const isColorDropdownOpen = ref(false);
@@ -1279,7 +1305,6 @@ const userPaintColorTouched = ref(false);
 const paintInProgress = ref(false);
 const modalPaintInProgress = ref(false);
 let pendingStep3AfterPaint = false;
-let modalPendingStep3AfterPaint = false;
 const originalBodyOverflow = ref<string | null>(null);
 const step3Error = ref<string | null>(null);
 const step3QuantizationError = ref<number | null>(null);
@@ -1291,6 +1316,7 @@ const SERIALIZE_EDGE_LENGTH = 512;
 const RESOLUTION_MIN = 32;
 const RESOLUTION_MAX = 128;
 const RESOLUTION_STEP = 16;
+const STEP2_PREVIEW_STORAGE = 'brick-step2-preview';
 const SCALING_FACTOR = 30;
 const SPARSE_COLOR_THRESHOLD = 10;
 const PDF_FILENAME_BASE = 'Siam-Brick-Instructions';
@@ -1303,7 +1329,26 @@ const APP_WATERMARK = {
 const STEP3_FINAL_PREVIEW_STORAGE = 'brick-step3-final-preview';
 const STEP3_FINAL_BASE_STORAGE = 'brick-step3-final-base';
 const STEP3_HASH_COOKIE = 'brick-step3-hash';
+const UNLIMITED_STUD_MAP = ALL_BRICKLINK_SOLID_COLORS.reduce((acc, color) => {
+  acc[color.hex] = Number.MAX_SAFE_INTEGER;
+  return acc;
+}, {} as Record<string, number>);
+const STUD_COLOR_SET = new Set(ALL_BRICKLINK_SOLID_COLORS.map((c) => c.hex.toLowerCase()));
 type PaintTool = 'brush' | 'eraser' | 'dropper';
+
+const quantizeToStudPalette = (pixels: Uint8ClampedArray) => {
+  const aligned = alignPixelsToStudMap(Array.from(pixels), UNLIMITED_STUD_MAP, ciede2000ColorDistance);
+  return Uint8ClampedArray.from(aligned);
+};
+const isAlreadyStudPalette = (pixels: Uint8ClampedArray) => {
+  for (let i = 0; i < pixels.length; i += 4) {
+    const hex = rgbToHex(pixels[i], pixels[i + 1], pixels[i + 2]).toLowerCase();
+    if (!STUD_COLOR_SET.has(hex)) {
+      return false;
+    }
+  }
+  return true;
+};
 
 const PaintbrushIcon = defineComponent({
   name: 'PaintbrushIcon',
@@ -1549,18 +1594,27 @@ const hsvControls = reactive({
   brightness: 0,
   contrast: 0
 });
+const defaultHsv = { hue: 0, saturation: 0, value: 0, brightness: 0, contrast: 0 };
 const selectedPixelType = ref(PIXEL_TYPE_OPTIONS[0].number);
 const isPreviewFrameLoading = computed(
   () =>
     step1Ready.value &&
     (isStep2Processing.value || (step2Ready.value && !step3Ready.value && !step3Error.value))
 );
+const isHsvDirty = computed(
+  () =>
+    hsvControls.hue !== defaultHsv.hue ||
+    hsvControls.saturation !== defaultHsv.saturation ||
+    hsvControls.value !== defaultHsv.value ||
+    hsvControls.brightness !== defaultHsv.brightness ||
+    hsvControls.contrast !== defaultHsv.contrast
+);
+const hasPixelRemap = computed(() => Object.keys(pixelColorRemap.value ?? {}).length > 0);
+const hasStep2Edits = computed(() => isHsvDirty.value || hasPaintOverrides.value || hasPixelRemap.value);
+const hasModalPixelRemap = computed(() => Object.keys(modalPixelColorRemap.value ?? {}).length > 0);
 const ensurePaintOverrideArray = (length: number) => {
   if (!paintOverrides.value || paintOverrides.value.length !== length) {
     paintOverrides.value = new Array(length).fill(null);
-  }
-  if (!modalOverrides.value || modalOverrides.value.length !== length) {
-    modalOverrides.value = new Array(length).fill(null);
   }
 };
 
@@ -1581,7 +1635,25 @@ const applyOverridesToPixels = (base: Uint8ClampedArray, overrides = paintOverri
   return merged;
 };
 
-const getStep2PixelsWithOverrides = (overrides = paintOverrides.value) => {
+const applyPixelColorRemap = (pixels: Uint8ClampedArray, remap: PixelColorRemap | null | undefined) => {
+  if (!remap || Object.keys(remap).length === 0) {
+    return pixels;
+  }
+  const output = Uint8ClampedArray.from(pixels);
+  for (let i = 0; i < pixels.length; i += 4) {
+    const replacement = remap[i.toString()];
+    if (!replacement) {
+      continue;
+    }
+    output[i] = replacement[0];
+    output[i + 1] = replacement[1];
+    output[i + 2] = replacement[2];
+    output[i + 3] = replacement[3] ?? pixels[i + 3];
+  }
+  return output;
+};
+
+const getStep2PixelsWithoutRemap = (overrides = paintOverrides.value) => {
   const base = step2PixelData.value;
   if (!base) {
     return null;
@@ -1589,30 +1661,28 @@ const getStep2PixelsWithOverrides = (overrides = paintOverrides.value) => {
   return applyOverridesToPixels(base, overrides);
 };
 
-const renderModalPreview = () => {
-  const result = computeQuantizedForOverrides(
-    modalOverrides.value ?? paintOverrides.value,
-    modalBaseQuantPixels.value ?? step3QuantPixelsBase.value
-  );
-  if (result?.quantPixels) {
-    modalQuantPixels.value = result.quantPixels;
-    drawStudImageOnCanvas(
-      result.quantPixels,
-      targetResolution.width,
-      SCALING_FACTOR,
-      modalUpscaledCanvas.value,
-      selectedPixelType.value
-    );
+const getStep2PixelsWithOverrides = (overrides = paintOverrides.value, remap = pixelColorRemap.value) => {
+  const base = getStep2PixelsWithoutRemap(overrides);
+  if (!base) {
+    return null;
   }
+  return applyPixelColorRemap(base, remap);
 };
-const scheduleModalPreview = () => {
-  if (modalRenderTimeout) {
+
+const renderModalUpscaled = (pixels: Uint8ClampedArray | null) => {
+  if (!pixels || !modalUpscaledCanvas.value) {
     return;
   }
-  modalRenderTimeout = setTimeout(() => {
-    modalRenderTimeout = null;
-    renderModalPreview();
-  }, 150);
+  renderUpscaledPreviewToTarget(modalUpscaledCanvas, pixels);
+};
+
+const renderModalPreview = () => {
+  if (!modalBaseStep2Pixels.value) {
+    return;
+  }
+  const remapped = applyPixelColorRemap(modalBaseStep2Pixels.value, modalPixelColorRemap.value ?? {});
+  modalPreviewPixels.value = remapped;
+  renderModalUpscaled(remapped);
 };
 const activeControlPointerIds = new Set<number>();
 let deferredStep2Delay = 120;
@@ -1627,6 +1697,53 @@ const markApiPreviewDirty = () => {
   if (props.editingOrderId && showApiStep3Preview.value) {
     showApiStep3Preview.value = false;
   }
+};
+
+const resetStep2Edits = () => {
+  hsvControls.hue = defaultHsv.hue;
+  hsvControls.saturation = defaultHsv.saturation;
+  hsvControls.value = defaultHsv.value;
+  hsvControls.brightness = defaultHsv.brightness;
+  hsvControls.contrast = defaultHsv.contrast;
+  useStep2PixelsAsSource.value = false;
+  if (paintOverrides.value) {
+    paintOverrides.value.fill(null);
+  }
+  pixelColorRemap.value = {};
+  modalPixelColorRemap.value = null;
+  modalPreviewPixels.value = null;
+  step2Ready.value = false;
+  step3Ready.value = false;
+  showApiStep3Preview.value = false;
+  finalStep3Preview.value = null;
+  if (hasStep2Edits.value) {
+    requestStep2Processing(0);
+  }
+  queuePersistSessionState();
+};
+
+const confirmResetEditsForStep1Change = () => {
+  if (!hasStep2Edits.value) {
+    useStep2PixelsAsSource.value = false;
+    step2Ready.value = false;
+    step3Ready.value = false;
+    showApiStep3Preview.value = false;
+    finalStep3Preview.value = null;
+    return true;
+  }
+  const ok = window.confirm('การเปลี่ยนขนาด/ตำแหน่งครอปจะรีเซ็ตการแก้ไข Step 2/3 ทั้งหมด ต้องการดำเนินการต่อหรือไม่?');
+  if (ok) {
+    resetStep2Edits();
+  }
+  return ok;
+};
+
+const handleResolutionPointerDown = (event: PointerEvent) => {
+  if (!confirmResetEditsForStep1Change()) {
+    event.preventDefault();
+    return;
+  }
+  handleControlPointerDown(event);
 };
 
 const handleResolutionInput = (axis: 'width' | 'height', event: Event) => {
@@ -1669,7 +1786,6 @@ const buildHsvState = (): HsvState => ({
 });
 
 let persistSessionTimeout: ReturnType<typeof setTimeout> | null = null;
-const lastPersistedImageDataByUser: Record<string, string | null> = {};
 
 const persistSessionState = () => {
   if (!props.enablePersistence || typeof window === 'undefined') {
@@ -1683,31 +1799,10 @@ const persistSessionState = () => {
     crop: sanitizeCropRect({ ...cropRect }),
     hsv: buildHsvState(),
     pixelType: selectedPixelType.value,
-    highQuality: isHighQualityColorMode.value
+    highQuality: isHighQualityColorMode.value,
+    pixelColorRemap: pixelColorRemap.value
   };
-  brickWorkflowCookie.value = {
-    ...(brickWorkflowCookie.value ?? {}),
-    [currentUserId.value]: payload
-  };
-  if (payload.hasImage && uploadedImage.value) {
-    const lastPersisted = lastPersistedImageDataByUser[currentUserId.value] ?? null;
-    if (uploadedImage.value !== lastPersisted) {
-      try {
-        localStorage.setItem(resolvedImageStorageKey.value, uploadedImage.value);
-        lastPersistedImageDataByUser[currentUserId.value] = uploadedImage.value;
-      } catch (error) {
-        console.warn('ไม่สามารถบันทึกภาพลง localStorage ได้', error);
-      }
-    }
-  } else {
-    try {
-      localStorage.removeItem(resolvedImageStorageKey.value);
-      lastPersistedImageDataByUser[currentUserId.value] = null;
-    } catch (error) {
-      console.warn('ไม่สามารถล้างภาพจาก localStorage ได้', error);
-    }
-    clearStepImagesForUser();
-  }
+  clearStepImagesForUser();
 };
 
 const queuePersistSessionState = () => {
@@ -1742,99 +1837,8 @@ const restoreFromPersistence = async (): Promise<boolean> => {
   if (!props.enablePersistence || typeof window === 'undefined') {
     return false;
   }
-  const cookieHash = step3HashCookie.value;
-  if (cookieHash?.userId === currentUserId.value) {
-    persistedStep3BaseHash.value = cookieHash.baseHash ?? null;
-    persistedStep3SourceHash.value = cookieHash.srcHash ?? null;
-  } else {
-    persistedStep3BaseHash.value = null;
-    persistedStep3SourceHash.value = null;
-  }
-  const persisted = brickWorkflowCookie.value?.[currentUserId.value];
-  if (!persisted || (persisted.userId && persisted.userId !== currentUserId.value)) {
-    return false;
-  }
-
-  if (persisted.resolution?.width) {
-    targetResolution.width = clampResolutionValue(persisted.resolution.width);
-  }
-  if (persisted.resolution?.height) {
-    targetResolution.height = clampResolutionValue(persisted.resolution.height);
-  }
-  if (persisted.hsv) {
-    hsvControls.hue = persisted.hsv.hue ?? hsvControls.hue;
-    hsvControls.saturation = persisted.hsv.saturation ?? hsvControls.saturation;
-    hsvControls.value = persisted.hsv.value ?? hsvControls.value;
-    hsvControls.brightness = persisted.hsv.brightness ?? hsvControls.brightness;
-    hsvControls.contrast = persisted.hsv.contrast ?? hsvControls.contrast;
-  }
-  if (persisted.pixelType != null) {
-    selectedPixelType.value = persisted.pixelType;
-  }
-  if (persisted.highQuality != null) {
-    isHighQualityColorMode.value = persisted.highQuality;
-  }
-  if (persisted.crop) {
-    persistedCropRect.value = sanitizeCropRect(persisted.crop);
-  }
-
-  if (!persisted.hasImage) {
-    return false;
-  }
-  const stepImageSnapshot = stepImagesCookie.value?.[currentUserId.value];
-  if (stepImageSnapshot?.userId === currentUserId.value) {
-    if (props.editingOrderId) {
-      if (props.initialStep3Preview) {
-        stepImageSnapshot.step3Preview = props.initialStep3Preview;
-      }
-      if (props.initialStep3Base && !stepImageSnapshot.step3Base) {
-        stepImageSnapshot.step3Base = props.initialStep3Base;
-      }
-    }
-    resetWorkflowState({ clearPersistedPreview: false });
-    const restoredFromCookie = await restoreFromStepImages(stepImageSnapshot);
-    if (restoredFromCookie) {
-      lastPersistedImageDataByUser[currentUserId.value] = stepImageSnapshot.step1 ?? null;
-      return true;
-    }
-    resetWorkflowState({ clearPersistedPreview: false });
-  }
-  const storedImage = localStorage.getItem(resolvedImageStorageKey.value);
-  if (storedImage) {
-    lastPersistedImageDataByUser[currentUserId.value] = storedImage;
-    resetWorkflowState({ clearPersistedPreview: false });
-    isProcessing.value = true;
-    drawImagePreview(storedImage);
-    try {
-      const persistedPreview =
-        sessionStorage.getItem(STEP3_FINAL_PREVIEW_STORAGE) ??
-        localStorage.getItem(STEP3_FINAL_PREVIEW_STORAGE);
-      if (persistedPreview) {
-        persistFinalStep3Preview(persistedPreview);
-      }
-      const persistedBase =
-        sessionStorage.getItem(STEP3_FINAL_BASE_STORAGE) ??
-        localStorage.getItem(STEP3_FINAL_BASE_STORAGE);
-      if (persistedBase) {
-        pendingRestoredStep3Base.value = persistedBase;
-        restoredStep3Applied.value = false;
-        persistedStep3BaseHash.value = hashString(persistedBase);
-        if (!persistedStep3SourceHash.value && step3HashCookie.value?.srcHash) {
-          persistedStep3SourceHash.value = step3HashCookie.value.srcHash;
-        }
-        suspendStep3Persistence.value = true;
-        step3HashCookie.value = {
-          v: 1,
-          userId: currentUserId.value,
-          baseHash: persistedStep3BaseHash.value,
-          srcHash: persistedStep3SourceHash.value ?? null
-        };
-      }
-    } catch (error) {
-      console.warn('ไม่สามารถโหลดภาพตัวอย่างจาก sessionStorage/localStorage ได้', error);
-    }
-    return true;
-  }
+  persistedStep3BaseHash.value = null;
+  persistedStep3SourceHash.value = null;
   return false;
 };
 
@@ -1899,6 +1903,9 @@ const beginCropInteraction = (event: PointerEvent, type: CropInteractionType) =>
   }
   const container = cropPreviewContainer.value;
   if (!container) {
+    return;
+  }
+  if (!confirmResetEditsForStep1Change()) {
     return;
   }
   event.preventDefault();
@@ -1984,6 +1991,59 @@ const triggerFilePicker = () => {
   fileInputRef.value?.click();
 };
 
+const applyInitialStep2Preview = async (preview: string | null) => {
+  if (!preview) {
+    return;
+  }
+  await nextTick();
+  if (!step2Canvas.value || !step2UpscaledCanvas.value) {
+    return;
+  }
+  let result = await loadDataUrlToCanvas(step2Canvas.value, preview);
+  if (!result) {
+    return;
+  }
+  let targetWidth = clampResolutionValue(result.width);
+  let targetHeight = clampResolutionValue(result.height);
+  const looksUpscaled = result.width > RESOLUTION_MAX || result.height > RESOLUTION_MAX;
+  if (looksUpscaled) {
+    const guessedWidth = Math.round(result.width / SCALING_FACTOR);
+    const guessedHeight = Math.round(result.height / SCALING_FACTOR);
+    if (
+      guessedWidth > 0 &&
+      guessedHeight > 0 &&
+      guessedWidth <= RESOLUTION_MAX &&
+      guessedHeight <= RESOLUTION_MAX
+    ) {
+      targetWidth = clampResolutionValue(guessedWidth);
+      targetHeight = clampResolutionValue(guessedHeight);
+    } else {
+      const aspect = result.width / Math.max(result.height, 1);
+      if (aspect >= 1) {
+        targetWidth = clampResolutionValue(RESOLUTION_MAX);
+        targetHeight = clampResolutionValue(Math.max(RESOLUTION_MIN, Math.round(targetWidth / Math.max(aspect, 0.01))));
+      } else {
+        targetHeight = clampResolutionValue(RESOLUTION_MAX);
+        targetWidth = clampResolutionValue(Math.max(RESOLUTION_MIN, Math.round(targetHeight * aspect)));
+      }
+    }
+    const resized = await loadDataUrlToCanvas(step2Canvas.value, preview, targetWidth, targetHeight);
+    if (!resized) {
+      return;
+    }
+    result = resized;
+  }
+  targetResolution.width = clampResolutionValue(result.width);
+  targetResolution.height = clampResolutionValue(result.height);
+  step2PixelData.value = Uint8ClampedArray.from(result.pixels);
+  useStep2PixelsAsSource.value = true;
+  renderStep2Preview(step2PixelData.value, true);
+  step2Ready.value = true;
+  step2Error.value = null;
+  persistStep2Preview(step2Canvas.value?.toDataURL('image/png', 0.92) ?? preview);
+  runStep3Pipeline();
+};
+
 onMounted(async () => {
   if (!shouldSkipPersistence.value) {
     const restored = props.enablePersistence ? await restoreFromPersistence() : false;
@@ -1991,7 +2051,7 @@ onMounted(async () => {
       return;
     }
   }
-  if (props.initialStep3Preview && !initialOrderPreviewApplied.value) {
+  if (props.initialStep3Preview && !initialOrderPreviewApplied.value && !props.initialStep2Preview) {
     finalStep3Preview.value = props.initialStep3Preview;
     initialOrderPreviewApplied.value = true;
     persistFinalStep3Preview(props.initialStep3Preview, props.initialStep3Base ?? undefined);
@@ -2002,11 +2062,24 @@ onMounted(async () => {
   }
   if (props.defaultImageSrc) {
     const hasApiStep3 = Boolean(props.initialStep3Preview || props.initialStep3Base);
+    if (props.initialStep2Preview) {
+      shouldSkipInitialStep2Run.value = true;
+    }
     resetWorkflowState({ clearPersistedPreview: !hasApiStep3, preserveRestoredStep3: hasApiStep3 });
     isProcessing.value = true;
-    drawImagePreview(props.defaultImageSrc);
+    const shouldDeferStep2 = Boolean(props.initialStep2Preview);
+    drawImagePreview(props.defaultImageSrc, { skipAutoStep2: shouldDeferStep2 });
+    if (shouldDeferStep2) {
+      await applyInitialStep2Preview(props.initialStep2Preview);
+    }
   } else {
+    if (props.initialStep2Preview) {
+      shouldSkipInitialStep2Run.value = true;
+    }
     applyInitialCrop();
+    if (props.initialStep2Preview) {
+      await applyInitialStep2Preview(props.initialStep2Preview);
+    }
   }
 });
 
@@ -2014,7 +2087,6 @@ watch(currentUserId, async () => {
   if (!props.enablePersistence || shouldSkipPersistence.value) {
     return;
   }
-  lastPersistedImageDataByUser[currentUserId.value] = null;
   initialCropApplied.value = false;
   const restored = await restoreFromPersistence();
   if (!restored) {
@@ -2045,27 +2117,43 @@ watch(
     if (!next) return;
     initialCropApplied.value = false;
     const hasApiStep3 = Boolean(props.initialStep3Preview || props.initialStep3Base);
+    if (props.initialStep2Preview) {
+      shouldSkipInitialStep2Run.value = true;
+    }
     resetWorkflowState({ clearPersistedPreview: !hasApiStep3, preserveRestoredStep3: hasApiStep3 });
     isProcessing.value = true;
-    drawImagePreview(next);
+    const shouldDeferStep2 = Boolean(props.initialStep2Preview);
+    drawImagePreview(next, { skipAutoStep2: shouldDeferStep2 });
+    if (shouldDeferStep2) {
+      applyInitialStep2Preview(props.initialStep2Preview);
+    }
+  }
+);
+
+watch(
+  () => props.initialStep2Preview,
+  (next) => {
+    if (!next) return;
+    applyInitialStep2Preview(next);
   }
 );
 
 watch(
   () => props.initialStep3Preview,
   (next) => {
-    if (!next) return;
+    if (!next || props.initialStep2Preview) return;
+    logStep3('initialStep3Preview watcher', {
+      hasInitialBase: Boolean(props.initialStep3Base),
+      editingOrderId: props.editingOrderId
+    });
     finalStep3Preview.value = next;
     initialOrderPreviewApplied.value = true;
     persistFinalStep3Preview(next, props.initialStep3Base ?? undefined);
     if (props.editingOrderId) {
       step3Ready.value = true;
       showApiStep3Preview.value = true;
-      if (!props.initialStep3Base && !restoredStep3Applied.value) {
-        pendingRestoredStep3Base.value = next;
-        suspendStep3Persistence.value = true;
-      }
     }
+    applyRestoredStep3BaseIfNeeded();
   },
   { immediate: true }
 );
@@ -2074,12 +2162,17 @@ watch(
   () => props.initialStep3Base,
   (next) => {
     if (!next) return;
+    logStep3('initialStep3Base watcher', {
+      editingOrderId: props.editingOrderId,
+      hasPreview: Boolean(props.initialStep3Preview)
+    });
     pendingRestoredStep3Base.value = next;
     restoredStep3Applied.value = false;
     suspendStep3Persistence.value = true;
-    if (props.editingOrderId && props.initialStep3Preview) {
+    if (props.editingOrderId && props.initialStep3Preview && !props.initialStep2Preview) {
       showApiStep3Preview.value = true;
     }
+    // applyRestoredStep3BaseIfNeeded();
   },
   { immediate: true }
 );
@@ -2105,6 +2198,10 @@ const applyInitialCrop = () => {
   Object.assign(cropInteraction, props.initialCropInteraction);
   initialCropApplied.value = true;
   persistCropForOrder();
+  if (shouldSkipInitialStep2Run.value) {
+    shouldSkipInitialStep2Run.value = false;
+    return;
+  }
   scheduleStep2Processing(100);
 };
 
@@ -2113,6 +2210,7 @@ const resetWorkflowState = (options: { clearPersistedPreview?: boolean; preserve
   step1Ready.value = false;
   step2Ready.value = false;
   step3Ready.value = false;
+  useStep2PixelsAsSource.value = false;
   initialCropApplied.value = false;
   step2Error.value = null;
   step3Error.value = null;
@@ -2121,21 +2219,17 @@ const resetWorkflowState = (options: { clearPersistedPreview?: boolean; preserve
   step3StudUsage.value = [];
   step2PixelData.value = null;
   paintOverrides.value = null;
-  modalOverrides.value = null;
+  pixelColorRemap.value = {};
+  modalPixelColorRemap.value = null;
+  modalBaseStep2Pixels.value = null;
+  modalPreviewPixels.value = null;
   step3QuantPixelsBase.value = null;
-  modalBaseQuantPixels.value = null;
-  modalQuantPixels.value = null;
-  if (modalRenderTimeout) {
-    clearTimeout(modalRenderTimeout);
-    modalRenderTimeout = null;
-  }
   isToolDropdownOpen.value = false;
   isColorDropdownOpen.value = false;
   isEditModalOpen.value = false;
   paintInProgress.value = false;
   modalPaintInProgress.value = false;
   pendingStep3AfterPaint = false;
-  modalPendingStep3AfterPaint = false;
   userPaintColorTouched.value = false;
   lockBodyScroll(false);
   cropRect.left = 0;
@@ -2143,8 +2237,8 @@ const resetWorkflowState = (options: { clearPersistedPreview?: boolean; preserve
   cropRect.width = 1;
   cropRect.height = 1;
   if (clearPersistedPreview) {
+    persistStep2Preview(null);
     persistFinalStep3Preview(null);
-    step3HashCookie.value = null;
     clearStepImagesForUser();
     originalImageForOrder.value = null;
     cropInteractionForOrder.value = null;
@@ -2171,7 +2265,8 @@ const normalizeCanvasPixels = (canvas: HTMLCanvasElement) => {
   drawPixelsOnCanvas(pixels, canvas);
 };
 
-const drawImagePreview = (src: string) => {
+const drawImagePreview = (src: string, options: { skipAutoStep2?: boolean } = {}) => {
+  const { skipAutoStep2 = false } = options;
   const canvas = step1Canvas.value;
   if (!canvas) {
     uploadError.value = 'ไม่สามารถสร้าง canvas แสดงตัวอย่างได้';
@@ -2195,14 +2290,18 @@ const drawImagePreview = (src: string) => {
     normalizeCanvasPixels(canvas);
     uploadedImage.value = canvas.toDataURL('image/png', 0.92);
     originalImageForOrder.value = uploadedImage.value;
-    persistStepImages({
+    useStep2PixelsAsSource.value = false;
+    const persistPayload: Partial<Omit<StepImageSnapshot, 'v' | 'userId'>> = {
       step1: uploadedImage.value,
-      step2: null,
       step3Base: null,
       step3Preview: null,
       baseHash: null,
       srcHash: null
-    });
+    };
+    if (!skipAutoStep2) {
+      persistPayload.step2 = null;
+    }
+    persistStepImages(persistPayload);
     imageDimensions.value = { width: img.width, height: img.height };
     step1Ready.value = true;
     step2Ready.value = false;
@@ -2212,8 +2311,10 @@ const drawImagePreview = (src: string) => {
     cropRect.height = 1;
     syncCropRectToAspect();
     persistCropForOrder();
-  applyInitialCrop();
-  nextTick().then(() => scheduleStep2Processing(10));
+    applyInitialCrop();
+    if (!skipAutoStep2) {
+      nextTick().then(() => scheduleStep2Processing(10));
+    }
     isProcessing.value = false;
   };
   img.onerror = () => {
@@ -2288,7 +2389,9 @@ const renderStep2Preview = (pixels: Uint8ClampedArray, markReady = true) => {
   outputCanvas.width = targetResolution.width;
   outputCanvas.height = targetResolution.height;
   drawPixelsOnCanvas(pixels, outputCanvas);
-  persistStepImages({ step2: outputCanvas.toDataURL('image/png', 0.92) });
+  const step2DataUrl = outputCanvas.toDataURL('image/png', 0.92);
+  persistStepImages({ step2: step2DataUrl });
+  persistStep2Preview(step2DataUrl);
 
   upscaledCanvas.width = targetResolution.width * SCALING_FACTOR;
   upscaledCanvas.height = targetResolution.height * SCALING_FACTOR;
@@ -2347,45 +2450,57 @@ const renderUpscaledPreviewToTarget = (targetCanvasRef: typeof step2UpscaledCanv
 const runStep2Pipeline = () => {
   const sourceCanvas = step1Canvas.value;
   const outputCanvas = step2Canvas.value;
-  if (!sourceCanvas || !outputCanvas) {
+  if ((!sourceCanvas || !outputCanvas) && !(useStep2PixelsAsSource.value && step2PixelData.value)) {
     return;
   }
   isStep2Processing.value = true;
   step2Error.value = null;
   try {
-    const bufferCanvas = document.createElement('canvas');
-    bufferCanvas.width = targetResolution.width;
-    bufferCanvas.height = targetResolution.height;
-    const bufferContext = bufferCanvas.getContext('2d');
-    if (!bufferContext) {
-      throw new Error('เบราว์เซอร์ไม่รองรับการประมวลผล canvas');
+    let pixelArray: Uint8ClampedArray | null = null;
+    if (useStep2PixelsAsSource.value && step2PixelData.value) {
+      pixelArray = Uint8ClampedArray.from(step2PixelData.value);
+      pixelArray = applyHSVAdjustment(pixelArray, hsvControls.hue, hsvControls.saturation / 100, hsvControls.value / 100);
+      pixelArray = applyBrightnessAdjustment(pixelArray, hsvControls.brightness);
+      pixelArray = applyContrastAdjustment(pixelArray, hsvControls.contrast);
+    } else {
+      const bufferCanvas = document.createElement('canvas');
+      bufferCanvas.width = targetResolution.width;
+      bufferCanvas.height = targetResolution.height;
+      const bufferContext = bufferCanvas.getContext('2d');
+      if (!bufferContext) {
+        throw new Error('เบราว์เซอร์ไม่รองรับการประมวลผล canvas');
+      }
+      bufferContext.imageSmoothingEnabled = false;
+      const sx = Math.round(cropRect.left * sourceCanvas!.width);
+      const sy = Math.round(cropRect.top * sourceCanvas!.height);
+      const sWidth = Math.round(cropRect.width * sourceCanvas!.width);
+      const sHeight = Math.round(cropRect.height * sourceCanvas!.height);
+      bufferContext.drawImage(
+        sourceCanvas!,
+        sx,
+        sy,
+        sWidth,
+        sHeight,
+        0,
+        0,
+        bufferCanvas.width,
+        bufferCanvas.height
+      );
+      pixelArray = getPixelArrayFromCanvas(bufferCanvas);
+      pixelArray = applyHSVAdjustment(pixelArray, hsvControls.hue, hsvControls.saturation / 100, hsvControls.value / 100);
+      pixelArray = applyBrightnessAdjustment(pixelArray, hsvControls.brightness);
+      pixelArray = applyContrastAdjustment(pixelArray, hsvControls.contrast);
+      outputCanvas.width = bufferCanvas.width;
+      outputCanvas.height = bufferCanvas.height;
     }
-    bufferContext.imageSmoothingEnabled = false;
-    const sx = Math.round(cropRect.left * sourceCanvas.width);
-    const sy = Math.round(cropRect.top * sourceCanvas.height);
-    const sWidth = Math.round(cropRect.width * sourceCanvas.width);
-    const sHeight = Math.round(cropRect.height * sourceCanvas.height);
-    bufferContext.drawImage(
-      sourceCanvas,
-      sx,
-      sy,
-      sWidth,
-      sHeight,
-      0,
-      0,
-      bufferCanvas.width,
-      bufferCanvas.height
-    );
-    let pixelArray = getPixelArrayFromCanvas(bufferCanvas);
-    pixelArray = applyHSVAdjustment(pixelArray, hsvControls.hue, hsvControls.saturation / 100, hsvControls.value / 100);
-    pixelArray = applyBrightnessAdjustment(pixelArray, hsvControls.brightness);
-    pixelArray = applyContrastAdjustment(pixelArray, hsvControls.contrast);
-    outputCanvas.width = bufferCanvas.width;
-    outputCanvas.height = bufferCanvas.height;
+    if (!pixelArray) {
+      throw new Error('ไม่พบข้อมูล Step 2');
+    }
     step2PixelData.value = Uint8ClampedArray.from(pixelArray);
     ensurePaintOverrideArray(pixelArray.length);
     const mergedPixels = applyOverridesToPixels(pixelArray);
-    renderStep2Preview(mergedPixels);
+    const remappedPixels = applyPixelColorRemap(mergedPixels, pixelColorRemap.value);
+    renderStep2Preview(remappedPixels);
     const upscaledCanvas = step2UpscaledCanvas.value;
     if (upscaledCanvas) {
       step2Ready.value = true;
@@ -2399,9 +2514,15 @@ const runStep2Pipeline = () => {
 };
 
 const runStep3Pipeline = () => {
+  logStep3('runStep3Pipeline: start', {
+    step2Ready: step2Ready.value,
+    hasOverrides: Boolean(paintOverrides.value?.some((v) => v != null)),
+    highQuality: isHighQualityColorMode.value
+  });
   const sourcePixels = getStep2PixelsWithOverrides();
   if (!step2Ready.value || sourcePixels == null) {
     step3Ready.value = false;
+    logStep3('runStep3Pipeline: aborted (step2 not ready or no source pixels)');
     return;
   }
   const baseStudMap = ALL_BRICKLINK_SOLID_COLORS.reduce((acc, color) => {
@@ -2415,6 +2536,10 @@ const runStep3Pipeline = () => {
     if (!isHighQualityColorMode.value) {
       quantPixels = replaceSparseColors(quantPixels, SPARSE_COLOR_THRESHOLD, ciede2000ColorDistance);
     }
+    logStep3('runStep3Pipeline: quantized', {
+      pixelCount: quantPixels.length,
+      colorCount: Object.keys(getUsedPixelsStudMap(quantPixels)).length
+    });
     const step3BaseCanvas = step3Canvas.value;
     const step3Upscaled = step3UpscaledCanvas.value;
     if (!step3BaseCanvas || !step3Upscaled) {
@@ -2440,6 +2565,13 @@ const runStep3Pipeline = () => {
       (props.editingOrderId && showApiStep3Preview.value && apiStep3Preview.value);
     if (!shouldSkipPersist) {
       persistFinalStep3Preview(step3Upscaled.toDataURL('image/png', 0.92), baseCanvasDataUrl, baseSourceHash);
+    } else {
+      logStep3('runStep3Pipeline: skip persist', {
+        suspendStep3Persistence: suspendStep3Persistence.value,
+        pendingRestoredStep3Base: Boolean(pendingRestoredStep3Base.value),
+        editingOrderId: props.editingOrderId,
+        showApiStep3Preview: showApiStep3Preview.value
+      });
     }
     step3QuantPixels.value = quantPixels;
     if (!step3QuantPixelsBase.value) {
@@ -2460,10 +2592,17 @@ const runStep3Pipeline = () => {
 
     step3Error.value = null;
     step3Ready.value = true;
+    logStep3('runStep3Pipeline: done', {
+      quantizationError: step3QuantizationError.value,
+      colorCount: step3StudUsage.value.length,
+      baseHash: lastGeneratedStep3BaseHash.value,
+      sourceHash: lastGeneratedStep3SourceHash.value
+    });
     applyRestoredStep3BaseIfNeeded();
   } catch (err) {
     step3Ready.value = false;
     step3Error.value = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดใน Step 3';
+    logStep3('runStep3Pipeline: error', { error: step3Error.value });
   }
 };
 
@@ -2482,14 +2621,24 @@ const handleClearPaintOverrides = () => {
   if (!step2PixelData.value) {
     return;
   }
+  markApiPreviewDirty();
   ensurePaintOverrideArray(step2PixelData.value.length);
   paintOverrides.value?.fill(null);
-  modalOverrides.value?.fill(null);
   const refreshed = getStep2PixelsWithOverrides();
   if (refreshed) {
     renderStep2Preview(refreshed, false);
     runStep3Pipeline();
   }
+};
+
+const clearPixelColorRemap = () => {
+  if (!hasPixelRemap.value) {
+    return;
+  }
+  markApiPreviewDirty();
+  pixelColorRemap.value = {};
+  requestStep2Processing(0);
+  queuePersistSessionState();
 };
 
 const toggleToolDropdown = () => {
@@ -2521,29 +2670,21 @@ const lockBodyScroll = (locked: boolean) => {
   }
 };
 
-const buildOverridesFromCurrent = (current: Uint8ClampedArray, base: Uint8ClampedArray) => {
-  const overrides = new Array(current.length).fill(null);
-  for (let i = 0; i < current.length; i += 4) {
-    if (current[i] !== base[i] || current[i + 1] !== base[i + 1] || current[i + 2] !== base[i + 2]) {
-      overrides[i] = current[i];
-      overrides[i + 1] = current[i + 1];
-      overrides[i + 2] = current[i + 2];
-      overrides[i + 3] = 255;
-    }
-  }
-  return overrides;
+const buildModalBasePixels = () => {
+  const base = getStep2PixelsWithoutRemap();
+  return base ? Uint8ClampedArray.from(base) : null;
 };
 
 const openEditModal = async () => {
-  if (!step2Ready.value || !step2PixelData.value || !step3Ready.value || !step3QuantPixels.value) {
+  if (!step2Ready.value || !step2PixelData.value) {
     return;
   }
-  const baseline =
-    (showApiStep3Preview.value && step3QuantPixels.value) || step3QuantPixelsBase.value || step3QuantPixels.value;
-  modalBaseQuantPixels.value = Uint8ClampedArray.from(baseline);
-  ensurePaintOverrideArray(baseline.length);
-  modalOverrides.value = buildOverridesFromCurrent(step3QuantPixels.value, baseline);
-  modalQuantPixels.value = Uint8ClampedArray.from(step3QuantPixels.value);
+  const basePixels = buildModalBasePixels();
+  if (!basePixels) {
+    return;
+  }
+  modalBaseStep2Pixels.value = basePixels;
+  modalPixelColorRemap.value = { ...(pixelColorRemap.value ?? {}) };
   isEditModalOpen.value = true;
   lockBodyScroll(true);
   await nextTick();
@@ -2552,96 +2693,58 @@ const openEditModal = async () => {
 
 const cancelEditModal = () => {
   isEditModalOpen.value = false;
-  modalOverrides.value = null;
-  modalQuantPixels.value = null;
-  modalBaseQuantPixels.value = null;
+  modalPixelColorRemap.value = null;
+  modalBaseStep2Pixels.value = null;
+  modalPreviewPixels.value = null;
   modalPaintInProgress.value = false;
-  modalPendingStep3AfterPaint = false;
   lockBodyScroll(false);
 };
 
 const confirmEditModal = () => {
-  if (!step2PixelData.value || !modalOverrides.value) {
-    isEditModalOpen.value = false;
-    return;
-  }
-  const baseQuant = modalBaseQuantPixels.value ?? step3QuantPixelsBase.value ?? step3QuantPixels.value;
-  const finalQuant =
-    modalQuantPixels.value ??
-    (baseQuant ? applyOverridesToPixels(baseQuant, modalOverrides.value) : null) ??
-    step3QuantPixels.value;
-  if (finalQuant) {
-    step3QuantPixels.value = Uint8ClampedArray.from(finalQuant);
-    step3QuantizationError.value = step3QuantizationError.value ?? 0;
-    const step3BaseCanvas = step3Canvas.value;
-    const step3Upscaled = step3UpscaledCanvas.value;
-    if (step3BaseCanvas && step3Upscaled) {
-      step3BaseCanvas.width = targetResolution.width;
-      step3BaseCanvas.height = targetResolution.height;
-      drawPixelsOnCanvas(step3QuantPixels.value, step3BaseCanvas);
-      drawStudImageOnCanvas(
-        step3QuantPixels.value,
-        targetResolution.width,
-        SCALING_FACTOR,
-        step3Upscaled,
-        selectedPixelType.value
-      );
-      persistFinalStep3Preview(
-        step3Upscaled.toDataURL('image/png', 0.92),
-        step3BaseCanvas.toDataURL('image/png', 0.92),
-        lastGeneratedStep3SourceHash.value
-      );
-    }
-    const basePixelsForError = step2PixelData.value ? Array.from(step2PixelData.value) : Array.from(step3QuantPixels.value);
-    step3QuantizationError.value = getAverageQuantizationError(
-      basePixelsForError,
-      Array.from(step3QuantPixels.value),
-      ciede2000ColorDistance
-    );
-    const usageMap = getUsedPixelsStudMap(step3QuantPixels.value);
-    step3StudUsage.value = Object.entries(usageMap)
-      .map(([hex, count]) => ({ hex, count, name: colorName(hex) ?? hex }))
-      .sort((a, b) => b.count - a.count);
-    step3Ready.value = true;
-    step3Error.value = null;
-  }
-  modalQuantPixels.value = null;
-  modalBaseQuantPixels.value = null;
+  markApiPreviewDirty();
+  pixelColorRemap.value = { ...(modalPixelColorRemap.value ?? {}) };
   isEditModalOpen.value = false;
+  modalBaseStep2Pixels.value = null;
+  modalPreviewPixels.value = null;
+  modalPixelColorRemap.value = null;
+  modalPaintInProgress.value = false;
   lockBodyScroll(false);
+  requestStep2Processing(0);
+  queuePersistSessionState();
 };
 
-const clearModalOverrides = () => {
-  modalOverrides.value?.fill(null);
+const clearModalRemap = () => {
+  modalPixelColorRemap.value = {};
   renderModalPreview();
 };
 
-const computeQuantizedForOverrides = (
-  overrides: Array<number | null> | null,
-  baseQuant: Uint8ClampedArray | null = step3QuantPixelsBase.value
-) => {
-  if (!step2Ready.value || step2PixelData.value == null) {
-    return null;
+const applyPixelRemapAtPointer = (event: PointerEvent) => {
+  if (!modalBaseStep2Pixels.value || !modalUpscaledCanvas.value) {
+    return;
   }
-  if (baseQuant) {
-    const quantPixels = applyOverridesToPixels(baseQuant, overrides);
-    return { quantPixels };
+  markApiPreviewDirty();
+  if (!modalPixelColorRemap.value) {
+    modalPixelColorRemap.value = { ...(pixelColorRemap.value ?? {}) };
   }
-  const sourcePixels = getStep2PixelsWithOverrides(overrides);
-  if (!sourcePixels) {
-    return null;
+  const pixelIndex = getStep2PixelIndexFromPointerEvent(event, modalUpscaledCanvas);
+  if (pixelIndex == null) {
+    return;
   }
-  const baseStudMap = ALL_BRICKLINK_SOLID_COLORS.reduce((acc, color) => {
-    acc[color.hex] = Number.MAX_SAFE_INTEGER;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const alignedPixels = alignPixelsToStudMap(Array.from(sourcePixels), baseStudMap, ciede2000ColorDistance);
-  let quantPixels = Uint8ClampedArray.from(alignedPixels);
-  if (!isHighQualityColorMode.value) {
-    quantPixels = replaceSparseColors(quantPixels, SPARSE_COLOR_THRESHOLD, ciede2000ColorDistance);
+  if (selectedPaintTool.value === 'dropper') {
+    const preview = modalPreviewPixels.value ?? applyPixelColorRemap(base, modalPixelColorRemap.value);
+    paintColorHex.value = rgbToHex(preview[pixelIndex], preview[pixelIndex + 1], preview[pixelIndex + 2]);
+    userPaintColorTouched.value = true;
+    return;
   }
-  return { quantPixels };
+  const working = { ...(modalPixelColorRemap.value ?? {}) };
+  if (selectedPaintTool.value === 'eraser') {
+    delete working[pixelIndex.toString()];
+  } else {
+    const [r, g, b] = hexToRgb(paintColorHex.value);
+    working[pixelIndex.toString()] = [r, g, b, 255];
+  }
+  modalPixelColorRemap.value = working;
+  renderModalPreview();
 };
 
 const getStep2PixelIndexFromPointerEvent = (event: PointerEvent, targetCanvasRef: typeof step2UpscaledCanvas) => {
@@ -2672,55 +2775,7 @@ const applyPaintAtPointer = (
   if (pixelIndex == null) {
     return;
   }
-  // modal editing path works on step 3 quant pixels only
-  if (targetCanvasRef === modalUpscaledCanvas) {
-    const baseQuant = modalBaseQuantPixels.value ?? step3QuantPixels.value;
-    if (!baseQuant) {
-      return;
-    }
-    ensurePaintOverrideArray(baseQuant.length);
-    const overrides = targetOverridesRef.value;
-    if (!overrides) {
-      return;
-    }
 
-    const currentPixels = modalQuantPixels.value ?? baseQuant;
-
-    if (selectedPaintTool.value === 'dropper') {
-      const hex = rgbToHex(currentPixels[pixelIndex], currentPixels[pixelIndex + 1], currentPixels[pixelIndex + 2]);
-      paintColorHex.value = hex;
-      userPaintColorTouched.value = true;
-      return;
-    }
-
-    if (selectedPaintTool.value === 'eraser') {
-      overrides[pixelIndex] = null;
-      overrides[pixelIndex + 1] = null;
-      overrides[pixelIndex + 2] = null;
-      overrides[pixelIndex + 3] = null;
-    } else {
-      const [r, g, b] = hexToRgb(paintColorHex.value);
-      overrides[pixelIndex] = r;
-      overrides[pixelIndex + 1] = g;
-      overrides[pixelIndex + 2] = b;
-      overrides[pixelIndex + 3] = 255;
-    }
-
-    const merged = applyOverridesToPixels(baseQuant, overrides);
-    modalQuantPixels.value = merged;
-    drawStudImageOnCanvas(
-      merged,
-      targetResolution.width,
-      SCALING_FACTOR,
-      modalUpscaledCanvas.value,
-      selectedPixelType.value
-    );
-    scheduleModalPreview();
-    setPending(true);
-    return;
-  }
-
-  // non-modal path (currently unused)
   if (!step2Ready.value || !step2PixelData.value) {
     return;
   }
@@ -2788,18 +2843,18 @@ const handlePaintPointerUp = () => {
 };
 
 const handleModalPaintPointerDown = (event: PointerEvent) => {
-  if (!step2Ready.value || !isEditModalOpen.value) {
+  if (!isEditModalOpen.value || !modalBaseStep2Pixels.value) {
     return;
   }
   modalPaintInProgress.value = true;
-  applyPaintAtPointer(event, modalOverrides, modalUpscaledCanvas, (v) => (modalPendingStep3AfterPaint = v), modalPaintInProgress);
+  applyPixelRemapAtPointer(event);
 };
 
 const handleModalPaintPointerMove = (event: PointerEvent) => {
   if (!modalPaintInProgress.value) {
     return;
   }
-  applyPaintAtPointer(event, modalOverrides, modalUpscaledCanvas, (v) => (modalPendingStep3AfterPaint = v), modalPaintInProgress);
+  applyPixelRemapAtPointer(event);
 };
 
 const handleModalPaintPointerUp = () => {
@@ -2807,10 +2862,6 @@ const handleModalPaintPointerUp = () => {
     return;
   }
   modalPaintInProgress.value = false;
-  // ไม่รัน step3 ทันที ปล่อยให้กดบันทึก
-  if (!isEditModalOpen.value) {
-    lockBodyScroll(false);
-  }
 };
 
 const goToCheckout = async () => {
@@ -2826,6 +2877,10 @@ const goToCheckout = async () => {
     checkoutOrderError.value = 'ยังไม่มีภาพตัวอย่าง กรุณาสร้าง Step 3 ให้เสร็จ';
     return;
   }
+  if (!step2PreviewForOrder.value) {
+    checkoutOrderError.value = 'ยังไม่มีภาพจาก Step 2 กรุณาสร้างและบันทึกก่อน';
+    return;
+  }
   isCreatingCheckoutOrder.value = true;
   try {
     let orderId = props.editingOrderId ?? null;
@@ -2833,7 +2888,7 @@ const goToCheckout = async () => {
       await updateOrderAssets(
         orderId,
         {
-          previewUrl: finalStep3Preview.value,
+          previewUrl: step2PreviewForOrder.value,
           source: 'brick:edit',
           cropInteraction: cropInteractionForOrder.value ?? null,
           originalImage: originalImageForOrder.value ?? uploadedImage.value ?? null
@@ -2843,7 +2898,7 @@ const goToCheckout = async () => {
     } else {
       const data = await recordPendingPaymentOrder({
         userId: user.value.id,
-        previewUrl: finalStep3Preview.value,
+        previewUrl: step2PreviewForOrder.value,
         source: 'checkout',
         cropInteraction: cropInteractionForOrder.value ?? null,
         originalImage: originalImageForOrder.value ?? uploadedImage.value ?? null
