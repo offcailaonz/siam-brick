@@ -77,10 +77,10 @@
                 ถ้าอยากแก้อีกครั้ง กดกลับไป Step 3 ก่อน แล้วค่อยกลับมาชำระเงิน
               </p>
             </div>
-          <div
-            v-else-if="isPreviewLoading"
-            class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm animate-pulse"
-          >
+            <div
+              v-else-if="isPreviewLoading"
+              class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm animate-pulse"
+            >
               <div class="flex items-center justify-between gap-3">
                 <div>
                   <p
@@ -103,7 +103,9 @@
               v-else-if="studPreviewError"
               class="rounded-xl border border-rose-100 bg-rose-50 px-4 py-4 shadow-sm"
             >
-              <p class="text-sm font-semibold text-rose-700">โหลดพรีวิวจาก Step 2 ไม่สำเร็จ</p>
+              <p class="text-sm font-semibold text-rose-700">
+                โหลดพรีวิวจาก Step 2 ไม่สำเร็จ
+              </p>
               <p class="text-xs text-rose-600 mt-1">{{ studPreviewError }}</p>
             </div>
           </div>
@@ -148,9 +150,6 @@ import { ALL_BRICKLINK_SOLID_COLORS, PIXEL_TYPE_OPTIONS } from '~/lib/brickArtRe
 const route = useRoute();
 const { openAuthModal, user, requireAuth } = useAuthFlow();
 const { recordPendingPaymentOrder, fetchMyOrders, fetchOrderById, updateOrderAssets } = useOrders();
-const stepImagesCookie = ref<Record<string, any> | null>(null);
-const step3HashCookie = ref<Record<string, any> | null>(null);
-const STEP2_PREVIEW_STORAGE = 'brick-step2-preview';
 const STUD_COLOR_SET = new Set(ALL_BRICKLINK_SOLID_COLORS.map((c) => c.hex.toLowerCase()));
 const SCALING_FACTOR = 30;
 const SPARSE_COLOR_THRESHOLD = 10;
@@ -190,42 +189,6 @@ const isPreviewLoading = computed(
 );
 const currentOrderId = computed(() => selectedOrderId.value ?? orderSuccess.value?.id ?? latestOrder.value?.id ?? null);
 const brickLink = computed(() => (currentOrderId.value ? `/brick?id=${currentOrderId.value}` : '/brick'));
-
-const clearLocalMosaicPersistence = () => {
-  try {
-    sessionStorage.removeItem(STEP2_PREVIEW_STORAGE);
-    localStorage.removeItem(STEP2_PREVIEW_STORAGE);
-    sessionStorage.removeItem('brick-step3-final-preview');
-    localStorage.removeItem('brick-step3-final-preview');
-    sessionStorage.removeItem('brick-step3-final-base');
-    localStorage.removeItem('brick-step3-final-base');
-  } catch (error) {
-    console.warn('ไม่สามารถล้างข้อมูล preview ใน storage ได้', error);
-  }
-  step2Preview.value = null;
-  studPreview.value = null;
-  stepImagesCookie.value = null;
-  step3HashCookie.value = null;
-};
-
-const restorePreviewFromStorage = () => {
-  try {
-    if (!step2Preview.value) {
-      const step2Stored = sessionStorage.getItem(STEP2_PREVIEW_STORAGE) ?? localStorage.getItem(STEP2_PREVIEW_STORAGE);
-      if (step2Stored) {
-        step2Preview.value = step2Stored;
-      }
-    }
-    if (finalPreview.value) return;
-    const stored =
-      sessionStorage.getItem('brick-step3-final-preview') ?? localStorage.getItem('brick-step3-final-preview');
-    if (stored) {
-      finalPreview.value = stored;
-    }
-  } catch (error) {
-    console.warn('ไม่สามารถอ่านภาพจาก sessionStorage/localStorage ได้', error);
-  }
-};
 
 const loadImagePixels = async (
   src: string
@@ -404,9 +367,6 @@ onMounted(() => {
     if (user.value?.id) {
       loadSelectedOrder();
     }
-  } else {
-    // fallback for hard refresh: try sessionStorage (ไม่ใช้ cookie)
-    restorePreviewFromStorage();
   }
 });
 
@@ -539,9 +499,6 @@ watch(
 watch(
   () => selectedOrderId.value,
   (next) => {
-    if (!next && !finalPreview.value) {
-      restorePreviewFromStorage();
-    }
     if (user.value?.id && selectedOrderId.value) {
       loadSelectedOrder();
     } else {
@@ -591,7 +548,6 @@ const handleCreateOrder = async () => {
       orderSuccess.value = { id: data?.id ?? 'new' };
     }
     await loadMyOrders();
-    clearLocalMosaicPersistence();
   } catch (error: any) {
     orderError.value = error?.message ?? 'ไม่สามารถสร้างออเดอร์ได้';
     console.error('create order error', error);

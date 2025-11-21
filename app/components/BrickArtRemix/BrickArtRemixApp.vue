@@ -864,8 +864,6 @@ type StepImageSnapshot = {
 type PixelColorReplacement = [number, number, number, number?];
 type PixelColorRemap = Record<string, PixelColorReplacement>;
 
-const STEP_IMAGES_COOKIE = 'brick-step-images';
-
 const props = withDefaults(
   defineProps<{
     initialResolution?: { width?: number; height?: number };
@@ -896,7 +894,6 @@ const router = useRouter();
 const { user, requireAuth } = useAuthFlow();
 const { recordPendingPaymentOrder, updateOrderAssets } = useOrders();
 const currentUserId = computed(() => user.value?.id ?? 'guest');
-const stepImagesCookie = ref<Record<string, StepImageSnapshot> | null>(null);
 const studMapEntries = reactive(studMaps);
 const availableSetIds = Object.keys(studMapEntries) as StudMapId[];
 const selectedSetId = ref<StudMapId>(availableSetIds[0]);
@@ -989,35 +986,6 @@ const persistCropForOrder = () => {
 
 const persistStep2Preview = (preview: string | null) => {
   step2PreviewForOrder.value = preview;
-  if (typeof window === 'undefined') {
-    return;
-  }
-  try {
-    if (preview) {
-      sessionStorage.setItem(STEP2_PREVIEW_STORAGE, preview);
-      localStorage.setItem(STEP2_PREVIEW_STORAGE, preview);
-    } else {
-      sessionStorage.removeItem(STEP2_PREVIEW_STORAGE);
-      localStorage.removeItem(STEP2_PREVIEW_STORAGE);
-    }
-  } catch (error) {
-    console.warn('ไม่สามารถบันทึก/ล้างภาพ Step 2 ลง storage ได้', error);
-  }
-};
-
-const clearLocalMosaicPersistence = () => {
-  try {
-    sessionStorage.removeItem(STEP2_PREVIEW_STORAGE);
-    localStorage.removeItem(STEP2_PREVIEW_STORAGE);
-    sessionStorage.removeItem(STEP3_FINAL_PREVIEW_STORAGE);
-    localStorage.removeItem(STEP3_FINAL_PREVIEW_STORAGE);
-    sessionStorage.removeItem(STEP3_FINAL_BASE_STORAGE);
-    localStorage.removeItem(STEP3_FINAL_BASE_STORAGE);
-  } catch (error) {
-    console.warn('ไม่สามารถล้างข้อมูล preview ใน storage ได้', error);
-  }
-  persistStep2Preview(null);
-  stepImagesCookie.value = null;
 };
 const persistFinalStep3Preview = (preview: string | null, baseDataUrl?: string | null, baseSourceHash?: string | null) => {
   logStep3('persistFinalStep3Preview', {
@@ -1026,63 +994,11 @@ const persistFinalStep3Preview = (preview: string | null, baseDataUrl?: string |
     baseHash: baseSourceHash ?? lastGeneratedStep3SourceHash.value ?? null
   });
   finalStep3Preview.value = preview;
-  if (typeof window === 'undefined') {
-    return;
-  }
-  const isClear = !preview && !baseDataUrl && baseSourceHash === undefined;
-  const baseHash = baseDataUrl
-    ? hashString(baseDataUrl)
-    : isClear
-      ? null
-      : lastGeneratedStep3BaseHash.value ?? persistedStep3BaseHash.value ?? null;
-  const sourceHash = baseSourceHash ?? (isClear ? null : lastGeneratedStep3SourceHash.value ?? persistedStep3SourceHash.value ?? null);
-  lastGeneratedStep3BaseHash.value = baseHash;
-  persistedStep3BaseHash.value = baseHash;
-  lastGeneratedStep3SourceHash.value = sourceHash;
-  persistedStep3SourceHash.value = sourceHash;
-  try {
-    if (preview) {
-      sessionStorage.setItem(STEP3_FINAL_PREVIEW_STORAGE, preview);
-    } else {
-      sessionStorage.removeItem(STEP3_FINAL_PREVIEW_STORAGE);
-    }
-  } catch (error) {
-    console.warn('ไม่สามารถบันทึก/ล้างภาพตัวอย่างจาก sessionStorage ได้', error);
-  }
-  try {
-    if (preview) {
-      localStorage.setItem(STEP3_FINAL_PREVIEW_STORAGE, preview);
-    } else {
-      localStorage.removeItem(STEP3_FINAL_PREVIEW_STORAGE);
-    }
-  } catch (error) {
-    console.warn('ไม่สามารถบันทึก/ล้างภาพตัวอย่างจาก localStorage ได้', error);
-  }
-  const base = baseDataUrl ?? null;
-  try {
-    if (base) {
-      sessionStorage.setItem(STEP3_FINAL_BASE_STORAGE, base);
-    } else {
-      sessionStorage.removeItem(STEP3_FINAL_BASE_STORAGE);
-    }
-  } catch (error) {
-    console.warn('ไม่สามารถบันทึก/ล้าง base step3 ไปที่ sessionStorage ได้', error);
-  }
-  try {
-    if (base) {
-      localStorage.setItem(STEP3_FINAL_BASE_STORAGE, base);
-    } else {
-      localStorage.removeItem(STEP3_FINAL_BASE_STORAGE);
-    }
-  } catch (error) {
-    console.warn('ไม่สามารถบันทึก/ล้าง base step3 ไปที่ localStorage ได้', error);
-  }
-  persistStepImages({
-    step3Base: base,
-    step3Preview: preview,
-    baseHash,
-    srcHash: sourceHash ?? null
-  });
+  lastGeneratedStep3BaseHash.value = baseDataUrl ? hashString(baseDataUrl) : null;
+  lastGeneratedStep3SourceHash.value = baseSourceHash ?? null;
+  persistedStep3BaseHash.value = lastGeneratedStep3BaseHash.value;
+  persistedStep3SourceHash.value = lastGeneratedStep3SourceHash.value;
+  persistStepImages({});
 };
 const loadDataUrlToCanvas = async (
   canvas: HTMLCanvasElement | null,
@@ -1316,7 +1232,6 @@ const SERIALIZE_EDGE_LENGTH = 512;
 const RESOLUTION_MIN = 32;
 const RESOLUTION_MAX = 128;
 const RESOLUTION_STEP = 16;
-const STEP2_PREVIEW_STORAGE = 'brick-step2-preview';
 const SCALING_FACTOR = 30;
 const SPARSE_COLOR_THRESHOLD = 10;
 const PDF_FILENAME_BASE = 'Siam-Brick-Instructions';
@@ -1326,9 +1241,6 @@ const APP_WATERMARK = {
   title: 'Generated by siam-brick.com',
   version: 'siam-brick preview'
 };
-const STEP3_FINAL_PREVIEW_STORAGE = 'brick-step3-final-preview';
-const STEP3_FINAL_BASE_STORAGE = 'brick-step3-final-base';
-const STEP3_HASH_COOKIE = 'brick-step3-hash';
 const UNLIMITED_STUD_MAP = ALL_BRICKLINK_SOLID_COLORS.reduce((acc, color) => {
   acc[color.hex] = Number.MAX_SAFE_INTEGER;
   return acc;
@@ -2905,7 +2817,6 @@ const goToCheckout = async () => {
       });
       orderId = data?.id ?? null;
     }
-    clearLocalMosaicPersistence();
     if (orderId) {
       router.push(`/checkout?id=${orderId}`);
     } else {
