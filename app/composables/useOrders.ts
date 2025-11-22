@@ -8,6 +8,7 @@ type OrderPayload = {
   paymentReference?: string | null;
   cropInteraction?: Record<string, any> | null;
   originalImage?: string | null;
+  shipping?: Record<string, any> | null;
 };
 
 export const useOrders = () => {
@@ -41,6 +42,13 @@ export const useOrders = () => {
       .single();
 
     if (error) throw error;
+
+    if (payload.shipping) {
+      await supabase
+        .from('order_shipping')
+        .upsert({ order_id: data.id, ...payload.shipping }, { onConflict: 'order_id' });
+    }
+
     return data;
   };
 
@@ -87,7 +95,7 @@ export const useOrders = () => {
   };
 
   const fetchOrderById = async (orderId: string | number, userId?: string) => {
-    let query = supabase.from('orders').select('*').eq('id', orderId).limit(1);
+    let query = supabase.from('orders').select('*, order_shipping(*)').eq('id', orderId).limit(1);
     // เพิ่มกรอง user_id หากส่งมา ให้ตรงกับ RLS ที่จำกัดของผู้ใช้
     if (userId) {
       query = query.eq('user_id', userId);
@@ -97,10 +105,41 @@ export const useOrders = () => {
     return data;
   };
 
+  const updateOrderStatus = async (orderId: string | number, status: string) => {
+    const { data, error } = await supabase
+      .from('orders')
+      .update({ status })
+      .eq('id', orderId)
+      .select()
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  };
+
+  const fetchOrderShipping = async (orderId: string | number) => {
+    const { data, error } = await supabase.from('order_shipping').select('*').eq('order_id', orderId).maybeSingle();
+    if (error) throw error;
+    return data;
+  };
+
+  const upsertOrderShipping = async (orderId: string | number, shipping: Record<string, any>) => {
+    const payload = { order_id: orderId, ...shipping };
+    const { data, error } = await supabase
+      .from('order_shipping')
+      .upsert(payload, { onConflict: 'order_id' })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  };
+
   return {
     recordPendingPaymentOrder,
     updateOrderAssets,
     fetchMyOrders,
-    fetchOrderById
+    fetchOrderById,
+    updateOrderStatus,
+    fetchOrderShipping,
+    upsertOrderShipping
   };
 };

@@ -108,34 +108,205 @@
               </p>
               <p class="text-xs text-rose-600 mt-1">{{ studPreviewError }}</p>
             </div>
+
+            <ReceiveInfo />
           </div>
 
           <aside class="space-y-4">
-            <div
-              class="rounded-xl border border-amber-100 bg-amber-50 px-4 py-4 shadow-inner h-full"
+            <section
+              class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
             >
-              <p class="text-sm font-semibold text-amber-900">
-                สินค้าที่จะได้รับ
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="text-sm font-semibold text-slate-900">
+                    สรุปออเดอร์
+                  </p>
+                </div>
+                <span
+                  class="rounded-full px-3 py-1 text-[11px] font-semibold"
+                  :class="summaryStatusBadge.color"
+                >
+                  {{ summaryStatusBadge.text }}
+                </span>
+              </div>
+              <div class="mt-3 space-y-2 text-sm text-slate-600">
+                <div class="flex justify-between">
+                  <span class="text-slate-500">ออเดอร์เลขที่</span>
+                  <span
+                    class="font-semibold text-slate-900"
+                    >{{ summaryOrderId ?? '-' }}</span
+                  >
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-500">สร้างเมื่อ</span>
+                  <span
+                    class="font-semibold text-slate-900"
+                    >{{ formatDateTime(summaryCreatedAt) }}</span
+                  >
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-500">อัปเดตล่าสุด</span>
+                  <span
+                    class="font-semibold text-slate-900"
+                    >{{ formatDateTime(summaryUpdatedAt) }}</span
+                  >
+                </div>
+              </div>
+              <div
+                class="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700"
+              >
+                <p class="mt-1 text-2xl font-bold text-emerald-700">
+                  {{ formatCurrency(summaryPrice) }}
+                </p>
+              </div>
+            </section>
+            <section
+              class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="text-sm font-semibold text-slate-900">
+                    เลือกที่อยู่จัดส่ง
+                  </p>
+                  <p class="text-xs text-slate-500">
+                    ที่อยู่จากโปรไฟล์จะถูกดึงมาให้
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                  :disabled="addressesLoading || !user"
+                  @click="addressesLoading ? null : loadAddresses()"
+                >
+                  รีเฟรช
+                </button>
+              </div>
+              <p v-if="addressesError" class="text-xs text-rose-600 mt-2">
+                {{ addressesError }}
               </p>
-              <ul class="mt-3 space-y-2 text-sm text-amber-900/90">
-                <li class="flex gap-2">
-                  <span class="mt-1 h-2 w-2 rounded-full bg-amber-500"></span>
-                  จำนวนแผ่นฐาน/สัดส่วน studs จาก Step 3 + ชื่อสีที่ใช้
-                </li>
-                <li class="flex gap-2">
-                  <span class="mt-1 h-2 w-2 rounded-full bg-amber-500"></span>
-                  ต้องการสั่งชุดเต็ม หรือเฉพาะไฟล์ PDF
-                </li>
-                <li class="flex gap-2">
-                  <span class="mt-1 h-2 w-2 rounded-full bg-amber-500"></span>
-                  ช่องทางติดต่อที่สะดวก (อีเมล/LINE/โทร)
-                </li>
-                <li class="flex gap-2">
-                  <span class="mt-1 h-2 w-2 rounded-full bg-amber-500"></span>
-                  ที่อยู่จัดส่ง/จังหวัด (สำหรับคำนวณค่าขนส่ง)
-                </li>
-              </ul>
-            </div>
+              <div class="mt-3 space-y-2">
+                <div v-if="!user" class="text-sm text-slate-500">
+                  เข้าสู่ระบบเพื่อใช้ที่อยู่จัดส่ง
+                </div>
+                <div
+                  v-else-if="addressesLoading"
+                  class="text-sm text-slate-500"
+                >
+                  กำลังโหลดที่อยู่...
+                </div>
+                <div
+                  v-else-if="addresses.length === 0"
+                  class="text-sm text-slate-500"
+                >
+                  ยังไม่มีที่อยู่จัดส่ง
+                </div>
+                <div
+                  v-else
+                  v-for="address in addresses"
+                  :key="address.id"
+                  class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 shadow-sm"
+                >
+                  <div class="flex items-center justify-between gap-2">
+                    <label
+                      class="inline-flex items-start gap-2 text-sm text-slate-800 cursor-pointer"
+                    >
+                      <input
+                        type="radio"
+                        class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                        :value="Number(address.id)"
+                        v-model="selectedAddressId"
+                      />
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <span
+                            class="font-semibold"
+                            >{{ address.label || 'ที่อยู่' }}</span
+                          >
+                          <span
+                            v-if="address.is_default"
+                            class="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-100"
+                            >หลัก</span
+                          >
+                        </div>
+                        <p class="text-xs text-slate-600">
+                          {{ address.recipient_name }} {{ address.phone }}
+                        </p>
+                        <p class="text-xs text-slate-600">
+                          {{ address.address_line }}
+                        </p>
+                        <p class="text-xs text-slate-600">
+                          {{ address.subdistrict }} {{ address.district }}
+                          {{ address.province }} {{ address.postcode }}
+                        </p>
+                      </div>
+                    </label>
+                    <div class="flex flex-col gap-1">
+                      <button
+                        type="button"
+                        class="rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                        :disabled="address.is_default || addressDefaulting[address.id]"
+                        @click="markDefault(address.id)"
+                      >
+                        ตั้งหลัก
+                      </button>
+                      <button
+                        type="button"
+                        class="rounded-full border border-rose-200 px-2.5 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+                        :disabled="addressDeleting[address.id]"
+                        @click="removeAddress(address.id)"
+                      >
+                        ลบ
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                v-if="user && addresses.length === 0"
+                class="mt-4 rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-3"
+              >
+                <p class="text-sm font-semibold text-amber-800">
+                  เพิ่มที่อยู่จัดส่งแรกของคุณ
+                </p>
+                <p class="text-xs text-amber-700">
+                  บันทึกไว้แล้วจะเลือกอัตโนมัติ
+                </p>
+                <AddressForm
+                  :model-value="addressForm"
+                  :loading="addressSaving"
+                  :error="addressFormError"
+                  :saved-message="addressSavedMessage"
+                  :show-default-toggle="true"
+                  submit-label="บันทึก"
+                  @submit="saveAddress"
+                  @reset="resetAddressForm"
+                  @update:model-value="(v) => Object.assign(addressForm, v)"
+                />
+              </div>
+              <details
+                v-else
+                class="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
+              >
+                <summary
+                  class="cursor-pointer text-sm font-semibold text-slate-800"
+                >
+                  เพิ่มที่อยู่ใหม่
+                </summary>
+                <div class="mt-3">
+                  <AddressForm
+                    :model-value="addressForm"
+                    :loading="addressSaving"
+                    :error="addressFormError"
+                    :saved-message="addressSavedMessage"
+                    :show-default-toggle="true"
+                    submit-label="บันทึก"
+                    @submit="saveAddress"
+                    @reset="resetAddressForm"
+                    @update:model-value="(v) => Object.assign(addressForm, v)"
+                  />
+                </div>
+              </details>
+            </section>
           </aside>
         </div>
       </section>
@@ -146,10 +317,18 @@
 <script setup lang="ts">
 import { alignPixelsToStudMap, drawStudImageOnCanvas, replaceSparseColors, rgbToHex } from '~/lib/brickArtRemix/algo';
 import { ALL_BRICKLINK_SOLID_COLORS, PIXEL_TYPE_OPTIONS } from '~/lib/brickArtRemix/bricklinkColors';
+import AddressForm from '~/components/address/AddressForm.vue';
+import ReceiveInfo from '~/components/checkout/ReceiveInfo.vue';
+import { useOrderConfig } from '~/composables/useOrderConfig';
+import { useAddresses } from '~/composables/useAddresses';
+import { useThaiAddressSearch } from '~/composables/useThaiAddressSearch';
 
 const route = useRoute();
 const { openAuthModal, user, requireAuth } = useAuthFlow();
-const { recordPendingPaymentOrder, fetchMyOrders, fetchOrderById, updateOrderAssets } = useOrders();
+const { recordPendingPaymentOrder, fetchMyOrders, fetchOrderById, updateOrderAssets, upsertOrderShipping } = useOrders();
+const { fetchAddresses, createAddress, deleteAddress, setDefaultAddress } = useAddresses();
+const { loadAddressData } = useThaiAddressSearch();
+const { orderConfig } = useOrderConfig();
 const STUD_COLOR_SET = new Set(ALL_BRICKLINK_SOLID_COLORS.map((c) => c.hex.toLowerCase()));
 const SCALING_FACTOR = 30;
 const SPARSE_COLOR_THRESHOLD = 10;
@@ -169,6 +348,26 @@ const myOrdersError = ref<string | null>(null);
 const selectedOrder = ref<Record<string, any> | null>(null);
 const selectedOrderLoading = ref(false);
 const selectedOrderError = ref<string | null>(null);
+const addresses = ref<Array<Record<string, any>>>([]);
+const addressesLoading = ref(false);
+const addressesError = ref<string | null>(null);
+const addressFormError = ref<string | null>(null);
+const addressSaving = ref(false);
+const addressDeleting = ref<Record<number, boolean>>({});
+const addressDefaulting = ref<Record<number, boolean>>({});
+const addressSavedMessage = ref<string | null>(null);
+const selectedAddressId = ref<number | null>(null);
+const addressForm = reactive({
+  label: '',
+  recipient_name: '',
+  phone: '',
+  address_line: '',
+  province: '',
+  district: '',
+  subdistrict: '',
+  postcode: '',
+  is_default: false
+});
 const linkedOrderStep2Preview = computed(() => {
   if (!hasLinkedOrder.value) return null;
   const preview = selectedOrder.value?.preview_url || selectedOrder.value?.preview;
@@ -189,6 +388,51 @@ const isPreviewLoading = computed(
 );
 const currentOrderId = computed(() => selectedOrderId.value ?? orderSuccess.value?.id ?? latestOrder.value?.id ?? null);
 const brickLink = computed(() => (currentOrderId.value ? `/brick?id=${currentOrderId.value}` : '/brick'));
+const selectedOrderShipping = computed(() => {
+  const shipping = (selectedOrder.value as any)?.order_shipping;
+  if (Array.isArray(shipping)) {
+    return shipping[0] ?? null;
+  }
+  return shipping ?? null;
+});
+const selectedAddress = computed(() => {
+  const id = selectedAddressId.value == null ? null : Number(selectedAddressId.value);
+  return id != null ? addresses.value.find((addr) => Number(addr.id) === id) ?? null : null;
+});
+
+const mapAddressToShipping = (address: Record<string, any> | null | undefined) => {
+  if (!address) return null;
+  return {
+    recipient_name: address.recipient_name ?? null,
+    phone: address.phone ?? null,
+    address_line: address.address_line ?? null,
+    province: address.province ?? null,
+    district: address.district ?? null,
+    subdistrict: address.subdistrict ?? null,
+    postcode: address.postcode ?? null,
+    label: address.label ?? null,
+    is_temp: false
+  };
+};
+
+const effectiveShipping = computed(() => {
+  const chosenAddressShipping = mapAddressToShipping(selectedAddress.value);
+  if (chosenAddressShipping) return chosenAddressShipping;
+  if (selectedOrderShipping.value) {
+    return {
+      recipient_name: selectedOrderShipping.value.recipient_name ?? null,
+      phone: selectedOrderShipping.value.phone ?? null,
+      address_line: selectedOrderShipping.value.address_line ?? null,
+      province: selectedOrderShipping.value.province ?? null,
+      district: selectedOrderShipping.value.district ?? null,
+      subdistrict: selectedOrderShipping.value.subdistrict ?? null,
+      postcode: selectedOrderShipping.value.postcode ?? null,
+      label: selectedOrderShipping.value.label ?? null,
+      is_temp: selectedOrderShipping.value.is_temp ?? false
+    };
+  }
+  return null;
+});
 
 const loadImagePixels = async (
   src: string
@@ -435,6 +679,118 @@ const paymentLink = (order: Record<string, any>) => {
   return looksLikeUrl ? trimmed : null;
 };
 
+const resetAddressForm = () => {
+  addressForm.label = '';
+  addressForm.recipient_name = '';
+  addressForm.phone = '';
+  addressForm.address_line = '';
+  addressForm.province = '';
+  addressForm.district = '';
+  addressForm.subdistrict = '';
+  addressForm.postcode = '';
+  addressForm.is_default = false;
+  addressFormError.value = null;
+};
+
+const loadAddresses = async () => {
+  if (!user.value?.id) return;
+  addressesLoading.value = true;
+  addressesError.value = null;
+  try {
+    const data = await fetchAddresses(user.value.id);
+    addresses.value = data ?? [];
+    if (!selectedAddressId.value && data?.length) {
+      const defaultAddress = data.find((item: any) => item.is_default) ?? data[0];
+      selectedAddressId.value = defaultAddress?.id != null ? Number(defaultAddress.id) : null;
+    }
+  } catch (error: any) {
+    addressesError.value = error?.message ?? 'ไม่สามารถโหลดที่อยู่ได้';
+    addresses.value = [];
+  } finally {
+    addressesLoading.value = false;
+  }
+};
+
+const saveAddress = async () => {
+  if (!user.value?.id) {
+    requireAuth(() => saveAddress());
+    return;
+  }
+  addressFormError.value = null;
+  addressSavedMessage.value = null;
+  if (!addressForm.recipient_name || !addressForm.address_line) {
+    addressFormError.value = 'กรุณากรอกชื่อผู้รับและที่อยู่';
+    return;
+  }
+  addressSaving.value = true;
+  try {
+    const created = await createAddress(user.value.id, {
+      ...addressForm,
+      user_id: user.value.id
+    });
+    if (addressForm.is_default && created?.id) {
+      await setDefaultAddress(created.id, user.value.id);
+    }
+    await loadAddresses();
+    selectedAddressId.value = created?.id != null ? Number(created.id) : selectedAddressId.value;
+    addressSavedMessage.value = 'บันทึกที่อยู่เรียบร้อย';
+    resetAddressForm();
+  } catch (error: any) {
+    addressFormError.value = error?.message ?? 'บันทึกที่อยู่ไม่สำเร็จ';
+  } finally {
+    addressSaving.value = false;
+    setTimeout(() => {
+      addressSavedMessage.value = null;
+    }, 2200);
+  }
+};
+
+const removeAddress = async (addressId: number) => {
+  if (!user.value?.id) return;
+  addressDeleting.value[addressId] = true;
+  try {
+    await deleteAddress(addressId, user.value.id);
+    if (selectedAddressId.value === addressId) {
+      selectedAddressId.value = null;
+    }
+    await loadAddresses();
+  } catch (error: any) {
+    addressesError.value = error?.message ?? 'ลบที่อยู่ไม่สำเร็จ';
+  } finally {
+    addressDeleting.value[addressId] = false;
+  }
+};
+
+const markDefault = async (addressId: number) => {
+  if (!user.value?.id) return;
+  addressDefaulting.value[addressId] = true;
+  try {
+    await setDefaultAddress(addressId, user.value.id);
+    selectedAddressId.value = Number(addressId);
+    await loadAddresses();
+  } catch (error: any) {
+    addressesError.value = error?.message ?? 'ไม่สามารถตั้งค่าที่อยู่หลักได้';
+  } finally {
+    addressDefaulting.value[addressId] = false;
+  }
+};
+
+const summaryOrder = computed(() => latestOrder.value);
+const summaryOrderId = computed(() => summaryOrder.value?.id ?? currentOrderId.value ?? null);
+const summaryCreatedAt = computed(() => summaryOrder.value?.created_at ?? null);
+const summaryUpdatedAt = computed(() => summaryOrder.value?.updated_at ?? summaryOrder.value?.created_at ?? null);
+const summaryStatusBadge = computed(() => statusBadge(summaryOrder.value?.status));
+const summaryPrice = computed(() => {
+  const rawAmount = summaryOrder.value?.total_amount;
+  const normalized =
+    typeof rawAmount === 'number' ? rawAmount : Number(rawAmount ?? orderConfig.value.defaultPrice ?? 0);
+  if (!Number.isNaN(normalized) && normalized > 0) {
+    return normalized;
+  }
+  return Number(orderConfig.value.defaultPrice ?? 0);
+});
+const summaryHoldMinutes = computed(() => orderConfig.value.holdMinutes ?? 0);
+
 const loadMyOrders = async () => {
   if (!user.value?.id) return;
   myOrdersLoading.value = true;
@@ -487,10 +843,13 @@ watch(
   (next) => {
     if (next) {
       loadMyOrders();
+      loadAddresses();
+      loadAddressData();
       loadSelectedOrder();
     } else {
       myOrders.value = [];
       selectedOrder.value = null;
+      addresses.value = [];
     }
   },
   { immediate: true }
@@ -522,6 +881,10 @@ const handleCreateOrder = async () => {
     orderError.value = 'ยังไม่มีรูป Step 3 กรุณากลับไปสร้างก่อน';
     return;
   }
+  if (!effectiveShipping.value) {
+    orderError.value = 'กรุณาเลือกหรือเพิ่มที่อยู่จัดส่ง';
+    return;
+  }
   isCreatingOrder.value = true;
   try {
     let data: any = null;
@@ -537,13 +900,15 @@ const handleCreateOrder = async () => {
         user.value.id
       );
       orderSuccess.value = { id: selectedOrderId.value };
+      await upsertOrderShipping(selectedOrderId.value, effectiveShipping.value);
     } else {
       data = await recordPendingPaymentOrder({
         userId: user.value.id,
         previewUrl: step2PreviewSource.value,
         source: 'checkout',
         cropInteraction: cropInteractionForOrder.value ?? null,
-        originalImage: originalImage.value ?? null
+        originalImage: originalImage.value ?? null,
+        shipping: effectiveShipping.value
       });
       orderSuccess.value = { id: data?.id ?? 'new' };
     }

@@ -61,6 +61,128 @@
             <div class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
               <div class="flex items-center justify-between gap-2">
                 <div>
+                  <p class="text-sm font-semibold text-slate-900">ที่อยู่จัดส่ง</p>
+                  <p class="text-xs text-slate-500">เพิ่ม/เลือกที่อยู่ให้ดึงไปใช้ตอน checkout ได้ทันที</p>
+                </div>
+                <button
+                  v-if="!user"
+                  type="button"
+                  class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow"
+                  @click="openAuthModal"
+                >
+                  เข้าสู่ระบบ
+                </button>
+              </div>
+
+              <div v-if="!user" class="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-slate-700">
+                เข้าสู่ระบบเพื่อจัดการที่อยู่จัดส่ง
+              </div>
+
+              <div v-else class="mt-4 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p class="text-xs font-semibold text-slate-600">ที่อยู่ของฉัน</p>
+                    <p class="text-[11px] text-slate-500">จัดการรายการที่อยู่สำหรับการจัดส่ง</p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button
+                      type="button"
+                      class="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                      :disabled="addressesLoading"
+                      @click="loadAddresses"
+                    >
+                      รีเฟรช
+                    </button>
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-700 disabled:opacity-60"
+                      :disabled="addressSaving"
+                      @click="openAddressForm"
+                    >
+                      เพิ่มที่อยู่ใหม่
+                    </button>
+                  </div>
+                </div>
+
+                <div v-if="showAddressForm" class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm">
+                  <div class="flex items-center justify-between gap-2">
+                    <p class="text-xs font-semibold text-slate-600">เพิ่มที่อยู่ใหม่</p>
+                    <button
+                      type="button"
+                      class="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                      @click="closeAddressForm"
+                    >
+                      ปิด
+                    </button>
+                  </div>
+                  <AddressForm
+                    class="mt-2"
+                    :model-value="addressForm"
+                    :loading="addressSaving"
+                    :error="addressFormError"
+                    :saved-message="addressSavedMessage"
+                    :show-default-toggle="true"
+                    submit-label="บันทึกที่อยู่"
+                    @submit="saveAddress"
+                    @reset="resetAddressForm"
+                    @update:model-value="(v) => Object.assign(addressForm, v)"
+                  />
+                </div>
+
+                <div class="space-y-2">
+                  <p v-if="addressesError" class="text-xs text-rose-600">{{ addressesError }}</p>
+                  <div v-else class="space-y-2">
+                    <div v-if="addressesLoading" class="text-sm text-slate-500">กำลังโหลดที่อยู่...</div>
+                    <div v-else-if="addresses.length === 0" class="text-sm text-slate-500">ยังไม่มีที่อยู่จัดส่ง</div>
+                    <div
+                      v-else
+                      v-for="address in addresses"
+                      :key="address.id"
+                      class="rounded-lg border border-slate-200 bg-white px-3 py-3 shadow-sm"
+                    >
+                      <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                          <span class="text-sm font-semibold text-slate-900">{{ address.label || 'ที่อยู่' }}</span>
+                          <span
+                            v-if="address.is_default"
+                            class="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 border border-emerald-100"
+                          >
+                            ค่าเริ่มต้น
+                          </span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <button
+                            type="button"
+                            class="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                            :disabled="address.is_default || addressDefaulting[address.id]"
+                            @click="markDefault(address.id)"
+                          >
+                            ตั้งเป็นหลัก
+                          </button>
+                          <button
+                            type="button"
+                            class="rounded-full border border-rose-200 px-3 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+                            :disabled="addressDeleting[address.id]"
+                            @click="removeAddress(address.id)"
+                          >
+                            ลบ
+                          </button>
+                        </div>
+                      </div>
+                      <div class="mt-1 text-xs text-slate-600 space-y-1">
+                        <p class="font-semibold text-slate-800">{{ address.recipient_name }} <span class="text-slate-500">{{ address.phone }}</span></p>
+                        <p>{{ address.address_line }}</p>
+                        <p>{{ address.subdistrict }} {{ address.district }} {{ address.province }} {{ address.postcode }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+              <div class="flex items-center justify-between gap-2">
+                <div>
                   <p class="text-sm font-semibold text-slate-900">ออเดอร์ของฉัน</p>
                   <p class="text-xs text-slate-500">5 รายการล่าสุด</p>
                 </div>
@@ -167,8 +289,13 @@
 </template>
 
 <script setup lang="ts">
+import AddressForm from '~/components/address/AddressForm.vue';
+import { useThaiAddressSearch } from '~/composables/useThaiAddressSearch';
+
 const { user, openAuthModal, requireAuth } = useAuthFlow();
 const { fetchMyOrders } = useOrders();
+const { fetchAddresses, createAddress, deleteAddress, setDefaultAddress } = useAddresses();
+const { loadAddressData } = useThaiAddressSearch();
 
 const myOrders = ref<Array<Record<string, any>>>([]);
 const myOrdersLoading = ref(false);
@@ -177,6 +304,26 @@ const myOrdersTotal = ref(0);
 const myOrdersPage = ref(1);
 const myOrdersPageSize = 5;
 const myOrdersTotalPages = computed(() => Math.max(1, Math.ceil(myOrdersTotal.value / myOrdersPageSize)));
+
+const addresses = ref<Array<Record<string, any>>>([]);
+const addressesLoading = ref(false);
+const addressesError = ref<string | null>(null);
+const addressSaving = ref(false);
+const addressFormError = ref<string | null>(null);
+const addressSavedMessage = ref<string | null>(null);
+const addressDefaulting = ref<Record<number, boolean>>({});
+const addressDeleting = ref<Record<number, boolean>>({});
+const addressForm = reactive({
+  recipient_name: '',
+  phone: '',
+  address_line: '',
+  province: '',
+  district: '',
+  subdistrict: '',
+  postcode: '',
+  is_default: false
+});
+const showAddressForm = ref(false);
 
 const userInitial = computed(() => user.value?.email?.charAt(0)?.toUpperCase() || 'U');
 
@@ -222,6 +369,106 @@ const paymentLink = (order: Record<string, any>) => {
   return looksLikeUrl ? trimmed : null;
 };
 
+const resetAddressForm = () => {
+  addressForm.recipient_name = '';
+  addressForm.phone = '';
+  addressForm.address_line = '';
+  addressForm.province = '';
+  addressForm.district = '';
+  addressForm.subdistrict = '';
+  addressForm.postcode = '';
+  addressForm.is_default = false;
+  addressFormError.value = null;
+};
+
+const openAddressForm = () => {
+  resetAddressForm();
+  showAddressForm.value = true;
+};
+
+const closeAddressForm = () => {
+  resetAddressForm();
+  showAddressForm.value = false;
+};
+
+const loadAddresses = async () => {
+  if (!user.value?.id) return;
+  addressesLoading.value = true;
+  addressesError.value = null;
+  try {
+    const data = await fetchAddresses(user.value.id);
+    addresses.value = data ?? [];
+    if ((addresses.value?.length ?? 0) === 0) {
+      showAddressForm.value = true;
+    }
+  } catch (error: any) {
+    addressesError.value = error?.message ?? 'ไม่สามารถโหลดที่อยู่ได้';
+    addresses.value = [];
+  } finally {
+    addressesLoading.value = false;
+  }
+};
+
+const saveAddress = async () => {
+  addressFormError.value = null;
+  addressSavedMessage.value = null;
+  if (!user.value?.id) {
+    requireAuth(() => saveAddress());
+    return;
+  }
+  if (!addressForm.recipient_name || !addressForm.address_line) {
+    addressFormError.value = 'กรุณากรอกชื่อผู้รับและที่อยู่';
+    return;
+  }
+  addressSaving.value = true;
+  try {
+    const created = await createAddress(user.value.id, {
+      ...addressForm,
+      user_id: user.value.id
+    });
+    if (addressForm.is_default && created?.id) {
+      await setDefaultAddress(created.id, user.value.id);
+    }
+    await loadAddresses();
+    addressSavedMessage.value = 'บันทึกที่อยู่เรียบร้อย';
+    resetAddressForm();
+    showAddressForm.value = false;
+  } catch (error: any) {
+    addressFormError.value = error?.message ?? 'บันทึกที่อยู่ไม่สำเร็จ';
+  } finally {
+    addressSaving.value = false;
+    setTimeout(() => {
+      addressSavedMessage.value = null;
+    }, 2200);
+  }
+};
+
+const markDefault = async (addressId: number) => {
+  if (!user.value?.id) return;
+  addressDefaulting.value[addressId] = true;
+  try {
+    await setDefaultAddress(addressId, user.value.id);
+    await loadAddresses();
+  } catch (error) {
+    // ignore, error already surfaced via supabase toast if any
+  } finally {
+    addressDefaulting.value[addressId] = false;
+  }
+};
+
+const removeAddress = async (addressId: number) => {
+  if (!user.value?.id) return;
+  addressDeleting.value[addressId] = true;
+  try {
+    await deleteAddress(addressId, user.value.id);
+    await loadAddresses();
+  } catch (error: any) {
+    addressesError.value = error?.message ?? 'ลบที่อยู่ไม่สำเร็จ';
+  } finally {
+    addressDeleting.value[addressId] = false;
+  }
+};
+
 const loadMyOrders = async () => {
   if (!user.value?.id) return;
   myOrdersLoading.value = true;
@@ -260,9 +507,12 @@ watch(
   () => user.value?.id,
   (next) => {
     if (next) {
+      loadAddressData();
       loadMyOrders();
+      loadAddresses();
     } else {
       myOrders.value = [];
+      addresses.value = [];
     }
   },
   { immediate: true }

@@ -41,6 +41,58 @@
 
         <div v-else class="grid gap-6 px-5 py-6 lg:grid-cols-[1.6fr,1fr]">
           <div class="space-y-5">
+            <section class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="text-sm font-semibold text-slate-900">Order config</p>
+                  <p class="text-xs text-slate-500">
+                    ปรับราคาเริ่มต้นและระยะเวลาจองรายการที่หน้า checkout
+                  </p>
+                </div>
+                <span class="text-[11px] font-semibold text-slate-500">
+                  เก็บข้อมูล {{ orderConfig.value.holdMinutes }} นาที
+                </span>
+              </div>
+              <form class="mt-4 space-y-3" @submit.prevent="handleConfigSave">
+                <div>
+                  <label class="text-[11px] font-semibold text-slate-500" for="config-price">ราคาเริ่มต้น (THB)</label>
+                  <input
+                    id="config-price"
+                    type="number"
+                    min="0"
+                    class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    v-model.number="configForm.price"
+                  />
+                </div>
+                <div>
+                  <label class="text-[11px] font-semibold text-slate-500" for="config-hold">เวลาเก็บออเดอร์ (นาที)</label>
+                  <input
+                    id="config-hold"
+                    type="number"
+                    min="1"
+                    class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    v-model.number="configForm.holdMinutes"
+                  />
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                  <button
+                    type="submit"
+                    class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                    :disabled="configSaving"
+                  >
+                    <span v-if="configSaving">กำลังบันทึก…</span>
+                    <span v-else>บันทึก config</span>
+                  </button>
+                  <p v-if="configSavedMessage" class="text-xs text-emerald-600">
+                    {{ configSavedMessage }}
+                  </p>
+                  <p v-else class="text-xs text-slate-500">
+                    อัปเดตล่าสุด {{ orderConfig.value.lastUpdatedAt ? formatDate(orderConfig.value.lastUpdatedAt) : '-' }}
+                  </p>
+                </div>
+                <p v-if="configError" class="text-xs text-rose-600">{{ configError }}</p>
+              </form>
+            </section>
             <!-- Orders -->
             <section class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
               <div class="flex items-center justify-between gap-2">
@@ -88,7 +140,32 @@
                         {{ order.customer_email || order.user_id || '-' }}
                       </td>
                       <td class="px-2 py-2">
-                        <span class="badge" :class="statusClass(order.status)">{{ order.status || 'รอชำระเงิน' }}</span>
+                        <div class="flex flex-col gap-2 text-sm">
+                          <span class="badge" :class="statusClass(order.status)">{{ order.status || 'รอชำระเงิน' }}</span>
+                          <div class="flex flex-wrap items-center gap-2">
+                            <select
+                              class="rounded-full border border-slate-200 bg-white/90 px-3 py-1 text-[11px] text-slate-700 shadow-sm"
+                              :value="statusDraftValue(order.id)"
+                              @change="(event) => updateStatusDraft(order.id, event.target.value)"
+                            >
+                              <option v-for="option in statusOptions" :key="option" :value="option">
+                                {{ option }}
+                              </option>
+                            </select>
+                            <button
+                              type="button"
+                              class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                              :disabled="isUpdatingStatus[String(order.id)]"
+                              @click="handleStatusChange(order.id, statusDraftValue(order.id))"
+                            >
+                              <span v-if="isUpdatingStatus[String(order.id)]">บันทึก…</span>
+                              <span v-else>บันทึก</span>
+                            </button>
+                          </div>
+                          <p v-if="statusUpdateErrors[String(order.id)]" class="text-[11px] text-rose-600">
+                            {{ statusUpdateErrors[String(order.id)] }}
+                          </p>
+                        </div>
                       </td>
                       <td class="px-2 py-2 text-slate-700">
                         {{ formatCurrency(order.total_amount) }}
@@ -198,14 +275,44 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { onMounted, reactive, ref, watch } from 'vue';
+import { useOrderConfig } from '~/composables/useOrderConfig';
+import { useOrders } from '~/composables/useOrders';
 
 const { openAuthModal, user } = useAuthFlow();
 const supabase = useSupabaseClient();
+const { updateOrderStatus } = useOrders();
+const { orderConfig, updateOrderConfig } = useOrderConfig();
 
 const orders = ref<Array<Record<string, any>>>([]);
 const ordersLoading = ref(false);
 const ordersError = ref<string | null>(null);
+
+const statusOptions = [
+  'รอชำระเงิน',
+  'ชำระแล้ว',
+  'กำลังตรวจสอบ',
+  'กำลังจัดส่ง',
+  'สำเร็จ',
+  'ยกเลิก'
+];
+const statusDrafts = ref<Record<string, string>>({});
+const isUpdatingStatus = ref<Record<string, boolean>>({});
+const statusUpdateErrors = ref<Record<string, string | null>>({});
+const configForm = reactive({ price: 999, holdMinutes: 60 });
+const configSaving = ref(false);
+const configSavedMessage = ref<string | null>(null);
+const configError = ref<string | null>(null);
+let configMessageTimeout: ReturnType<typeof setTimeout> | null = null;
+
+watch(
+  orderConfig,
+  (next) => {
+    configForm.price = next.defaultPrice ?? configForm.price;
+    configForm.holdMinutes = next.holdMinutes ?? configForm.holdMinutes;
+  },
+  { immediate: true }
+);
 
 const inventory = ref<Array<Record<string, any>>>([]);
 const inventoryLoading = ref(false);
@@ -243,6 +350,71 @@ const formatDate = (value: string | null | undefined) => {
   }
 };
 
+const statusDraftValue = (orderId: string | number) => {
+  return statusDrafts.value[String(orderId)] ?? 'รอชำระเงิน';
+};
+
+const updateStatusDraft = (orderId: string | number, nextValue: string) => {
+  statusDrafts.value[String(orderId)] = nextValue;
+  statusUpdateErrors.value[String(orderId)] = null;
+};
+
+const syncStatusDrafts = () => {
+  const next: Record<string, string> = {};
+  orders.value.forEach((order) => {
+    if (!order?.id) return;
+    next[String(order.id)] = order.status ?? 'รอชำระเงิน';
+  });
+  statusDrafts.value = next;
+};
+
+const handleStatusChange = async (orderId: string | number, newStatus: string) => {
+  if (!newStatus) return;
+  const key = String(orderId);
+  isUpdatingStatus.value[key] = true;
+  statusUpdateErrors.value[key] = null;
+  try {
+    const updated = await updateOrderStatus(orderId, newStatus);
+    if (updated) {
+      orders.value = orders.value.map((order) => {
+        if (order.id === updated.id) {
+          return updated;
+        }
+        return order;
+      });
+      statusDrafts.value[key] = updated.status ?? newStatus;
+    }
+  } catch (error: any) {
+    statusUpdateErrors.value[key] = error?.message ?? 'ไม่สามารถอัปเดตสถานะได้';
+  } finally {
+    isUpdatingStatus.value[key] = false;
+  }
+};
+
+const handleConfigSave = () => {
+  configSaving.value = true;
+  configError.value = null;
+  try {
+    const normalizedPrice = Math.max(0, Number(configForm.price));
+    const normalizedHold = Math.max(1, Number(configForm.holdMinutes));
+    updateOrderConfig({
+      defaultPrice: normalizedPrice,
+      holdMinutes: normalizedHold
+    });
+    configSavedMessage.value = 'บันทึกเรียบร้อย';
+    if (configMessageTimeout) {
+      clearTimeout(configMessageTimeout);
+    }
+    configMessageTimeout = setTimeout(() => {
+      configSavedMessage.value = null;
+    }, 2500);
+  } catch (error: any) {
+    configError.value = error?.message ?? 'ไม่สามารถบันทึก config ได้';
+  } finally {
+    configSaving.value = false;
+  }
+};
+
 const loadOrders = async () => {
   ordersLoading.value = true;
   ordersError.value = null;
@@ -254,9 +426,11 @@ const loadOrders = async () => {
       .limit(20);
     if (error) throw error;
     orders.value = data ?? [];
+    syncStatusDrafts();
   } catch (error: any) {
     ordersError.value = error?.message ?? 'เกิดข้อผิดพลาด';
     orders.value = [];
+    statusDrafts.value = {};
   } finally {
     ordersLoading.value = false;
   }
