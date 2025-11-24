@@ -24,6 +24,12 @@
         </div>
 
         <form class="space-y-4 px-5 py-6" @submit.prevent="handleSubmit">
+          <div
+            v-if="awaitingEmailConfirm"
+            class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800"
+          >
+            สมัครสำเร็จแล้ว กรุณาเช็กอีเมลและกดยืนยันภายใน 10 นาที (อาจอยู่ในโฟลเดอร์สแปม)
+          </div>
           <div class="space-y-2">
             <label class="text-sm font-medium text-slate-700" for="auth-email">อีเมล</label>
             <input
@@ -35,17 +41,35 @@
               placeholder="you@example.com"
             />
           </div>
-          <div class="space-y-2">
+          <div v-if="mode !== 'reset'" class="space-y-2">
             <label class="text-sm font-medium text-slate-700" for="auth-password">รหัสผ่าน</label>
             <input
               id="auth-password"
               v-model="password"
               type="password"
-              required
+              :required="mode !== 'reset'"
               minlength="6"
               class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               placeholder="อย่างน้อย 6 ตัวอักษร"
             />
+            <div v-if="mode === 'sign-up'" class="space-y-2">
+              <label class="text-sm font-medium text-slate-700" for="auth-password-confirm">ยืนยันรหัสผ่าน</label>
+              <input
+                id="auth-password-confirm"
+                v-model="confirmPassword"
+                type="password"
+                minlength="6"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                placeholder="พิมพ์รหัสผ่านอีกครั้ง"
+              />
+            </div>
+            <p v-if="mode === 'sign-in'" class="text-xs text-slate-500">
+              ลืมรหัสผ่าน?
+              <button type="button" class="font-semibold text-indigo-600 hover:underline" @click="setMode('reset')">ส่งลิงก์รีเซ็ต</button>
+            </p>
+          </div>
+          <div v-else class="text-xs text-slate-500">
+            ระบบจะส่งลิงก์รีเซ็ตรหัสผ่านไปที่อีเมลของคุณ
           </div>
 
           <p v-if="errorMessage" class="text-sm text-rose-600">{{ errorMessage }}</p>
@@ -60,11 +84,14 @@
             <span v-else>{{ ctaLabel }}</span>
           </button>
 
-          <p class="text-center text-xs text-slate-500">
+          <div class="flex items-center justify-center gap-4 text-xs text-slate-500">
             <button type="button" class="font-semibold text-indigo-600 hover:underline" @click="toggleMode">
               {{ toggleLabel }}
             </button>
-          </p>
+            <button v-if="mode === 'reset'" type="button" class="font-semibold text-slate-500 hover:underline" @click="setMode('sign-in')">
+              กลับไปเข้าสู่ระบบ
+            </button>
+          </div>
         </form>
       </div>
     </div>
@@ -84,21 +111,48 @@ const emit = defineEmits<{
 const supabase = useSupabaseClient();
 const user = useSupabaseUser();
 
-const mode = ref<'sign-in' | 'sign-up'>('sign-in');
-const email = ref('admin@siam-brick.com');
-const password = ref('123456');
+const mode = ref<'sign-in' | 'sign-up' | 'reset'>('sign-in');
+const email = ref('');
+const password = ref('');
+const confirmPassword = ref('');
 const loading = ref(false);
 const errorMessage = ref('');
 const infoMessage = ref('');
+const awaitingEmailConfirm = ref(false);
 
-const title = computed(() => (mode.value === 'sign-in' ? 'เข้าสู่ระบบ' : 'สมัครบัญชีใหม่'));
-const ctaLabel = computed(() => (mode.value === 'sign-in' ? 'เข้าสู่ระบบ' : 'สมัครและเข้าสู่ระบบ'));
-const toggleLabel = computed(() =>
-  mode.value === 'sign-in' ? 'ยังไม่มีบัญชี? สมัครใช้งาน' : 'มีบัญชีแล้ว? กลับไปเข้าสู่ระบบ'
-);
+const title = computed(() => {
+  if (mode.value === 'sign-up') return 'สมัครบัญชีใหม่';
+  if (mode.value === 'reset') return 'รีเซ็ตรหัสผ่าน';
+  return 'เข้าสู่ระบบ';
+});
+const ctaLabel = computed(() => {
+  if (mode.value === 'sign-up') return 'สมัครและส่งอีเมลยืนยัน';
+  if (mode.value === 'reset') return 'ส่งลิงก์รีเซ็ต';
+  return 'เข้าสู่ระบบ';
+});
+const toggleLabel = computed(() => {
+  if (mode.value === 'sign-up') return 'มีบัญชีแล้ว? กลับไปเข้าสู่ระบบ';
+  return 'ยังไม่มีบัญชี? สมัครใช้งาน';
+});
+const redirectUrl = computed(() => {
+  if (process.client && typeof window !== 'undefined') {
+    return `${window.location.origin}/auth/callback`;
+  }
+  return 'http://localhost:3000/auth/callback';
+});
 
 const emitClose = () => {
   emit('close');
+};
+
+const setMode = (nextMode: typeof mode.value) => {
+  mode.value = nextMode;
+  errorMessage.value = '';
+  infoMessage.value = '';
+  awaitingEmailConfirm.value = false;
+  if (nextMode !== 'sign-up') {
+    confirmPassword.value = '';
+  }
 };
 
 const handleSubmit = async () => {
@@ -116,16 +170,35 @@ const handleSubmit = async () => {
     } else {
       emit('authed');
     }
-  } else {
+  } else if (mode.value === 'sign-up') {
+    if (password.value !== confirmPassword.value) {
+      errorMessage.value = 'รหัสผ่านไม่ตรงกัน';
+      loading.value = false;
+      return;
+    }
     const { data, error } = await supabase.auth.signUp({
       email: email.value,
-      password: password.value
+      password: password.value,
+      options: {
+        emailRedirectTo: redirectUrl.value
+      }
     });
     if (error) {
       errorMessage.value = error.message;
     } else {
       infoMessage.value = data.session ? 'สมัครและเข้าสู่ระบบสำเร็จ' : 'สมัครสำเร็จ ตรวจสอบอีเมลเพื่อยืนยัน';
+      awaitingEmailConfirm.value = !data.session;
       if (data.session) emit('authed');
+    }
+  } else {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.value, {
+      redirectTo: redirectUrl.value
+    });
+    if (error) {
+      errorMessage.value = error.message;
+    } else {
+      infoMessage.value = 'ส่งลิงก์รีเซ็ตรหัสผ่านไปที่อีเมลแล้ว';
+      mode.value = 'reset';
     }
   }
 
@@ -133,9 +206,7 @@ const handleSubmit = async () => {
 };
 
 const toggleMode = () => {
-  mode.value = mode.value === 'sign-in' ? 'sign-up' : 'sign-in';
-  errorMessage.value = '';
-  infoMessage.value = '';
+  setMode(mode.value === 'sign-in' ? 'sign-up' : 'sign-in');
 };
 
 watch(
@@ -143,6 +214,15 @@ watch(
   (val) => {
     if (val && props.open) {
       emit('authed');
+    }
+  }
+);
+
+watch(
+  () => props.open,
+  (opened) => {
+    if (opened) {
+      setMode('sign-in');
     }
   }
 );

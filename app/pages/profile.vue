@@ -61,6 +61,78 @@
             <div class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
               <div class="flex items-center justify-between gap-2">
                 <div>
+                  <p class="text-sm font-semibold text-slate-900">ความปลอดภัย</p>
+                  <p class="text-xs text-slate-500">เปลี่ยนรหัสผ่านของบัญชี</p>
+                </div>
+              </div>
+
+              <div v-if="!user" class="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-slate-700">
+                เข้าสู่ระบบเพื่อเปลี่ยนรหัสผ่าน
+              </div>
+
+              <form v-else class="mt-4 space-y-3" @submit.prevent="handleChangePassword">
+                <div class="grid gap-3 md:grid-cols-2">
+                  <div class="space-y-1">
+                    <label class="text-xs font-semibold text-slate-600" for="current-password">รหัสผ่านเดิม</label>
+                    <input
+                      id="current-password"
+                      v-model="passwordForm.current"
+                      type="password"
+                      required
+                      class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div class="space-y-1">
+                    <label class="text-xs font-semibold text-slate-600" for="new-password">รหัสผ่านใหม่</label>
+                    <input
+                      id="new-password"
+                      v-model="passwordForm.next"
+                      type="password"
+                      minlength="6"
+                      required
+                      class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      placeholder="อย่างน้อย 6 ตัวอักษร"
+                    />
+                  </div>
+                  <div class="space-y-1 md:col-span-2">
+                    <label class="text-xs font-semibold text-slate-600" for="confirm-password">ยืนยันรหัสผ่านใหม่</label>
+                    <input
+                      id="confirm-password"
+                      v-model="passwordForm.confirm"
+                      type="password"
+                      minlength="6"
+                      required
+                      class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <p v-if="passwordError" class="text-xs text-rose-600">{{ passwordError }}</p>
+                <p v-else-if="passwordSuccess" class="text-xs text-emerald-600">{{ passwordSuccess }}</p>
+
+                <div class="flex flex-wrap items-center gap-2">
+                  <button
+                    type="submit"
+                    class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-700 disabled:opacity-60"
+                    :disabled="passwordSaving"
+                  >
+                    {{ passwordSaving ? 'กำลังบันทึก...' : 'บันทึกรหัสผ่านใหม่' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                    :disabled="passwordSaving"
+                    @click="resetPasswordForm"
+                  >
+                    ล้างฟอร์ม
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+              <div class="flex items-center justify-between gap-2">
+                <div>
                   <p class="text-sm font-semibold text-slate-900">ที่อยู่จัดส่ง</p>
                   <p class="text-xs text-slate-500">เพิ่ม/เลือกที่อยู่ให้ดึงไปใช้ตอน checkout ได้ทันที</p>
                 </div>
@@ -289,6 +361,7 @@
 </template>
 
 <script setup lang="ts">
+import { useSupabaseClient } from '#imports';
 import AddressForm from '~/components/address/AddressForm.vue';
 import { useThaiAddressSearch } from '~/composables/useThaiAddressSearch';
 
@@ -296,6 +369,7 @@ const { user, openAuthModal, requireAuth } = useAuthFlow();
 const { fetchMyOrders } = useOrders();
 const { fetchAddresses, createAddress, deleteAddress, setDefaultAddress } = useAddresses();
 const { loadAddressData } = useThaiAddressSearch();
+const supabase = useSupabaseClient();
 
 const myOrders = ref<Array<Record<string, any>>>([]);
 const myOrdersLoading = ref(false);
@@ -324,6 +398,15 @@ const addressForm = reactive({
   is_default: false
 });
 const showAddressForm = ref(false);
+
+const passwordForm = reactive({
+  current: '',
+  next: '',
+  confirm: ''
+});
+const passwordSaving = ref(false);
+const passwordError = ref('');
+const passwordSuccess = ref('');
 
 const userInitial = computed(() => user.value?.email?.charAt(0)?.toUpperCase() || 'U');
 
@@ -367,6 +450,62 @@ const paymentLink = (order: Record<string, any>) => {
   if (!trimmed) return null;
   const looksLikeUrl = /^https?:\/\//i.test(trimmed);
   return looksLikeUrl ? trimmed : null;
+};
+
+const resetPasswordForm = (clearMessages = true) => {
+  passwordForm.current = '';
+  passwordForm.next = '';
+  passwordForm.confirm = '';
+  if (clearMessages) {
+    passwordError.value = '';
+    passwordSuccess.value = '';
+  }
+};
+
+const handleChangePassword = async () => {
+  passwordError.value = '';
+  passwordSuccess.value = '';
+  if (!user.value?.email) {
+    requireAuth(() => handleChangePassword());
+    return;
+  }
+  if (!passwordForm.current || !passwordForm.next || !passwordForm.confirm) {
+    passwordError.value = 'กรุณากรอกรหัสผ่านให้ครบ';
+    return;
+  }
+  if (passwordForm.next.length < 6) {
+    passwordError.value = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร';
+    return;
+  }
+  if (passwordForm.next !== passwordForm.confirm) {
+    passwordError.value = 'รหัสผ่านใหม่ไม่ตรงกัน';
+    return;
+  }
+
+  passwordSaving.value = true;
+  try {
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email: user.value.email,
+      password: passwordForm.current
+    });
+    if (verifyError) {
+      passwordError.value = verifyError.message || 'รหัสผ่านเดิมไม่ถูกต้อง';
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: passwordForm.next });
+    if (error) {
+      passwordError.value = error.message || 'เปลี่ยนรหัสผ่านไม่สำเร็จ';
+      return;
+    }
+
+    resetPasswordForm(false);
+    passwordSuccess.value = 'เปลี่ยนรหัสผ่านสำเร็จ';
+  } catch (error: any) {
+    passwordError.value = error?.message || 'เปลี่ยนรหัสผ่านไม่สำเร็จ';
+  } finally {
+    passwordSaving.value = false;
+  }
 };
 
 const resetAddressForm = () => {

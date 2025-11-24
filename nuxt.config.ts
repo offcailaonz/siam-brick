@@ -7,7 +7,7 @@ export default defineNuxtConfig({
   supabase: {
     redirectOptions: {
       // allow landing page without forcing login
-      exclude: ['/', '/brick', '/privacy', '/terms']
+      exclude: ['/', '/brick', '/privacy', '/terms', '/auth/callback']
     }
   },
   runtimeConfig: {

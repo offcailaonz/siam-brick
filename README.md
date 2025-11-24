@@ -71,6 +71,42 @@ type Product = {
 
 > หมายเหตุ: คำว่า “Brick” ถูกใช้แทนทั้งหมดเพื่อหลีกเลี่ยงประเด็นลิขสิทธิ์
 
+### การตั้งค่าและรันโปรเจกต์แบบละเอียด
+1) เตรียม environment
+```bash
+cp .env.example .env
+# แก้ค่าให้ตรงกับโปรเจกต์ Supabase ของคุณ
+SUPABASE_URL="https://<your-project>.supabase.co"
+SUPABASE_KEY="<anon-or-service-role-key>"
+```
+> ในรีโปนี้มี `.env` ตัวอย่างพร้อมค่า anon key ของโปรเจกต์เดโม่ (`jozjqbioezokkztqlgdv`) ใช้งานได้ทันทีสำหรับ dev
+
+2) ติดตั้งและรัน
+```bash
+yarn install
+yarn dev --hostname 127.0.0.1 --port 3000
+```
+เปิดเบราว์เซอร์ที่ `http://127.0.0.1:3000`
+
+3) บัญชีทดสอบ (Supabase Auth)
+- อีเมล: `admin@siam-brick.com`
+- รหัสผ่าน: `123456`
+> ใช้ล็อกอินใน Backoffice (`/backoffice`) และทดสอบ flow auth
+
+### Troubleshooting Auth (Supabase)
+- ถ้า Network ขึ้น `token?grant_type=password` แล้วได้ 400 `invalid_credentials` → อีเมล/รหัสไม่ตรง หรือบัญชียังไม่ถูกสร้าง/ยืนยันอีเมล
+- เช็กว่า `.env` โหลดจริง (รัน `echo $SUPABASE_URL` ก่อน `yarn dev` หรือดูใน DevTools Network header `apikey`)
+- ทดสอบด้วย cURL เพื่อแยกปัญหาหน้าเว็บ:
+```bash
+curl -i "$SUPABASE_URL/auth/v1/token?grant_type=password" \
+  -H "apikey: $SUPABASE_KEY" \
+  -H "Authorization: Bearer $SUPABASE_KEY" \
+  -H "Content-Type: application/json" \
+  --data '{"email":"admin@siam-brick.com","password":"123456"}'
+```
+- ถ้าได้ 200 พร้อม access_token แปลว่า backend ปกติ → กลับไปตรวจฟอร์มและข้อมูลล็อกอินที่ใส่
+- ถ้าอยู่หลัง proxy/VPN หรือมี extension บล็อก request ให้ลอง incognito/ปิด extension
+
 ## 7. Mock API & Assets
 - ดาต้าในหน้า Landing ถูก mock ผ่านไฟล์ `app/mockup-api-data/index.ts` และรูป placeholder ใน `public/mockup-api-data/images/**`
 - เมื่อ backend พร้อม เพียงเปลี่ยนให้ component ไปเรียก API จริงหรือใช้ Nuxt server route โดยคง schema ใกล้เคียง

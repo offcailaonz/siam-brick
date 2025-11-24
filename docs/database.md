@@ -1,73 +1,93 @@
 # Database Schema Overview (Siam Brick)
 
-> สรุปโครงสร้างฐานข้อมูลสำหรับระบบออเดอร์ / fulfillment
+> สรุปโครงสร้างฐานข้อมูลสำหรับระบบออเดอร์ / fulfillment (อ้างอิง DDL ล่าสุด)
 
 ## orders
-- `id` (bigint, PK, identity)
-- `user_id` (uuid, FK → auth.users)
-- `status` (text, default `รอชำระเงิน`)
-- `preview_url` (text) – ลิงก์ภาพ preview
-- `source` (text) – ที่มาของออเดอร์ เช่น `checkout`, `checkout:linked`
-- `total_amount` (numeric) – มูลค่าออเดอร์
-- `payment_ref` (text) – อ้างอิงการจ่าย
-- `payment_method` (text)
-- `payment_confirmed_at` (timestamptz)
-- `cancellation_reason` (text)
-- `fulfilled_at` (timestamptz)
-- `is_locked_for_edits` (bool, default false)
-- `idempotency_key` (text)
-- `expires_at` (timestamptz) – ใช้ลบออเดอร์/asset ชั่วคราวเมื่อหมดอายุ
-- `metadata` (jsonb, default `{}`)
-- `crop_interaction` (jsonb) – interaction state จากหน้า generator
-- `original_image` (text)
-- `created_at` / `updated_at` (timestamptz, default now)
+- `id` bigint PK GENERATED ALWAYS AS IDENTITY
+- `user_id` uuid FK → auth.users.id
+- `status` text NOT NULL DEFAULT `รอชำระเงิน`
+- `preview_url` text
+- `source` text
+- `total_amount` numeric
+- `payment_ref` text
+- `payment_method` text
+- `payment_confirmed_at` timestamptz
+- `cancellation_reason` text
+- `fulfilled_at` timestamptz
+- `is_locked_for_edits` boolean NOT NULL DEFAULT false
+- `idempotency_key` text
+- `expires_at` timestamptz – ใช้ลบออเดอร์/asset ชั่วคราวเมื่อหมดอายุ
+- `metadata` jsonb NOT NULL DEFAULT `{}`
+- `crop_interaction` jsonb – interaction state จากหน้า generator
+- `original_image` text
+- `created_at` / `updated_at` timestamptz DEFAULT now
 
 ## order_shipping
-- `order_id` (bigint, PK, FK → orders.id, cascade) – หนึ่งออเดอร์มีหนึ่ง record
-- `recipient_name`, `phone`
-- `province`, `district`, `subdistrict`, `postcode`
-- `shipping_provider`, `tracking_number`
-- `is_temp` (bool, default true) – ใช้ทำความสะอาดข้อมูลจัดส่งชั่วคราว
-- `label` (text) – ชื่อเรียกที่อยู่
-- `address_line` (text)
-- `created_at`, `updated_at` (timestamptz)
+- `order_id` bigint PK, FK → orders.id (1:1)
+- `recipient_name`, `phone` text
+- `province`, `district`, `subdistrict`, `postcode` text
+- `shipping_provider`, `tracking_number` text
+- `is_temp` boolean NOT NULL DEFAULT true – ใช้ทำความสะอาดข้อมูลจัดส่งชั่วคราว
+- `label` text – ชื่อเรียกที่อยู่
+- `address_line` text
+- `created_at`, `updated_at` timestamptz DEFAULT now
 
 ## order_items (BOM / Line Items)
-- `id` (bigint, PK)
-- `order_id` (bigint, FK → orders.id, cascade)
-- `sku`, `name`
-- `quantity` (int, default 1)
-- `unit_cost` (numeric, default 0) – เก็บต้นทุน/ราคาต่อชิ้น
-- `package_id` (text) – ใช้จับกลุ่มเป็นแพ็ก
-- `material_group` (text) – กลุ่มวัสดุ/สี
-- `notes` (text)
-- `created_at` (timestamptz)
+- `id` bigint PK DEFAULT nextval
+- `order_id` bigint NOT NULL FK → orders.id
+- `sku`, `name` text
+- `quantity` int NOT NULL DEFAULT 1
+- `unit_cost` numeric NOT NULL DEFAULT 0 – เก็บต้นทุน/ราคาต่อชิ้น
+- `package_id` text – ใช้จับกลุ่มเป็นแพ็ก
+- `material_group` text – กลุ่มวัสดุ/สี
+- `notes` text
+- `created_at` timestamptz DEFAULT now
 
 ## order_status_logs
-- `id` (bigint, PK)
-- `order_id` (bigint, FK → orders.id, cascade)
-- `status` (text, not null)
-- `changed_by` (uuid, FK → auth.users.id) – ผู้เปลี่ยนสถานะ
-- `note` (text)
-- `created_at` (timestamptz, default now)
+- `id` bigint PK DEFAULT nextval
+- `order_id` bigint NOT NULL FK → orders.id
+- `status` text NOT NULL
+- `changed_by` uuid FK → auth.users.id – ผู้เปลี่ยนสถานะ
+- `note` text
+- `created_at` timestamptz DEFAULT now
 
 ## order_config
-- `id` (serial, PK)
-- `default_price` (numeric, default 999) – ราคาเริ่มต้นที่ Backoffice ตั้งค่า
-- `hold_minutes` (int, default 60) – เวลาจองออเดอร์
-- `price_note` (text)
-- `last_updated_at` (timestamptz, default now)
+- `id` int PK DEFAULT nextval
+- `default_price` numeric NOT NULL DEFAULT 999 – ราคาเริ่มต้นที่ Backoffice ตั้งค่า
+- `hold_minutes` int NOT NULL DEFAULT 60 – เวลาจองออเดอร์
+- `price_note` text
+- `last_updated_at` timestamptz NOT NULL DEFAULT now
 
 ## user_addresses (ที่อยู่จัดส่งของผู้ใช้)
-- `id` (bigint, PK)
-- `user_id` (uuid, FK → auth.users.id)
-- `label` (text) – ชื่อเรียก เช่น บ้าน/ออฟฟิศ
-- `recipient_name` (text) – ชื่อ-นามสกุลผู้รับ
-- `phone` (text) – เบอร์ติดต่อ
-- `address_line` (text)
-- `province`, `district`, `subdistrict`, `postcode` (text)
-- `is_default` (bool, default false)
-- `created_at`, `updated_at` (timestamptz)
+- `id` bigint PK DEFAULT nextval
+- `user_id` uuid NOT NULL FK → auth.users.id
+- `label` text – ชื่อเรียก เช่น บ้าน/ออฟฟิศ
+- `recipient_name` text – ชื่อ-นามสกุลผู้รับ
+- `phone` text – เบอร์ติดต่อ
+- `address_line` text
+- `province`, `district`, `subdistrict`, `postcode` text
+- `is_default` boolean NOT NULL DEFAULT false
+- `created_at`, `updated_at` timestamptz DEFAULT now
+
+## products
+- `id` bigint PK DEFAULT nextval
+- `slug` text UNIQUE
+- `name` text NOT NULL
+- `type` text
+- `price` numeric
+- `active` boolean NOT NULL DEFAULT true
+- `metadata` jsonb NOT NULL DEFAULT `{}`
+- `created_at`, `updated_at` timestamptz NOT NULL DEFAULT now
+
+## inventory_items
+- `id` bigint PK DEFAULT nextval
+- `sku` text UNIQUE
+- `part_num` text
+- `name` text NOT NULL
+- `on_hand` int NOT NULL DEFAULT 0
+- `reorder_point` int NOT NULL DEFAULT 0
+- `metadata` jsonb NOT NULL DEFAULT `{}`
+- `created_at`, `updated_at` timestamptz NOT NULL DEFAULT now
 
 ## ความสัมพันธ์หลัก
 - orders 1:N order_items
