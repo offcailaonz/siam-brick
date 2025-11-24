@@ -1,7 +1,7 @@
 <template>
   <div class="brick-bg--content">
     <main
-      class="min-h-[calc(100vh-68px-68px)] mx-auto my-auto flex max-w-6xl flex-col px-4 py-10 lg:py-14 text-slate-800"
+      class="min-h-[calc(100vh-68px-68px)] w-full flex flex-col px-4 py-10 lg:px-8 lg:py-14 text-slate-800"
     >
       <section class="rounded-2xl border border-slate-200 bg-white/90 shadow-sm overflow-hidden">
         <header class="border-b border-slate-200 bg-slate-50/80 px-5 py-4 flex items-center justify-between gap-3">
@@ -39,235 +39,100 @@
           </div>
         </div>
 
-        <div v-else class="grid gap-6 px-5 py-6 lg:grid-cols-[1.6fr,1fr]">
-          <div class="space-y-5">
-            <section class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <p class="text-sm font-semibold text-slate-900">Order config</p>
-                  <p class="text-xs text-slate-500">
-                    ปรับราคาเริ่มต้นและระยะเวลาจองรายการที่หน้า checkout
-                  </p>
-                </div>
-                <span class="text-[11px] font-semibold text-slate-500">
-                  เก็บข้อมูล {{ orderConfig.value.holdMinutes }} นาที
-                </span>
-              </div>
-              <form class="mt-4 space-y-3" @submit.prevent="handleConfigSave">
-                <div>
-                  <label class="text-[11px] font-semibold text-slate-500" for="config-price">ราคาเริ่มต้น (THB)</label>
-                  <input
-                    id="config-price"
-                    type="number"
-                    min="0"
-                    class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                    v-model.number="configForm.price"
-                  />
-                </div>
-                <div>
-                  <label class="text-[11px] font-semibold text-slate-500" for="config-hold">เวลาเก็บออเดอร์ (นาที)</label>
-                  <input
-                    id="config-hold"
-                    type="number"
-                    min="1"
-                    class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                    v-model.number="configForm.holdMinutes"
-                  />
-                </div>
-                <div class="flex flex-wrap items-center gap-3">
-                  <button
-                    type="submit"
-                    class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
-                    :disabled="configSaving"
-                  >
-                    <span v-if="configSaving">กำลังบันทึก…</span>
-                    <span v-else>บันทึก config</span>
-                  </button>
-                  <p v-if="configSavedMessage" class="text-xs text-emerald-600">
-                    {{ configSavedMessage }}
-                  </p>
-                  <p v-else class="text-xs text-slate-500">
-                    อัปเดตล่าสุด {{ orderConfig.value.lastUpdatedAt ? formatDate(orderConfig.value.lastUpdatedAt) : '-' }}
-                  </p>
-                </div>
-                <p v-if="configError" class="text-xs text-rose-600">{{ configError }}</p>
-              </form>
-            </section>
-            <!-- Orders -->
-            <section class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-              <div class="flex items-center justify-between gap-2">
-                <div>
-                  <p class="text-sm font-semibold text-slate-900">ออเดอร์ล่าสุด</p>
-                  <p class="text-xs text-slate-500">แสดง 20 รายการล่าสุด เรียงจากใหม่ไปเก่า</p>
-                </div>
+        <div v-else class="px-5 py-6">
+          <div class="grid gap-6 lg:grid-cols-[260px,1fr]">
+            <aside class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm h-fit sticky top-4 space-y-2">
+              <p class="text-sm font-semibold text-slate-900">เมนูจัดการ</p>
+              <p class="text-[11px] text-slate-500">เลือกหมวดเพื่อแก้ไข</p>
+              <nav class="mt-2 space-y-1 text-sm">
                 <button
                   type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
-                  :disabled="ordersLoading"
-                  @click="loadOrders"
+                  class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left font-semibold transition"
+                  :class="activeMenu === 'order-config' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'text-slate-700 hover:bg-slate-50'"
+                  @click="activeMenu = 'order-config'"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 1 0-.908-.417A6 6 0 1 0 8 2v1z"/>
-                    <path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.967A.25.25 0 0 0 8 4.466z"/>
-                  </svg>
-                  รีเฟรช
+                  <span>Order config</span>
+                  <span class="text-[11px] text-slate-500">ตั้งค่า</span>
                 </button>
-              </div>
-              <p v-if="ordersError" class="mt-2 text-xs text-rose-600">ไม่สามารถโหลดออเดอร์: {{ ordersError }}</p>
-              <div v-else class="mt-3 overflow-x-auto">
-                <table class="min-w-full text-sm">
-                  <thead>
-                    <tr class="text-left text-slate-500">
-                      <th class="px-2 py-2">ออเดอร์</th>
-                      <th class="px-2 py-2">ลูกค้า</th>
-                      <th class="px-2 py-2">สถานะ</th>
-                      <th class="px-2 py-2">ยอด</th>
-                      <th class="px-2 py-2">อัปเดต</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-if="ordersLoading">
-                      <td colspan="5" class="px-2 py-3 text-center text-slate-500">กำลังโหลด...</td>
-                    </tr>
-                    <tr v-else-if="orders.length === 0">
-                      <td colspan="5" class="px-2 py-3 text-center text-slate-500">ยังไม่มีออเดอร์</td>
-                    </tr>
-                    <tr v-else v-for="order in orders" :key="order.id" class="border-t border-slate-100 hover:bg-slate-50">
-                      <td class="px-2 py-2 font-semibold text-slate-900">
-                        #{{ order.id }}
-                      </td>
-                      <td class="px-2 py-2 text-slate-700">
-                        {{ order.customer_email || order.user_id || '-' }}
-                      </td>
-                      <td class="px-2 py-2">
-                        <div class="flex flex-col gap-2 text-sm">
-                          <span class="badge" :class="statusClass(order.status)">{{ order.status || 'รอชำระเงิน' }}</span>
-                          <div class="flex flex-wrap items-center gap-2">
-                            <select
-                              class="rounded-full border border-slate-200 bg-white/90 px-3 py-1 text-[11px] text-slate-700 shadow-sm"
-                              :value="statusDraftValue(order.id)"
-                              @change="(event) => updateStatusDraft(order.id, event.target.value)"
-                            >
-                              <option v-for="option in statusOptions" :key="option" :value="option">
-                                {{ option }}
-                              </option>
-                            </select>
-                            <button
-                              type="button"
-                              class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
-                              :disabled="isUpdatingStatus[String(order.id)]"
-                              @click="handleStatusChange(order.id, statusDraftValue(order.id))"
-                            >
-                              <span v-if="isUpdatingStatus[String(order.id)]">บันทึก…</span>
-                              <span v-else>บันทึก</span>
-                            </button>
-                          </div>
-                          <p v-if="statusUpdateErrors[String(order.id)]" class="text-[11px] text-rose-600">
-                            {{ statusUpdateErrors[String(order.id)] }}
-                          </p>
-                        </div>
-                      </td>
-                      <td class="px-2 py-2 text-slate-700">
-                        {{ formatCurrency(order.total_amount) }}
-                      </td>
-                      <td class="px-2 py-2 text-slate-500 text-xs">
-                        {{ formatDate(order.updated_at || order.created_at) }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
+                <button
+                  type="button"
+                  class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left font-semibold transition"
+                  :class="activeMenu === 'orders' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'text-slate-700 hover:bg-slate-50'"
+                  @click="activeMenu = 'orders'"
+                >
+                  <span>ออเดอร์ล่าสุด</span>
+                  <span class="text-[11px] text-slate-500">20 รายการ</span>
+                </button>
+                <button
+                  type="button"
+                  class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left font-semibold transition"
+                  :class="activeMenu === 'inventory' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'text-slate-700 hover:bg-slate-50'"
+                  @click="activeMenu = 'inventory'"
+                >
+                  <span>สต็อกวัสดุ</span>
+                  <span class="text-[11px] text-slate-500">on hand</span>
+                </button>
+                <button
+                  type="button"
+                  class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left font-semibold transition"
+                  :class="activeMenu === 'products' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'text-slate-700 hover:bg-slate-50'"
+                  @click="activeMenu = 'products'"
+                >
+                  <span>สินค้า/คอนเทนต์</span>
+                  <span class="text-[11px] text-slate-500">หน้าเว็บ</span>
+                </button>
+              </nav>
+            </aside>
 
-            <!-- Inventory -->
-            <section class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-              <div class="flex items-center justify-between gap-2">
-                <div>
-                  <p class="text-sm font-semibold text-slate-900">สต็อกวัสดุ</p>
-                  <p class="text-xs text-slate-500">ดูยอดคงเหลือและรายการที่ใกล้หมด</p>
-                </div>
-                <button
-                  type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
-                  :disabled="inventoryLoading"
-                  @click="loadInventory"
-                >
-                  รีเฟรช
-                </button>
-              </div>
-              <p v-if="inventoryError" class="mt-2 text-xs text-rose-600">โหลดสต็อกไม่สำเร็จ: {{ inventoryError }}</p>
-              <div v-else class="mt-3 space-y-2 max-h-[340px] overflow-auto pr-1">
-                <div v-if="inventoryLoading" class="text-sm text-slate-500 px-1">กำลังโหลด...</div>
-                <div v-else-if="inventory.length === 0" class="text-sm text-slate-500 px-1">ยังไม่มีสต็อก</div>
-                <div
-                  v-else
-                  v-for="item in inventory"
-                  :key="item.id || item.sku"
-                  class="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2"
-                >
-                  <div class="flex flex-col">
-                    <span class="text-sm font-semibold text-slate-900">{{ item.name || item.sku }}</span>
-                    <span class="text-xs text-slate-500">{{ item.part_num || item.sku || 'ไม่ระบุรหัส' }}</span>
-                  </div>
-                  <div class="text-right">
-                    <p class="text-sm font-semibold text-slate-900">
-                      {{ item.on_hand ?? 0 }} ชิ้น
-                    </p>
-                    <p class="text-[11px]" :class="item.on_hand <= (item.reorder_point ?? 0) ? 'text-amber-600' : 'text-slate-500'">
-                      จุดสั่งซื้อ {{ item.reorder_point ?? 0 }}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </section>
+            <div class="space-y-5">
+              <OrderConfigSection
+                v-if="activeMenu === 'order-config'"
+                :price="configForm.price"
+                :hold-minutes="configForm.holdMinutes"
+                :last-updated-at="orderConfigSafe.lastUpdatedAt"
+                :saving="configSaving"
+                :saved-message="configSavedMessage"
+                :error="configError"
+                :format-date="formatDate"
+                @update:price="configForm.price = $event"
+                @update:holdMinutes="configForm.holdMinutes = $event"
+                @save="handleConfigSave"
+              />
+
+              <OrdersSection
+                v-else-if="activeMenu === 'orders'"
+                :orders="orders"
+                :loading="ordersLoading"
+                :error="ordersError"
+                :status-options="statusOptions"
+                :status-drafts="statusDrafts"
+                :is-updating-status="isUpdatingStatus"
+                :status-update-errors="statusUpdateErrors"
+                :format-currency="formatCurrency"
+                :format-date="formatDate"
+                @refresh="loadOrders"
+                @update-draft="updateStatusDraft"
+                @save-status="handleStatusChange"
+              />
+
+              <InventorySection
+                v-else-if="activeMenu === 'inventory'"
+                :items="inventory"
+                :loading="inventoryLoading"
+                :error="inventoryError"
+                @refresh="loadInventory"
+              />
+
+              <ProductsSection
+                v-else-if="activeMenu === 'products'"
+                :products="products"
+                :loading="productsLoading"
+                :error="productsError"
+                :format-currency="formatCurrency"
+                @refresh="loadProducts"
+              />
+            </div>
           </div>
-
-          <!-- Products -->
-          <aside class="space-y-5">
-            <section class="rounded-xl border border-indigo-100 bg-white px-4 py-4 shadow-sm">
-              <div class="flex items-center justify-between gap-2">
-                <div>
-                  <p class="text-sm font-semibold text-slate-900">สินค้า/คอนเทนต์</p>
-                  <p class="text-xs text-slate-500">รายการสินค้าที่แสดงบนหน้าเว็บ</p>
-                </div>
-                <button
-                  type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
-                  :disabled="productsLoading"
-                  @click="loadProducts"
-                >
-                  รีเฟรช
-                </button>
-              </div>
-              <p v-if="productsError" class="mt-2 text-xs text-rose-600">โหลดสินค้าไม่สำเร็จ: {{ productsError }}</p>
-              <div v-else class="mt-3 space-y-2 max-h-[420px] overflow-auto pr-1">
-                <div v-if="productsLoading" class="text-sm text-slate-500 px-1">กำลังโหลด...</div>
-                <div v-else-if="products.length === 0" class="text-sm text-slate-500 px-1">ยังไม่มีสินค้า</div>
-                <div
-                  v-else
-                  v-for="product in products"
-                  :key="product.id"
-                  class="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2"
-                >
-                  <div class="flex items-center justify-between gap-2">
-                    <div>
-                      <p class="text-sm font-semibold text-slate-900">{{ product.name }}</p>
-                      <p class="text-xs text-slate-500">{{ product.slug || product.type || 'สินค้า' }}</p>
-                    </div>
-                    <span
-                      class="badge"
-                      :class="product.active === false ? 'badge-grey' : 'badge-green'"
-                    >
-                      {{ product.active === false ? 'ปิด' : 'ขายอยู่' }}
-                    </span>
-                  </div>
-                  <p class="text-xs text-slate-500 mt-1">
-                    ราคา {{ product.price != null ? formatCurrency(product.price) : '—' }}
-                  </p>
-                </div>
-              </div>
-            </section>
-          </aside>
         </div>
       </section>
     </main>
@@ -275,18 +140,23 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from 'vue';
+import { onMounted, reactive, ref, watch, computed } from 'vue';
 import { useOrderConfig } from '~/composables/useOrderConfig';
 import { useOrders } from '~/composables/useOrders';
+import OrderConfigSection from '~/components/backoffice/OrderConfigSection.vue';
+import OrdersSection from '~/components/backoffice/OrdersSection.vue';
+import InventorySection from '~/components/backoffice/InventorySection.vue';
+import ProductsSection from '~/components/backoffice/ProductsSection.vue';
 
 const { openAuthModal, user } = useAuthFlow();
 const supabase = useSupabaseClient();
-const { updateOrderStatus } = useOrders();
+const { updateOrderStatus, cancelOrder } = useOrders();
 const { orderConfig, updateOrderConfig } = useOrderConfig();
 
 const orders = ref<Array<Record<string, any>>>([]);
 const ordersLoading = ref(false);
 const ordersError = ref<string | null>(null);
+const activeMenu = ref<'order-config' | 'orders' | 'inventory' | 'products'>('order-config');
 
 const statusOptions = [
   'รอชำระเงิน',
@@ -308,11 +178,20 @@ let configMessageTimeout: ReturnType<typeof setTimeout> | null = null;
 watch(
   orderConfig,
   (next) => {
+    if (!next) return;
     configForm.price = next.defaultPrice ?? configForm.price;
     configForm.holdMinutes = next.holdMinutes ?? configForm.holdMinutes;
   },
   { immediate: true }
 );
+
+const orderConfigSafe = computed(() => {
+  return {
+    defaultPrice: orderConfig?.value?.defaultPrice ?? configForm.price,
+    holdMinutes: orderConfig?.value?.holdMinutes ?? configForm.holdMinutes,
+    lastUpdatedAt: orderConfig?.value?.lastUpdatedAt ?? null
+  };
+});
 
 const inventory = ref<Array<Record<string, any>>>([]);
 const inventoryLoading = ref(false);
@@ -374,7 +253,10 @@ const handleStatusChange = async (orderId: string | number, newStatus: string) =
   isUpdatingStatus.value[key] = true;
   statusUpdateErrors.value[key] = null;
   try {
-    const updated = await updateOrderStatus(orderId, newStatus);
+    const updated =
+      newStatus === 'ยกเลิก'
+        ? await cancelOrder(orderId, 'ยกเลิกโดยแอดมิน')
+        : await updateOrderStatus(orderId, newStatus);
     if (updated) {
       orders.value = orders.value.map((order) => {
         if (order.id === updated.id) {

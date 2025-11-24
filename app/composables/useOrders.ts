@@ -116,6 +116,23 @@ export const useOrders = () => {
     return data;
   };
 
+  const cancelOrder = async (orderId: string | number, reason?: string | null) => {
+    const { data, error } = await supabase
+      .from('orders')
+      .update({
+        status: 'ยกเลิก',
+        cancellation_reason: reason ?? null,
+        preview_url: null,
+        original_image: null,
+        crop_interaction: null
+      })
+      .eq('id', orderId)
+      .select()
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  };
+
   const fetchOrderShipping = async (orderId: string | number) => {
     const { data, error } = await supabase.from('order_shipping').select('*').eq('order_id', orderId).maybeSingle();
     if (error) throw error;
@@ -139,6 +156,7 @@ export const useOrders = () => {
     fetchMyOrders,
     fetchOrderById,
     updateOrderStatus,
+    cancelOrder,
     fetchOrderShipping,
     upsertOrderShipping
   };
