@@ -1,15 +1,34 @@
 <template>
   <div class="brick-bg--content">
-    <main class="min-h-[calc(100vh-68px-68px)] mx-auto my-auto flex max-w-5xl flex-col px-4 py-10 lg:py-14 text-slate-800">
-      <section class="rounded-2xl border border-slate-200 bg-white/90 shadow-sm overflow-hidden">
-        <header class="border-b border-slate-200 bg-slate-50/80 px-5 py-4 flex items-center justify-between gap-3">
+    <main
+      class="min-h-[calc(100vh-68px-68px)] mx-auto my-auto flex max-w-5xl flex-col px-4 py-10 lg:py-14 text-slate-800"
+    >
+      <section
+        class="rounded-2xl border border-slate-200 bg-white/90 shadow-sm overflow-hidden"
+      >
+        <header
+          class="border-b border-slate-200 bg-slate-50/80 px-5 py-4 flex items-center justify-between gap-3"
+        >
           <div>
-            <p class="text-xs font-semibold uppercase tracking-wide text-amber-600">บัญชีผู้ใช้</p>
-            <h1 class="mt-1 text-2xl font-bold text-slate-900">โปรไฟล์และออเดอร์</h1>
-            <p class="mt-2 text-sm text-slate-600">ดูข้อมูลบัญชี และติดตามสถานะออเดอร์ที่สั่งไว้</p>
+            <p
+              class="text-xs font-semibold uppercase tracking-wide text-amber-600"
+            >
+              บัญชีผู้ใช้
+            </p>
+            <h1 class="mt-1 text-2xl font-bold text-slate-900">
+              โปรไฟล์และออเดอร์
+            </h1>
+            <p class="mt-2 text-sm text-slate-600">
+              ดูข้อมูลบัญชี และติดตามสถานะออเดอร์ที่สั่งไว้
+            </p>
           </div>
-          <div v-if="user" class="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 shadow-sm">
-            <span class="h-7 w-7 rounded-full bg-emerald-600 text-white flex items-center justify-center">
+          <div
+            v-if="user"
+            class="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 shadow-sm"
+          >
+            <span
+              class="h-7 w-7 rounded-full bg-emerald-600 text-white flex items-center justify-center"
+            >
               {{ userInitial }}
             </span>
             <span>{{ user.email }}</span>
@@ -18,194 +37,122 @@
 
         <div class="grid gap-6 px-5 py-6">
           <div class="space-y-4">
-            <div class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+            <div
+              class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
+            >
               <div class="flex items-center justify-between gap-2">
                 <div>
-                  <p class="text-sm font-semibold text-slate-900">ข้อมูลบัญชี</p>
-                  <p class="text-xs text-slate-500">อัปเดตล่าสุด {{ formatDateTime(user?.last_sign_in_at || user?.created_at) }}</p>
+                  <p class="text-sm font-semibold text-slate-900">
+                    ข้อมูลบัญชี
+                  </p>
+                  <p class="text-xs text-slate-500">
+                    อัปเดตล่าสุด
+                    {{ formatDateTime(user?.last_sign_in_at || user?.created_at) }}
+                  </p>
                 </div>
                 <button
-                  v-if="!user"
+                  v-if="user"
                   type="button"
-                  class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow"
-                  @click="openAuthModal"
+                  class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-3 py-1 text-sm text-sm font-semibold text-white shadow hover:bg-indigo-700"
+                  @click="openPasswordModal"
                 >
-                  เข้าสู่ระบบ
+                  แก้ไขรหัสผ่าน
                 </button>
               </div>
 
-              <div v-if="!user" class="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-slate-700">
+              <div
+                v-if="!user"
+                class="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-slate-700"
+              >
                 เข้าสู่ระบบเพื่อดูโปรไฟล์และออเดอร์ของคุณ
               </div>
 
               <div v-else class="mt-4 space-y-2 text-sm text-slate-700">
                 <div class="flex items-center justify-between gap-2">
                   <span class="text-slate-500">อีเมล</span>
-                  <span class="font-semibold text-slate-900">{{ user.email }}</span>
+                  <span
+                    class="font-semibold text-slate-900"
+                    >{{ user.email }}</span
+                  >
                 </div>
-                <div class="flex items-center justify-between gap-2">
+                <!-- <div class="flex items-center justify-between gap-2">
                   <span class="text-slate-500">รหัสผู้ใช้</span>
-                  <span class="font-mono text-xs text-slate-900">{{ user.id }}</span>
-                </div>
+                  <span
+                    class="font-mono text-xs text-slate-900"
+                    >{{ user.id }}</span
+                  >
+                </div> -->
                 <div class="flex items-center justify-between gap-2">
                   <span class="text-slate-500">สร้างเมื่อ</span>
-                  <span class="font-semibold text-slate-900">{{ formatDateTime(user.created_at) }}</span>
+                  <span
+                    class="font-semibold text-slate-900"
+                    >{{ formatDateTime(user.created_at) }}</span
+                  >
                 </div>
                 <div class="flex items-center justify-between gap-2">
                   <span class="text-slate-500">เข้าสู่ระบบล่าสุด</span>
-                  <span class="font-semibold text-slate-900">{{ formatDateTime(user.last_sign_in_at) }}</span>
+                  <span
+                    class="font-semibold text-slate-900"
+                    >{{ formatDateTime(user.last_sign_in_at) }}</span
+                  >
                 </div>
               </div>
             </div>
 
-            <div class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+            <div
+              class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
+            >
               <div class="flex items-center justify-between gap-2">
                 <div>
-                  <p class="text-sm font-semibold text-slate-900">ความปลอดภัย</p>
-                  <p class="text-xs text-slate-500">เปลี่ยนรหัสผ่านของบัญชี</p>
+                  <p class="text-sm font-semibold text-slate-900">
+                    ที่อยู่จัดส่ง
+                  </p>
+                  <p class="text-xs text-slate-500">
+                    เพิ่ม/เลือกที่อยู่ให้ดึงไปใช้ตอน checkout ได้ทันที
+                  </p>
                 </div>
-              </div>
-
-              <div v-if="!user" class="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-slate-700">
-                เข้าสู่ระบบเพื่อเปลี่ยนรหัสผ่าน
-              </div>
-
-              <form v-else class="mt-4 space-y-3" @submit.prevent="handleChangePassword">
-                <div class="grid gap-3 md:grid-cols-2">
-                  <div class="space-y-1">
-                    <label class="text-xs font-semibold text-slate-600" for="current-password">รหัสผ่านเดิม</label>
-                    <input
-                      id="current-password"
-                      v-model="passwordForm.current"
-                      type="password"
-                      required
-                      class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div class="space-y-1">
-                    <label class="text-xs font-semibold text-slate-600" for="new-password">รหัสผ่านใหม่</label>
-                    <input
-                      id="new-password"
-                      v-model="passwordForm.next"
-                      type="password"
-                      minlength="6"
-                      required
-                      class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                      placeholder="อย่างน้อย 6 ตัวอักษร"
-                    />
-                  </div>
-                  <div class="space-y-1 md:col-span-2">
-                    <label class="text-xs font-semibold text-slate-600" for="confirm-password">ยืนยันรหัสผ่านใหม่</label>
-                    <input
-                      id="confirm-password"
-                      v-model="passwordForm.confirm"
-                      type="password"
-                      minlength="6"
-                      required
-                      class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                    />
-                  </div>
-                </div>
-
-                <p v-if="passwordError" class="text-xs text-rose-600">{{ passwordError }}</p>
-                <p v-else-if="passwordSuccess" class="text-xs text-emerald-600">{{ passwordSuccess }}</p>
-
-                <div class="flex flex-wrap items-center gap-2">
+                <div class="flex items-center gap-2">
                   <button
-                    type="submit"
-                    class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-700 disabled:opacity-60"
-                    :disabled="passwordSaving"
+                    type="button"
+                    class="rounded-full border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                    :disabled="addressesLoading"
+                    @click="loadAddresses"
                   >
-                    {{ passwordSaving ? 'กำลังบันทึก...' : 'บันทึกรหัสผ่านใหม่' }}
+                    รีเฟรช
                   </button>
                   <button
                     type="button"
-                    class="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
-                    :disabled="passwordSaving"
-                    @click="resetPasswordForm"
+                    class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-3 py-1 text-sm font-semibold text-white shadow hover:bg-indigo-700 disabled:opacity-60"
+                    :disabled="addressSaving"
+                    @click="openAddressForm"
                   >
-                    ล้างฟอร์ม
+                    เพิ่มที่อยู่ใหม่
                   </button>
                 </div>
-              </form>
-            </div>
-
-            <div class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-              <div class="flex items-center justify-between gap-2">
-                <div>
-                  <p class="text-sm font-semibold text-slate-900">ที่อยู่จัดส่ง</p>
-                  <p class="text-xs text-slate-500">เพิ่ม/เลือกที่อยู่ให้ดึงไปใช้ตอน checkout ได้ทันที</p>
-                </div>
-                <button
-                  v-if="!user"
-                  type="button"
-                  class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow"
-                  @click="openAuthModal"
-                >
-                  เข้าสู่ระบบ
-                </button>
               </div>
 
-              <div v-if="!user" class="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-slate-700">
+              <div
+                v-if="!user"
+                class="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-slate-700"
+              >
                 เข้าสู่ระบบเพื่อจัดการที่อยู่จัดส่ง
               </div>
 
               <div v-else class="mt-4 space-y-3" v-auto-animate>
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p class="text-xs font-semibold text-slate-600">ที่อยู่ของฉัน</p>
-                    <p class="text-[11px] text-slate-500">จัดการรายการที่อยู่สำหรับการจัดส่ง</p>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <button
-                      type="button"
-                      class="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-                      :disabled="addressesLoading"
-                      @click="loadAddresses"
-                    >
-                      รีเฟรช
-                    </button>
-                    <button
-                      type="button"
-                      class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-700 disabled:opacity-60"
-                      :disabled="addressSaving"
-                      @click="openAddressForm"
-                    >
-                      เพิ่มที่อยู่ใหม่
-                    </button>
-                  </div>
-                </div>
-
-                <div v-if="showAddressForm" class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm">
-                  <div class="flex items-center justify-between gap-2">
-                    <p class="text-xs font-semibold text-slate-600">เพิ่มที่อยู่ใหม่</p>
-                    <button
-                      type="button"
-                      class="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
-                      @click="closeAddressForm"
-                    >
-                      ปิด
-                    </button>
-                  </div>
-                  <AddressForm
-                    class="mt-2"
-                    :model-value="addressForm"
-                    :loading="addressSaving"
-                    :error="addressFormError"
-                    :saved-message="addressSavedMessage"
-                    :show-default-toggle="true"
-                    submit-label="บันทึกที่อยู่"
-                    @submit="saveAddress"
-                    @reset="resetAddressForm"
-                    @update:model-value="(v) => Object.assign(addressForm, v)"
-                  />
-                </div>
-
                 <div class="space-y-2" v-auto-animate>
-                  <p v-if="addressesError" class="text-xs text-rose-600">{{ addressesError }}</p>
+                  <p v-if="addressesError" class="text-xs text-rose-600">
+                    {{ addressesError }}
+                  </p>
                   <div v-else class="space-y-2" v-auto-animate>
-                    <div v-if="addressesLoading" class="text-sm text-slate-500">กำลังโหลดที่อยู่...</div>
-                    <div v-else-if="addresses.length === 0" class="text-sm text-slate-500">ยังไม่มีที่อยู่จัดส่ง</div>
+                    <div v-if="addressesLoading" class="text-sm text-slate-500">
+                      กำลังโหลดที่อยู่...
+                    </div>
+                    <div
+                      v-else-if="addresses.length === 0"
+                      class="text-sm text-slate-500"
+                    >
+                      ยังไม่มีที่อยู่จัดส่ง
+                    </div>
                     <div
                       v-else
                       v-for="address in addresses"
@@ -214,7 +161,10 @@
                     >
                       <div class="flex items-center justify-between gap-2">
                         <div class="flex items-center gap-2">
-                          <span class="text-sm font-semibold text-slate-900">{{ address.label || 'ที่อยู่' }}</span>
+                          <span
+                            class="text-sm font-semibold text-slate-900"
+                            >{{ address.label || 'ที่อยู่' }}</span
+                          >
                           <span
                             v-if="address.is_default"
                             class="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 border border-emerald-100"
@@ -242,9 +192,18 @@
                         </div>
                       </div>
                       <div class="mt-1 text-xs text-slate-600 space-y-1">
-                        <p class="font-semibold text-slate-800">{{ address.recipient_name }} <span class="text-slate-500">{{ address.phone }}</span></p>
+                        <p class="font-semibold text-slate-800">
+                          {{ address.recipient_name }}
+                          <span
+                            class="text-slate-500"
+                            >{{ address.phone }}</span
+                          >
+                        </p>
                         <p>{{ address.address_line }}</p>
-                        <p>{{ address.subdistrict }} {{ address.district }} {{ address.province }} {{ address.postcode }}</p>
+                        <p>
+                          {{ address.subdistrict }} {{ address.district }}
+                          {{ address.province }} {{ address.postcode }}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -252,16 +211,20 @@
               </div>
             </div>
 
-            <div class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+            <div
+              class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
+            >
               <div class="flex items-center justify-between gap-2">
                 <div>
-                  <p class="text-sm font-semibold text-slate-900">ออเดอร์ของฉัน</p>
+                  <p class="text-sm font-semibold text-slate-900">
+                    ออเดอร์ของฉัน
+                  </p>
                   <p class="text-xs text-slate-500">5 รายการล่าสุด</p>
                 </div>
                 <div class="flex items-center gap-2">
                   <button
                     type="button"
-                    class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
+                    class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
                     :disabled="myOrdersLoading || !user"
                     @click="handleRefreshOrders"
                   >
@@ -270,11 +233,22 @@
                 </div>
               </div>
 
-              <p v-if="myOrdersError" class="mt-2 text-xs text-rose-600">โหลดออเดอร์ไม่สำเร็จ: {{ myOrdersError }}</p>
+              <p v-if="myOrdersError" class="mt-2 text-xs text-rose-600">
+                โหลดออเดอร์ไม่สำเร็จ: {{ myOrdersError }}
+              </p>
               <div v-else class="mt-3 space-y-2" v-auto-animate>
-                <div v-if="!user" class="text-sm text-slate-500">เข้าสู่ระบบเพื่อดูออเดอร์</div>
-                <div v-else-if="myOrdersLoading" class="text-sm text-slate-500">กำลังโหลด...</div>
-                <div v-else-if="myOrders.length === 0" class="text-sm text-slate-500">ยังไม่มีออเดอร์</div>
+                <div v-if="!user" class="text-sm text-slate-500">
+                  เข้าสู่ระบบเพื่อดูออเดอร์
+                </div>
+                <div v-else-if="myOrdersLoading" class="text-sm text-slate-500">
+                  กำลังโหลด...
+                </div>
+                <div
+                  v-else-if="myOrders.length === 0"
+                  class="text-sm text-slate-500"
+                >
+                  ยังไม่มีออเดอร์
+                </div>
                 <div
                   v-else
                   v-for="order in myOrders"
@@ -283,8 +257,13 @@
                 >
                   <div class="flex items-center justify-between gap-2">
                     <div>
-                      <p class="text-sm font-semibold text-slate-900">ออเดอร์ #{{ order.id }}</p>
-                      <p class="text-xs text-slate-500">อัปเดต {{ formatDateTime(order.updated_at || order.created_at) }}</p>
+                      <p class="text-sm font-semibold text-slate-900">
+                        ออเดอร์ #{{ order.id }}
+                      </p>
+                      <p class="text-xs text-slate-500">
+                        อัปเดต
+                        {{ formatDateTime(order.updated_at || order.created_at) }}
+                      </p>
                     </div>
                     <span
                       class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold"
@@ -293,11 +272,19 @@
                       {{ statusBadge(order.status).text }}
                     </span>
                   </div>
-                  <div class="mt-2 flex items-center justify-between text-sm text-slate-600">
+                  <div
+                    class="mt-2 flex items-center justify-between text-sm text-slate-600"
+                  >
                     <span>ยอดรวม</span>
-                    <span class="font-semibold text-slate-900">{{ formatCurrency(order.total_amount) }}</span>
+                    <span
+                      class="font-semibold text-slate-900"
+                      >{{ formatCurrency(order.total_amount) }}</span
+                    >
                   </div>
-                  <div v-if="isPending(order.status)" class="mt-3 flex flex-wrap items-center gap-2">
+                  <div
+                    v-if="isPending(order.status)"
+                    class="mt-3 flex flex-wrap items-center gap-2"
+                  >
                     <template v-if="paymentLink(order)">
                       <a
                         :href="paymentLink(order)"
@@ -307,7 +294,9 @@
                       >
                         ไปชำระเงิน
                       </a>
-                      <p class="text-xs text-slate-500">เปิดลิงก์จ่ายในหน้าต่างใหม่</p>
+                      <p class="text-xs text-slate-500">
+                        เปิดลิงก์จ่ายในหน้าต่างใหม่
+                      </p>
                     </template>
                     <template v-else>
                       <div class="flex flex-wrap items-center gap-2">
@@ -330,8 +319,13 @@
                     </template>
                   </div>
                 </div>
-                <div v-if="myOrdersTotal > myOrdersPageSize" class="flex items-center justify-between pt-2 text-xs text-slate-600">
-                  <span>หน้า {{ myOrdersPage }} / {{ myOrdersTotalPages }}</span>
+                <div
+                  v-if="myOrdersTotal > myOrdersPageSize"
+                  class="flex items-center justify-between pt-2 text-xs text-slate-600"
+                >
+                  <span
+                    >หน้า {{ myOrdersPage }} / {{ myOrdersTotalPages }}</span
+                  >
                   <div class="flex items-center gap-2">
                     <button
                       type="button"
@@ -357,12 +351,42 @@
         </div>
       </section>
     </main>
+    <ChangePasswordModal
+      :open="showPasswordModal"
+      :model="passwordForm"
+      :saving="passwordSaving"
+      :error="passwordError || null"
+      :success="passwordSuccess || null"
+      @close="closePasswordModal"
+      @submit="handleChangePassword"
+      @reset="resetPasswordForm"
+    />
+    <BaseModal
+      :open="showAddressForm"
+      title="เพิ่มที่อยู่ใหม่"
+      @close="closeAddressForm"
+    >
+      <AddressForm
+        class="mt-2"
+        :model-value="addressForm"
+        :loading="addressSaving"
+        :error="addressFormError"
+        :saved-message="addressSavedMessage"
+        :show-default-toggle="true"
+        submit-label="บันทึกที่อยู่"
+        @submit="saveAddress"
+        @reset="resetAddressForm"
+        @update:model-value="(v) => Object.assign(addressForm, v)"
+      />
+    </BaseModal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useSupabaseClient } from '#imports';
 import AddressForm from '~/components/address/AddressForm.vue';
+import ChangePasswordModal from '~/components/profile/ChangePasswordModal.vue';
+import BaseModal from '~/components/ui/BaseModal.vue';
 import { useThaiAddressSearch } from '~/composables/useThaiAddressSearch';
 
 const { user, openAuthModal, requireAuth } = useAuthFlow();
@@ -407,6 +431,7 @@ const passwordForm = reactive({
 const passwordSaving = ref(false);
 const passwordError = ref('');
 const passwordSuccess = ref('');
+const showPasswordModal = ref(false);
 
 const userInitial = computed(() => user.value?.email?.charAt(0)?.toUpperCase() || 'U');
 
@@ -506,6 +531,22 @@ const handleChangePassword = async () => {
   } finally {
     passwordSaving.value = false;
   }
+  if (passwordSuccess.value) {
+    showPasswordModal.value = false;
+  }
+};
+
+const openPasswordModal = () => {
+  if (!user.value) {
+    openAuthModal();
+    return;
+  }
+  resetPasswordForm();
+  showPasswordModal.value = true;
+};
+
+const closePasswordModal = () => {
+  showPasswordModal.value = false;
 };
 
 const resetAddressForm = () => {

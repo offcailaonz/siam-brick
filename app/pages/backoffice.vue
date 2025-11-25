@@ -73,46 +73,48 @@
               </nav>
             </aside>
 
-            <div class="space-y-5">
-              <OrdersSection
-                v-if="activeMenu === 'orders'"
-                :orders="orders"
-                :loading="ordersLoading"
-                :error="ordersError"
-                :status-options="statusOptions"
-                :status-drafts="statusDrafts"
-                :is-updating-status="isUpdatingStatus"
-                :status-update-errors="statusUpdateErrors"
-                :format-currency="formatCurrency"
-                :format-date="formatDate"
-                @refresh="loadOrders"
-                @update-draft="updateStatusDraft"
-                @save-status="handleStatusChange"
-              />
+            <Transition name="menu-swap" mode="out-in">
+              <div :key="activeMenu" class="space-y-5">
+                <OrdersSection
+                  v-if="activeMenu === 'orders'"
+                  :orders="orders"
+                  :loading="ordersLoading"
+                  :error="ordersError"
+                  :status-options="statusOptions"
+                  :status-drafts="statusDrafts"
+                  :is-updating-status="isUpdatingStatus"
+                  :status-update-errors="statusUpdateErrors"
+                  :format-currency="formatCurrency"
+                  :format-date="formatDate"
+                  @refresh="loadOrders"
+                  @update-draft="updateStatusDraft"
+                  @save-status="handleStatusChange"
+                />
 
-              <ProductsSection
-                v-else-if="activeMenu === 'products'"
-                :products="products"
-                :loading="productsLoading"
-                :error="productsError"
-                :format-currency="formatCurrency"
-                :saving="productSaving"
-                :save-error="productSaveError"
-                @refresh="loadProducts"
-                @save="handleSaveProduct"
-                @delete="handleDeleteProduct"
-              />
+                <ProductsSection
+                  v-else-if="activeMenu === 'products'"
+                  :products="products"
+                  :loading="productsLoading"
+                  :error="productsError"
+                  :format-currency="formatCurrency"
+                  :saving="productSaving"
+                  :save-error="productSaveError"
+                  @refresh="loadProducts"
+                  @save="handleSaveProduct"
+                  @delete="handleDeleteProduct"
+                />
 
-              <UserRolesSection
-                v-else-if="activeMenu === 'users'"
-                :roles="userRoles"
-                :loading="userRolesLoading"
-                :error="userRolesError"
-                @refresh="loadUserRoles"
-                @update-role="handleUpdateRole"
-                @delete="handleDeleteUser"
-              />
-            </div>
+                <UserRolesSection
+                  v-else-if="activeMenu === 'users'"
+                  :roles="userRoles"
+                  :loading="userRolesLoading"
+                  :error="userRolesError"
+                  @refresh="loadUserRoles"
+                  @update-role="handleUpdateRole"
+                  @delete="handleDeleteUser"
+                />
+              </div>
+            </Transition>
           </div>
         </div>
       </section>
@@ -373,6 +375,16 @@ watch(
 .badge-grey {
   background: #f1f5f9;
   color: #475569;
+}
+
+.menu-swap-enter-active,
+.menu-swap-leave-active {
+  transition: opacity 180ms ease, transform 200ms ease;
+}
+.menu-swap-enter-from,
+.menu-swap-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
 }
 
 @mixin brick-bg($color, $hue: 0deg) {

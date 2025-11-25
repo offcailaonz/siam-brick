@@ -104,7 +104,14 @@
       />
       ตั้งเป็นที่อยู่หลัก
     </label>
-    <div class="flex flex-wrap items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2 justify-between">
+      <button
+        type="button"
+        class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+        @click="handleReset"
+      >
+        เคลียร์
+      </button>
       <button
         type="submit"
         class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
@@ -113,17 +120,6 @@
         <span v-if="loading">กำลังบันทึก...</span>
         <span v-else>{{ submitLabel }}</span>
       </button>
-      <button
-        type="button"
-        class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-        @click="handleReset"
-      >
-        เคลียร์ฟอร์ม
-      </button>
-      <p v-if="error" class="text-xs text-rose-600">{{ error }}</p>
-      <p v-if="savedMessage" class="text-xs text-emerald-600">
-        {{ savedMessage }}
-      </p>
     </div>
   </form>
 </template>
