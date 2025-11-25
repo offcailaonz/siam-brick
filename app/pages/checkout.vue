@@ -108,8 +108,6 @@
               </p>
               <p class="text-xs text-rose-600 mt-1">{{ studPreviewError }}</p>
             </div>
-
-            <ReceiveInfo />
           </div>
 
           <aside class="space-y-4">
@@ -163,24 +161,32 @@
             <section
               class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
             >
-              <div class="flex items-center justify-between gap-3">
-                <div>
-                  <p class="text-sm font-semibold text-slate-900">
-                    เลือกที่อยู่จัดส่ง
-                  </p>
-                  <p class="text-xs text-slate-500">
-                    ที่อยู่จากโปรไฟล์จะถูกดึงมาให้
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  class="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-                  :disabled="addressesLoading || !user"
-                  @click="addressesLoading ? null : loadAddresses()"
-                >
-                  รีเฟรช
-                </button>
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold text-slate-900">
+                  เลือกที่อยู่จัดส่ง
+                </p>
+                <p class="text-xs text-slate-500">
+                  ที่อยู่จากโปรไฟล์จะถูกดึงมาให้
+                </p>
               </div>
+              <button
+                type="button"
+                class="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                :disabled="addressesLoading || !user"
+                @click="addressesLoading ? null : loadAddresses()"
+              >
+                รีเฟรช
+              </button>
+              <button
+                type="button"
+                class="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                :disabled="addressSaving || !user"
+                @click="openAddressModal"
+              >
+                เพิ่มที่อยู่ใหม่
+              </button>
+            </div>
               <p v-if="addressesError" class="text-xs text-rose-600 mt-2">
                 {{ addressesError }}
               </p>
@@ -199,6 +205,13 @@
                   class="text-sm text-slate-500"
                 >
                   ยังไม่มีที่อยู่จัดส่ง
+                  <button
+                    type="button"
+                    class="ml-2 rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                    @click="openAddressModal"
+                  >
+                    เพิ่มที่อยู่ใหม่
+                  </button>
                 </div>
                 <div
                   v-else
@@ -261,56 +274,31 @@
                   </div>
                 </div>
               </div>
-              <div
-                v-if="user && addresses.length === 0"
-                class="mt-4 rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-3"
-              >
-                <p class="text-sm font-semibold text-amber-800">
-                  เพิ่มที่อยู่จัดส่งแรกของคุณ
-                </p>
-                <p class="text-xs text-amber-700">
-                  บันทึกไว้แล้วจะเลือกอัตโนมัติ
-                </p>
-                <AddressForm
-                  :model-value="addressForm"
-                  :loading="addressSaving"
-                  :error="addressFormError"
-                  :saved-message="addressSavedMessage"
-                  :show-default-toggle="true"
-                  submit-label="บันทึก"
-                  @submit="saveAddress"
-                  @reset="resetAddressForm"
-                  @update:model-value="(v) => Object.assign(addressForm, v)"
-                />
-              </div>
-              <details
-                v-else
-                class="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
-              >
-                <summary
-                  class="cursor-pointer text-sm font-semibold text-slate-800"
-                >
-                  เพิ่มที่อยู่ใหม่
-                </summary>
-                <div class="mt-3">
-                  <AddressForm
-                    :model-value="addressForm"
-                    :loading="addressSaving"
-                    :error="addressFormError"
-                    :saved-message="addressSavedMessage"
-                    :show-default-toggle="true"
-                    submit-label="บันทึก"
-                    @submit="saveAddress"
-                    @reset="resetAddressForm"
-                    @update:model-value="(v) => Object.assign(addressForm, v)"
-                  />
-                </div>
-              </details>
             </section>
           </aside>
         </div>
+
+        <ReceiveInfo
+          class="mx-5 mb-6"
+          :breakdown="kitBreakdown"
+          :resolution="previewResolution"
+        />
       </section>
     </main>
+    <BaseModal :open="showAddressModal" title="เพิ่มที่อยู่ใหม่" @close="closeAddressModal">
+      <AddressForm
+        class="mt-2"
+        :model-value="addressForm"
+        :loading="addressSaving"
+        :error="addressFormError"
+        :saved-message="addressSavedMessage"
+        :show-default-toggle="true"
+        submit-label="บันทึกที่อยู่"
+        @submit="saveAddress"
+        @reset="resetAddressForm"
+        @update:model-value="(v) => Object.assign(addressForm, v)"
+      />
+    </BaseModal>
   </div>
 </template>
 
@@ -319,6 +307,7 @@ import { alignPixelsToStudMap, drawStudImageOnCanvas, replaceSparseColors, rgbTo
 import { ALL_BRICKLINK_SOLID_COLORS, PIXEL_TYPE_OPTIONS } from '~/lib/brickArtRemix/bricklinkColors';
 import AddressForm from '~/components/address/AddressForm.vue';
 import ReceiveInfo from '~/components/checkout/ReceiveInfo.vue';
+import BaseModal from '~/components/ui/BaseModal.vue';
 import { useAddresses } from '~/composables/useAddresses';
 import { useThaiAddressSearch } from '~/composables/useThaiAddressSearch';
 
@@ -356,6 +345,7 @@ const addressDeleting = ref<Record<number, boolean>>({});
 const addressDefaulting = ref<Record<number, boolean>>({});
 const addressSavedMessage = ref<string | null>(null);
 const selectedAddressId = ref<number | null>(null);
+const showAddressModal = ref(false);
 const addressForm = reactive({
   label: '',
   recipient_name: '',
@@ -620,6 +610,13 @@ watch(
     if (hasLinkedOrder.value) {
       finalPreview.value = null;
     }
+    if (next) {
+      const img = new Image();
+      img.onload = () => {
+        previewResolution.value = { width: img.naturalWidth, height: img.naturalHeight };
+      };
+      img.src = next;
+    }
   },
   { immediate: true }
 );
@@ -691,6 +688,20 @@ const resetAddressForm = () => {
   addressFormError.value = null;
 };
 
+const openAddressModal = () => {
+  if (!user.value) {
+    requireAuth(() => openAddressModal());
+    return;
+  }
+  resetAddressForm();
+  showAddressModal.value = true;
+};
+
+const closeAddressModal = () => {
+  resetAddressForm();
+  showAddressModal.value = false;
+};
+
 const loadAddresses = async () => {
   if (!user.value?.id) return;
   addressesLoading.value = true;
@@ -701,6 +712,9 @@ const loadAddresses = async () => {
     if (!selectedAddressId.value && data?.length) {
       const defaultAddress = data.find((item: any) => item.is_default) ?? data[0];
       selectedAddressId.value = defaultAddress?.id != null ? Number(defaultAddress.id) : null;
+    }
+    if ((addresses.value?.length ?? 0) === 0) {
+      showAddressModal.value = true;
     }
   } catch (error: any) {
     addressesError.value = error?.message ?? 'ไม่สามารถโหลดที่อยู่ได้';
@@ -734,6 +748,7 @@ const saveAddress = async () => {
     selectedAddressId.value = created?.id != null ? Number(created.id) : selectedAddressId.value;
     addressSavedMessage.value = 'บันทึกที่อยู่เรียบร้อย';
     resetAddressForm();
+    showAddressModal.value = false;
   } catch (error: any) {
     addressFormError.value = error?.message ?? 'บันทึกที่อยู่ไม่สำเร็จ';
   } finally {
@@ -784,6 +799,29 @@ const summaryPrice = computed(() => {
   const normalized = typeof rawAmount === 'number' ? rawAmount : Number(rawAmount ?? DEFAULT_ORDER_PRICE);
   return !Number.isNaN(normalized) && normalized > 0 ? normalized : DEFAULT_ORDER_PRICE;
 });
+
+const previewResolution = ref({ width: 0, height: 0 });
+
+const getFrameAndBase = (width: number, height: number) => {
+  const hasSize = width > 0 && height > 0;
+
+  const corners = hasSize ? 4 : 0;
+  const clips = hasSize ? 2 : 0;
+
+  const sideShort = hasSize ? ((width - 16) / 16) * 2 : 0;
+  const sideLong = hasSize ? ((height - 16) / 16) * 2 : 0;
+
+  const canUse32 = hasSize && width % 32 === 0 && height % 32 === 0;
+
+  const base32 = canUse32 ? (width / 32) * (height / 32) : 0;
+  const base16 = !canUse32 && hasSize ? (width / 16) * (height / 16) : 0;
+
+  const studs = width * height;
+
+  return { corners, clips, sideShort, sideLong, base32, base16, studs };
+};
+
+const kitBreakdown = computed(() => getFrameAndBase(previewResolution.value.width, previewResolution.value.height));
 
 const loadMyOrders = async () => {
   if (!user.value?.id) return;

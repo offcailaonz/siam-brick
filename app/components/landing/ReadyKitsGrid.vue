@@ -7,7 +7,11 @@
     </div>
     <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3" v-auto-animate>
       <template v-if="loading">
-        <article v-for="n in 6" :key="n" class="rounded-2xl border border-white bg-white p-5 shadow-sm">
+        <article
+          v-for="n in 6"
+          :key="n"
+          class="rounded-2xl border border-white bg-white p-5 shadow-sm"
+        >
           <div class="h-40 w-full rounded-xl bg-slate-200 animate-pulse" />
           <div class="mt-4 space-y-2">
             <div class="h-4 w-2/3 rounded bg-slate-200 animate-pulse" />
@@ -24,47 +28,67 @@
         <article
           v-for="kit in paginatedKits"
           :key="kit.id || kit.slug || kit.name"
-          class="rounded-2xl border border-white bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+          class="rounded-3xl bg-white shadow-xl border border-slate-200 transition hover:-translate-y-1 hover:shadow-2xl"
         >
-          <img
-            :src="kit.image"
-            :alt="kit.name"
-            class="h-50 w-full rounded-xl object-cover"
-            loading="lazy"
-          />
-          <div class="mt-4 space-y-2">
-            <div class="flex items-center justify-between">
-              <h3 class="text-lg font-semibold text-slate-900">{{ kit.name }}</h3>
-              <span class="text-xs font-semibold uppercase text-amber-600">{{ kit.tag }}</span>
+          <div class="h-full flex flex-col">
+            <div class="relative overflow-hidden rounded-t-3xl bg-slate-100">
+              <button type="button" class="group block w-full cursor-pointer" @click="openPreview(kit)">
+                <div class="aspect-square overflow-hidden">
+                  <img
+                    :src="kit.image"
+                    :alt="kit.name"
+                    class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                    loading="lazy"
+                  />
+                </div>
+                <span class="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/15 transition"></span>
+              </button>
+              <span
+                class="absolute left-3 top-3 rounded-full bg-amber-500 px-3 py-1 text-[11px] font-semibold uppercase text-white shadow"
+              >
+                {{ kit.tag || 'พร้อมสร้าง' }}
+              </span>
             </div>
-            <p class="text-sm text-slate-500">
-              {{ kit.size }} · {{ kit.studs }} studs · ระดับ {{ kit.difficulty }}
-            </p>
-            <div class="flex items-center gap-3 text-sm">
-              <span class="font-semibold text-slate-900">฿{{ kit.priceKit }}</span>
-              <span class="text-xs text-slate-500">ชุดคำสั่ง ฿{{ kit.priceInstructions }}</span>
+
+            <div class="flex-1 space-y-3 rounded-b-3xl border-t border-slate-100 bg-white px-4 pb-4 pt-3">
+              <div class="flex items-start justify-between gap-2">
+                <h3 class="text-lg font-bold text-slate-900 leading-tight">
+                  {{ kit.name }}
+                </h3>
+                <span
+                  class="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 border border-emerald-100"
+                >
+                  ฿{{ kit.priceKit }}
+                </span>
+              </div>
+              <p class="text-xs text-slate-500">
+                {{ kit.size }} · {{ kit.studs }} studs · ระดับ {{ kit.difficulty }}
+              </p>
+              <div class="mt-3 flex gap-3">
+                <button
+                  type="button"
+                  class="flex-1 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700 transition"
+                  @click="handleOrder(kit)"
+                >
+                  สั่งชุดเต็ม
+                </button>
+                <!-- <button
+                  type="button"
+                  class="flex-1 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-900 bg-white hover:bg-slate-50 transition"
+                  @click="handleDownload(kit)"
+                >
+                  ดาวน์โหลดคำสั่ง
+                </button> -->
+              </div>
             </div>
-          </div>
-          <div class="mt-4 flex gap-3">
-            <button
-              type="button"
-              class="flex-1 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-              @click="handleOrder(kit)"
-            >
-              สั่งชุดเต็ม
-            </button>
-            <button
-              type="button"
-              class="flex-1 rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-900"
-              @click="handleDownload(kit)"
-            >
-              ดาวน์โหลดคำสั่ง
-            </button>
           </div>
         </article>
       </template>
     </div>
-    <div v-if="!loading && totalPages > 1" class="mt-8 flex items-center justify-center gap-4 text-sm font-semibold">
+    <div
+      v-if="!loading && totalPages > 1"
+      class="mt-8 flex items-center justify-center gap-4 text-sm font-semibold"
+    >
       <button
         type="button"
         class="rounded-full bg-yellow-400 hover:bg-yellow-500 border border-slate-300 px-4 py-2 text-slate-600 disabled:opacity-40"
@@ -84,10 +108,34 @@
       </button>
     </div>
   </section>
+  <BaseModal
+    :open="!!previewKit"
+    :title="previewKit?.name"
+    max-width-class="max-w-4xl"
+    @close="closePreview"
+  >
+    <div class="space-y-2">
+      <p class="text-xs text-slate-500">
+        {{ previewKit?.size }} · {{ previewKit?.studs }} studs · ระดับ
+        {{ previewKit?.difficulty }}
+      </p>
+      <div
+        class="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+      >
+        <img
+          v-if="previewKit"
+          :src="previewKit.image"
+          :alt="previewKit.name"
+          class="w-full max-h-[70vh] object-contain"
+        />
+      </div>
+    </div>
+  </BaseModal>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch, withDefaults } from 'vue';
+import BaseModal from '~/components/ui/BaseModal.vue';
 
 type KitItem = {
   id?: string | number;
@@ -125,6 +173,14 @@ const paginatedKits = computed(() => {
   const start = (currentPage.value - 1) * props.pageSize;
   return props.kits.slice(start, start + props.pageSize);
 });
+
+const previewKit = ref<KitItem | null>(null);
+const openPreview = (kit: KitItem) => {
+  previewKit.value = kit;
+};
+const closePreview = () => {
+  previewKit.value = null;
+};
 
 const handleOrder = (kit: KitItem) => {
   emit('order', kit);

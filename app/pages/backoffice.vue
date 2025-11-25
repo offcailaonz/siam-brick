@@ -297,8 +297,7 @@ const handleSaveProduct = async (payload: any) => {
       studs: payload.studs ?? null,
       difficulty: payload.difficulty || null,
       size: payload.size || null,
-      image: payload.image || null,
-      priceInstructions: payload.priceInstructions ?? null
+      image: payload.image || null
     };
     const { error } = await supabase
       .from('products')
@@ -307,7 +306,7 @@ const handleSaveProduct = async (payload: any) => {
           id: payload.id ?? undefined,
           name: payload.name,
           slug: payload.slug,
-          price: payload.priceKit ?? payload.priceInstructions ?? 0,
+          price: payload.priceKit ?? 0,
           active: payload.active !== false,
           metadata
         },

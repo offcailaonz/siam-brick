@@ -7,7 +7,7 @@
         @keydown.escape.prevent.stop="emitClose"
       >
         <Transition name="modal-scale">
-          <div class="w-full max-w-3xl rounded-2xl bg-white shadow-2xl">
+          <div class="w-full rounded-2xl bg-white shadow-2xl" :class="containerClass">
             <header class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
               <h3 class="text-lg font-semibold text-slate-900">{{ title }}</h3>
               <button
@@ -32,9 +32,11 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed, onUnmounted, watch } from 'vue';
+const props = defineProps<{
   open: boolean;
   title?: string;
+  maxWidthClass?: string;
 }>();
 
 const emit = defineEmits<{
@@ -42,6 +44,35 @@ const emit = defineEmits<{
 }>();
 
 const emitClose = () => emit('close');
+
+let openModalCount = 0;
+
+const containerClass = computed(() => props.maxWidthClass || 'max-w-3xl');
+
+watch(
+  () => props.open,
+  (val) => {
+    if (typeof document === 'undefined') return;
+    if (val) {
+      openModalCount += 1;
+      document.body.style.overflow = 'hidden';
+    } else {
+      openModalCount = Math.max(0, openModalCount - 1);
+      if (openModalCount === 0) {
+        document.body.style.overflow = '';
+      }
+    }
+  },
+  { immediate: true }
+);
+
+onUnmounted(() => {
+  if (!props.open || typeof document === 'undefined') return;
+  openModalCount = Math.max(0, openModalCount - 1);
+  if (openModalCount === 0) {
+    document.body.style.overflow = '';
+  }
+});
 </script>
 
 <style scoped>

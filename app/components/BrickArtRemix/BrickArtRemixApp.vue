@@ -3,13 +3,22 @@
     <section
       class="rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm"
     >
+      <div class="text-end">
+        <button
+          v-if="props.showGenerateAction && step3Ready"
+          type="button"
+          class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow hover:bg-emerald-700"
+          @click="emitGenerated"
+        >
+          {{ props.generateLabel }}
+        </button>
+      </div>
       <div v-if="isPreviewFrameLoading" class="loading-bar" aria-live="polite">
         <div class="loading-bar__track">
           <div class="loading-bar__fill"></div>
         </div>
       </div>
       <div v-else style="height: 14px;"></div>
-
       <div class="grid gap-6 lg:grid-cols-3">
         <article class=" rounded-xl border border-slate-100 bg-white/80 p-4">
           <div v-show="uploadedImage" class="text-sm text-slate-600 mb-4">
@@ -87,13 +96,13 @@
                 :min="RESOLUTION_MIN"
                 :max="RESOLUTION_MAX"
                 :step="RESOLUTION_STEP"
-              class="mt-2 w-full"
-              :value="targetResolution.width"
-              @pointerdown="handleResolutionPointerDown($event)"
-              @pointerup="handleControlPointerUp"
-              @pointercancel="handleControlPointerUp"
-              @input="handleResolutionInput('width', $event)"
-            />
+                class="mt-2 w-full"
+                :value="targetResolution.width"
+                @pointerdown="handleResolutionPointerDown($event)"
+                @pointerup="handleControlPointerUp"
+                @pointercancel="handleControlPointerUp"
+                @input="handleResolutionInput('width', $event)"
+              />
               <span class="text-xs text-slate-500"
                 >{{ targetResolution.width }} pixel</span
               >
@@ -105,13 +114,13 @@
                 :min="RESOLUTION_MIN"
                 :max="RESOLUTION_MAX"
                 :step="RESOLUTION_STEP"
-              class="mt-2 w-full"
-              :value="targetResolution.height"
-              @pointerdown="handleResolutionPointerDown($event)"
-              @pointerup="handleControlPointerUp"
-              @pointercancel="handleControlPointerUp"
-              @input="handleResolutionInput('height', $event)"
-            />
+                class="mt-2 w-full"
+                :value="targetResolution.height"
+                @pointerdown="handleResolutionPointerDown($event)"
+                @pointerup="handleControlPointerUp"
+                @pointercancel="handleControlPointerUp"
+                @input="handleResolutionInput('height', $event)"
+              />
               <span class="text-xs text-slate-500"
                 >{{ targetResolution.height }} pixel</span
               >
@@ -162,37 +171,34 @@
             {{ targetResolution.height }} Pixel (อัตราขยาย ×{{ SCALING_FACTOR}})
           </p>
 
-          <div
-            v-if="step2Ready"
-            class="mt-3 flex flex-wrap items-center gap-2"
-          >
+          <div v-if="step2Ready" class="mt-3 flex flex-wrap items-center gap-2">
             <button
               type="button"
               class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
               @click="openEditModal"
-        >
-          แก้ไขสี (Step 2)
-        </button>
-        <button
-          v-if="hasPixelRemap"
+            >
+              แก้ไขสี (Step 2)
+            </button>
+            <button
+              v-if="hasPixelRemap"
               type="button"
               class="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50"
               @click="clearPixelColorRemap"
-          >
-            ล้างการ remap สี
-          </button>
-        <button
-          v-if="hasStep2Edits"
-          type="button"
-          class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-          @click="resetStep2Edits"
-        >
-          ล้างการแก้ไขกลับต้นฉบับ
-        </button>
-      </div>
-      <p v-if="hasPixelRemap" class="text-xs text-indigo-700 mt-1">
-        กำลังใช้การ remap สีหลังจากปรับโทน/แก้สีพิกเซล
-      </p>
+            >
+              ล้างการ remap สี
+            </button>
+            <button
+              v-if="hasStep2Edits"
+              type="button"
+              class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+              @click="resetStep2Edits"
+            >
+              ล้างการแก้ไขกลับต้นฉบับ
+            </button>
+          </div>
+          <p v-if="hasPixelRemap" class="text-xs text-indigo-700 mt-1">
+            กำลังใช้การ remap สีหลังจากปรับโทน/แก้สีพิกเซล
+          </p>
 
           <!-- <div v-if="step2Ready" class="mt-3">
             <button
@@ -437,11 +443,12 @@
                   Step 3 – ตัวอย่างภาพตัวต่อ
                 </h3>
               </div>
-              <span
-                style="min-width: 64px;"
-                class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800"
-                >Step 3</span
-              >
+              <div class="flex items-center gap-2">
+                <span
+                  class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800"
+                  >Step 3</span
+                >
+              </div>
             </div>
             <p
               class="text-xs text-slate-500"
@@ -503,6 +510,9 @@
                   >
                 </div>
               </div>
+              <p class="mt-2 text-xs text-slate-500">
+                รวม {{ formatNumber(step3StudTotal) }} studs
+              </p>
             </div>
           </div>
           <p class="text-sm text-rose-600" v-if="step3Error">
@@ -734,7 +744,7 @@
                     <span class="truncate">{{ color.name }}</span>
                   </button>
                 </div>
-                </div>
+              </div>
 
               <button
                 class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm font-semibold text-rose-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
@@ -766,10 +776,10 @@
                 ยกเลิก
               </button>
               <button
-              class="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
-              type="button"
-              @click="confirmEditModal"
-            >
+                class="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
+                type="button"
+                @click="confirmEditModal"
+              >
                 บันทึกการ remap สี
               </button>
             </div>
@@ -876,6 +886,8 @@ const props = withDefaults(
     initialStep2Preview?: string | null;
     initialStep3Preview?: string | null;
     initialStep3Base?: string | null;
+    showGenerateAction?: boolean;
+    generateLabel?: string;
   }>(),
   {
     showStep4: true,
@@ -886,9 +898,23 @@ const props = withDefaults(
     editingOrderId: null,
     initialStep2Preview: null,
     initialStep3Preview: null,
-    initialStep3Base: null
+    initialStep3Base: null,
+    showGenerateAction: false,
+    generateLabel: 'ใช้ผลลัพธ์นี้'
   }
 );
+
+const emit = defineEmits<{
+  (
+    e: 'generated',
+    payload: {
+      preview: string | null;
+      studs: number;
+      studUsage: Array<{ hex: string; name?: string; count: number }>;
+      resolution: { width: number; height: number };
+    }
+  ): void;
+}>();
 
 const router = useRouter();
 const { user, requireAuth } = useAuthFlow();
@@ -1339,6 +1365,7 @@ const formatNumber = (value: number) => new Intl.NumberFormat('th-TH').format(va
 const colorName = (hex: string) => HEX_TO_COLOR_NAME[hex.toLowerCase()] ?? HEX_TO_COLOR_NAME[hex];
 
 const instructionColorOrder = computed(() => step3StudUsage.value.map((usage) => usage.hex));
+const step3StudTotal = computed(() => step3StudUsage.value.reduce((sum, usage) => sum + usage.count, 0));
 
 const hexToRgb = (hex: string) => {
   const normalized = hex.replace('#', '');
@@ -1672,6 +1699,22 @@ const handleHsvInput = (key: keyof typeof hsvControls, event: Event) => {
   if (!Number.isNaN(numericValue)) {
     hsvControls[key] = numericValue;
   }
+};
+
+const emitGenerated = () => {
+  if (!step3Ready.value) return;
+  const preview =
+    step3UpscaledCanvas.value?.toDataURL('image/png') ||
+    finalStep3Preview.value ||
+    apiStep3Preview.value ||
+    null;
+  const studs = step3StudTotal.value;
+  emit('generated', {
+    preview,
+    studs,
+    studUsage: step3StudUsage.value,
+    resolution: { width: targetResolution.width, height: targetResolution.height }
+  });
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
