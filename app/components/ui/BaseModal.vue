@@ -7,7 +7,7 @@
         @keydown.escape.prevent.stop="emitClose"
       >
         <Transition name="modal-scale">
-          <div v-if="open" class="w-full max-w-3xl rounded-2xl bg-white shadow-2xl">
+          <div class="w-full max-w-3xl rounded-2xl bg-white shadow-2xl">
             <header class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
               <h3 class="text-lg font-semibold text-slate-900">{{ title }}</h3>
               <button
