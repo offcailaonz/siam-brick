@@ -61,6 +61,15 @@
                 >
                   <span>สินค้า</span>
                 </button>
+                <button
+                  type="button"
+                  class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left font-semibold transition"
+                  :class="activeMenu === 'users' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'text-slate-700 hover:bg-slate-50'"
+                  @click="activeMenu = 'users'"
+                >
+                  <span>ผู้ใช้</span>
+                  <span class="text-[11px] text-slate-500">role</span>
+                </button>
               </nav>
             </aside>
 
@@ -89,6 +98,16 @@
                 :format-currency="formatCurrency"
                 @refresh="loadProducts"
               />
+
+              <UserRolesSection
+                v-else-if="activeMenu === 'users'"
+                :roles="userRoles"
+                :loading="userRolesLoading"
+                :error="userRolesError"
+                @refresh="loadUserRoles"
+                @update-role="handleUpdateRole"
+                @delete="handleDeleteUser"
+              />
             </div>
           </div>
         </div>
@@ -98,10 +117,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
+import { ref, watch } from 'vue';
 import { useOrders } from '~/composables/useOrders';
 import OrdersSection from '~/components/backoffice/OrdersSection.vue';
 import ProductsSection from '~/components/backoffice/ProductsSection.vue';
+import UserRolesSection from '~/components/backoffice/UserRolesSection.vue';
+
+definePageMeta({
+  middleware: ['admin-only']
+});
 
 const { openAuthModal, user } = useAuthFlow();
 const supabase = useSupabaseClient();
@@ -110,32 +134,18 @@ const { updateOrderStatus, cancelOrder } = useOrders();
 const orders = ref<Array<Record<string, any>>>([]);
 const ordersLoading = ref(false);
 const ordersError = ref<string | null>(null);
-const activeMenu = ref<'orders' | 'products'>('orders');
+const activeMenu = ref<'orders' | 'products' | 'users'>('orders');
 
-const statusOptions = [
-  'รอชำระเงิน',
-  'ชำระแล้ว',
-  'กำลังตรวจสอบ',
-  'กำลังจัดส่ง',
-  'สำเร็จ',
-  'ยกเลิก'
-];
+const statusOptions = ['รอชำระเงิน', 'ชำระแล้ว', 'กำลังตรวจสอบ', 'กำลังจัดส่ง', 'สำเร็จ', 'ยกเลิก'];
 const statusDrafts = ref<Record<string, string>>({});
 const isUpdatingStatus = ref<Record<string, boolean>>({});
 const statusUpdateErrors = ref<Record<string, string | null>>({});
 const products = ref<Array<Record<string, any>>>([]);
 const productsLoading = ref(false);
 const productsError = ref<string | null>(null);
-
-const statusClass = (status: string | null | undefined) => {
-  if (!status) return 'badge-grey';
-  const s = String(status).toLowerCase();
-  if (s.includes('paid') || s.includes('complete') || s.includes('done')) return 'badge-green';
-  if (s.includes('ship')) return 'badge-blue';
-  if (s.includes('pending') || s.includes('รอชำระ')) return 'badge-amber';
-  if (s.includes('cancel')) return 'badge-grey';
-  return 'badge-blue';
-};
+const userRoles = ref<Array<Record<string, any>>>([]);
+const userRolesLoading = ref(false);
+const userRolesError = ref<string | null>(null);
 
 const formatCurrency = (value: number | string | null | undefined) => {
   const num = Number(value);
@@ -204,7 +214,7 @@ const loadOrders = async () => {
   ordersError.value = null;
   try {
     const { data, error } = await supabase
-      .from('orders')
+      .from('orders_with_email')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(20);
@@ -235,8 +245,43 @@ const loadProducts = async () => {
   }
 };
 
+const loadUserRoles = async () => {
+  userRolesLoading.value = true;
+  userRolesError.value = null;
+  try {
+    const { data, error } = await supabase.from('user_roles').select('user_id, email, role, created_at').order('created_at', { ascending: false });
+    if (error) throw error;
+    userRoles.value = data ?? [];
+  } catch (error: any) {
+    userRolesError.value = error?.message ?? 'โหลดรายชื่อผู้ใช้ไม่สำเร็จ';
+    userRoles.value = [];
+  } finally {
+    userRolesLoading.value = false;
+  }
+};
+
+const handleUpdateRole = async (userId: string, role: string) => {
+  try {
+    const { error } = await supabase.from('user_roles').update({ role }).eq('user_id', userId);
+    if (error) throw error;
+    await loadUserRoles();
+  } catch (error: any) {
+    userRolesError.value = error?.message ?? 'อัปเดต role ไม่สำเร็จ';
+  }
+};
+
+const handleDeleteUser = async (userId: string) => {
+  try {
+    const { error } = await supabase.from('user_roles').delete().eq('user_id', userId);
+    if (error) throw error;
+    await loadUserRoles();
+  } catch (error: any) {
+    userRolesError.value = error?.message ?? 'ลบผู้ใช้ไม่สำเร็จ';
+  }
+};
+
 const loadAll = async () => {
-  await Promise.allSettled([loadOrders(), loadProducts()]);
+  await Promise.allSettled([loadOrders(), loadProducts(), loadUserRoles()]);
 };
 
 watch(

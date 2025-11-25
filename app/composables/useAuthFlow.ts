@@ -46,6 +46,14 @@ export const useAuthFlow = () => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    const cachedRole = useState<{ userId: string | null; role: string | null }>('current-user-role', () => ({
+      userId: null,
+      role: null
+    }));
+    cachedRole.value = { userId: null, role: null };
+    if (process.client) {
+      navigateTo('/');
+    }
   };
 
   return {
