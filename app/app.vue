@@ -1,10 +1,10 @@
 <template>
-  <div class="min-h-screen bg-slate-900 text-slate-100">
+  <div class="min-h-screen brick-bg--app text-slate-100 flex flex-col">
     <div class="brick-bg--header">
       <SiteHeader />
     </div>
     <NuxtRouteAnnouncer />
-    <main>
+    <main class="flex-1">
       <NuxtLayout>
         <Transition name="page-fade" mode="out-in" appear>
           <NuxtPage :page-key="route.fullPath" />
@@ -70,6 +70,10 @@ const { authModalOpen, closeAuthModal, handleAuthenticated } = useAuthFlow();
 
 .brick-bg--header {
   @include brick-bg(#43a047, 0deg);
+}
+
+.brick-bg--app {
+  @include brick-bg(#334155, 0deg);
 }
 
 .brick-bg--footer {

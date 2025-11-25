@@ -24,7 +24,7 @@
     </div>
 
     <div class="brick-bg--readykits" ref="readyKitsRef">
-      <LandingReadyKitsGrid :kits="readyKits" />
+      <LandingReadyKitsGrid :kits="readyKits" :loading="readyKitsPending && !(readyKitsData?.length)" />
     </div>
 
     <div class="brick-bg--faq">
@@ -36,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import LandingHeroBanner from '~/components/landing/HeroBanner.vue';
 import LandingReadyKitsGrid from '~/components/landing/ReadyKitsGrid.vue';
 import LandingStepsTimeline from '~/components/landing/StepsTimeline.vue';
@@ -45,10 +45,35 @@ import LandingShowcaseGrid from '~/components/landing/ShowcaseGrid.vue';
 import LandingFaqAccordion from '~/components/landing/FaqAccordion.vue';
 import LandingComingSoonSection from '~/components/landing/ComingSoonSection.vue';
 
-import { heroData, readyKits, steps, materials, showcase, faqs } from '~/mockup-api-data';
+import { heroData, readyKits as mockReadyKits, steps, materials, showcase, faqs } from '~/mockup-api-data';
 
 const hero = heroData;
 const readyKitsRef = ref<HTMLElement | null>(null);
+const supabase = useSupabaseClient();
+const { data: readyKitsData, pending: readyKitsPending } = await useAsyncData('ready-kits', async () => {
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, slug, name, price, active, metadata')
+    .eq('active', true)
+    .order('created_at', { ascending: false })
+    .limit(12);
+  if (error) throw error;
+  return (
+    data?.map((p) => ({
+      id: p.id,
+      slug: p.slug,
+      name: p.name,
+      tag: p.metadata?.tag ?? p.type ?? 'พร้อมสร้าง',
+      size: p.metadata?.size ?? 'ขนาดกำลังดี',
+      studs: p.metadata?.studs ?? 0,
+      difficulty: p.metadata?.difficulty ?? 'Beginner',
+      priceKit: p.price ?? p.metadata?.priceKit ?? 0,
+      priceInstructions: p.metadata?.priceInstructions ?? p.price ?? 0,
+      image: p.metadata?.image ?? '/placeholder.png'
+    })) ?? []
+  );
+});
+const readyKits = computed(() => readyKitsData.value?.length ? readyKitsData.value : mockReadyKits);
 const scrollToReady = () => {
   readyKitsRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };

@@ -96,7 +96,11 @@
                 :loading="productsLoading"
                 :error="productsError"
                 :format-currency="formatCurrency"
+                :saving="productSaving"
+                :save-error="productSaveError"
                 @refresh="loadProducts"
+                @save="handleSaveProduct"
+                @delete="handleDeleteProduct"
               />
 
               <UserRolesSection
@@ -146,6 +150,8 @@ const productsError = ref<string | null>(null);
 const userRoles = ref<Array<Record<string, any>>>([]);
 const userRolesLoading = ref(false);
 const userRolesError = ref<string | null>(null);
+const productSaving = ref(false);
+const productSaveError = ref<string | null>(null);
 
 const formatCurrency = (value: number | string | null | undefined) => {
   const num = Number(value);
@@ -277,6 +283,50 @@ const handleDeleteUser = async (userId: string) => {
     await loadUserRoles();
   } catch (error: any) {
     userRolesError.value = error?.message ?? 'ลบผู้ใช้ไม่สำเร็จ';
+  }
+};
+
+const handleSaveProduct = async (payload: any) => {
+  productSaving.value = true;
+  productSaveError.value = null;
+  try {
+    const metadata = {
+      tag: payload.tag || null,
+      studs: payload.studs ?? null,
+      difficulty: payload.difficulty || null,
+      size: payload.size || null,
+      image: payload.image || null,
+      priceInstructions: payload.priceInstructions ?? null
+    };
+    const { error } = await supabase
+      .from('products')
+      .upsert(
+        {
+          id: payload.id ?? undefined,
+          name: payload.name,
+          slug: payload.slug,
+          price: payload.priceKit ?? payload.priceInstructions ?? 0,
+          active: payload.active !== false,
+          metadata
+        },
+        { onConflict: 'slug' }
+      );
+    if (error) throw error;
+    await loadProducts();
+  } catch (error: any) {
+    productSaveError.value = error?.message ?? 'บันทึกสินค้าไม่สำเร็จ';
+  } finally {
+    productSaving.value = false;
+  }
+};
+
+const handleDeleteProduct = async (id: number | string) => {
+  try {
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) throw error;
+    await loadProducts();
+  } catch (error: any) {
+    productsError.value = error?.message ?? 'ลบสินค้าไม่สำเร็จ';
   }
 };
 
