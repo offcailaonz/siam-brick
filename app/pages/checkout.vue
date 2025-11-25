@@ -184,7 +184,7 @@
               <p v-if="addressesError" class="text-xs text-rose-600 mt-2">
                 {{ addressesError }}
               </p>
-              <div class="mt-3 space-y-2">
+              <div class="mt-3 space-y-2" v-auto-animate>
                 <div v-if="!user" class="text-sm text-slate-500">
                   เข้าสู่ระบบเพื่อใช้ที่อยู่จัดส่ง
                 </div>
@@ -319,7 +319,6 @@ import { alignPixelsToStudMap, drawStudImageOnCanvas, replaceSparseColors, rgbTo
 import { ALL_BRICKLINK_SOLID_COLORS, PIXEL_TYPE_OPTIONS } from '~/lib/brickArtRemix/bricklinkColors';
 import AddressForm from '~/components/address/AddressForm.vue';
 import ReceiveInfo from '~/components/checkout/ReceiveInfo.vue';
-import { useOrderConfig } from '~/composables/useOrderConfig';
 import { useAddresses } from '~/composables/useAddresses';
 import { useThaiAddressSearch } from '~/composables/useThaiAddressSearch';
 
@@ -328,7 +327,7 @@ const { openAuthModal, user, requireAuth } = useAuthFlow();
 const { recordPendingPaymentOrder, fetchMyOrders, fetchOrderById, updateOrderAssets, upsertOrderShipping } = useOrders();
 const { fetchAddresses, createAddress, deleteAddress, setDefaultAddress } = useAddresses();
 const { loadAddressData } = useThaiAddressSearch();
-const { orderConfig } = useOrderConfig();
+const DEFAULT_ORDER_PRICE = 999;
 const STUD_COLOR_SET = new Set(ALL_BRICKLINK_SOLID_COLORS.map((c) => c.hex.toLowerCase()));
 const SCALING_FACTOR = 30;
 const SPARSE_COLOR_THRESHOLD = 10;
@@ -782,14 +781,9 @@ const summaryUpdatedAt = computed(() => summaryOrder.value?.updated_at ?? summar
 const summaryStatusBadge = computed(() => statusBadge(summaryOrder.value?.status));
 const summaryPrice = computed(() => {
   const rawAmount = summaryOrder.value?.total_amount;
-  const normalized =
-    typeof rawAmount === 'number' ? rawAmount : Number(rawAmount ?? orderConfig.value.defaultPrice ?? 0);
-  if (!Number.isNaN(normalized) && normalized > 0) {
-    return normalized;
-  }
-  return Number(orderConfig.value.defaultPrice ?? 0);
+  const normalized = typeof rawAmount === 'number' ? rawAmount : Number(rawAmount ?? DEFAULT_ORDER_PRICE);
+  return !Number.isNaN(normalized) && normalized > 0 ? normalized : DEFAULT_ORDER_PRICE;
 });
-const summaryHoldMinutes = computed(() => orderConfig.value.holdMinutes ?? 0);
 
 const loadMyOrders = async () => {
   if (!user.value?.id) return;

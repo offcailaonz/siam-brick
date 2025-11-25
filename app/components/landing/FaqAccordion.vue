@@ -4,7 +4,7 @@
       <div class="mb-8 text-center">
         <h2 class="text-3xl font-bold text-white">คำถามที่พบบ่อย</h2>
       </div>
-      <div class="space-y-4">
+      <div class="space-y-4" v-auto-animate>
         <details
           v-for="faq in faqs"
           :key="faq.question"

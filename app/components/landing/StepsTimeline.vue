@@ -3,7 +3,7 @@
     <div class="mb-8 text-center">
       <h2 class="text-white text-3xl font-bold">ทุกอย่างเกิดขึ้นใน 3 ขั้นตอน</h2>
     </div>
-    <div class="grid gap-6 md:grid-cols-3">
+    <div class="grid gap-6 md:grid-cols-3" v-auto-animate>
       <article
         v-for="(step, index) in steps"
         :key="step.title"

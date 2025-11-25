@@ -4,7 +4,7 @@
       <div class="mb-8 text-center">
         <h2 class="text-white text-3xl font-bold">มาตรฐานวัสดุและการจัดส่ง</h2>
       </div>
-      <div class="grid gap-6 md:grid-cols-3">
+      <div class="grid gap-6 md:grid-cols-3" v-auto-animate>
         <article
           v-for="material in materials"
           :key="material.title"

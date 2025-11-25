@@ -1,11 +1,15 @@
 <template>
-  <div class="min-h-screen bg-slate-50 text-slate-900">
+  <div class="min-h-screen bg-slate-900 text-slate-100">
     <div class="brick-bg--header">
       <SiteHeader />
     </div>
     <NuxtRouteAnnouncer />
     <main>
-      <NuxtPage />
+      <NuxtLayout>
+        <Transition name="page-fade" mode="out-in" appear>
+          <NuxtPage :page-key="route.fullPath" />
+        </Transition>
+      </NuxtLayout>
     </main>
     <div class="brick-bg--footer">
       <SiteFooter />
@@ -23,9 +27,12 @@ import SiteHeader from '~/components/layout/SiteHeader.vue';
 import SiteFooter from '~/components/layout/SiteFooter.vue';
 import AuthModal from '~/components/auth/AuthModal.vue';
 
+const route = useRoute();
 const { authModalOpen, closeAuthModal, handleAuthenticated } = useAuthFlow();
 </script>
 <style lang="scss">
+@use 'sass:math';
+
 @mixin brick-bg($color, $hue: 0deg) {
   $brick-peg-size: 15px;
   $brick-wall-thickness: 6px;
@@ -43,17 +50,17 @@ const { authModalOpen, closeAuthModal, handleAuthenticated } = useAuthFlow();
 
     background-color: $color;
     background-image:
-      radial-gradient($color $brick-peg-size/2, transparent $brick-peg-size/2+1px),
-      radial-gradient(rgba(#fff, .4) $brick-peg-size/2, transparent $brick-peg-size/2+1px),
-      radial-gradient(rgba(#000, .18) $brick-peg-size/2, transparent $brick-peg-size/2+$brick-wall-thickness/2),
-      radial-gradient(rgba(#000, .18) $brick-peg-size/2, transparent $brick-peg-size/2+$brick-wall-thickness/2);
+      radial-gradient($color math.div($brick-peg-size, 2), transparent calc(#{$brick-peg-size} / 2 + 1px)),
+      radial-gradient(rgba(#fff, .4) math.div($brick-peg-size, 2), transparent calc(#{$brick-peg-size} / 2 + 1px)),
+      radial-gradient(rgba(#000, .18) math.div($brick-peg-size, 2), transparent calc(#{$brick-peg-size} / 2 + math.div($brick-wall-thickness, 2))),
+      radial-gradient(rgba(#000, .18) math.div($brick-peg-size, 2), transparent calc(#{$brick-peg-size} / 2 + math.div($brick-wall-thickness, 2)));
 
     background-size: $brick-square $brick-square;
     background-position:
       0px 0px,
       -0.5px -0.5px,
       0px 0px,
-      $brick-wall-thickness/2 $brick-wall-thickness/2;
+      math.div($brick-wall-thickness, 2) math.div($brick-wall-thickness, 2);
 
     background-repeat: repeat;
 
@@ -67,5 +74,16 @@ const { authModalOpen, closeAuthModal, handleAuthenticated } = useAuthFlow();
 
 .brick-bg--footer {
   @include brick-bg(#0f172a, 0deg);
+}
+
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 220ms ease;
+  will-change: opacity;
+}
+
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
 }
 </style>

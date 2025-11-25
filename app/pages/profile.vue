@@ -150,7 +150,7 @@
                 เข้าสู่ระบบเพื่อจัดการที่อยู่จัดส่ง
               </div>
 
-              <div v-else class="mt-4 space-y-3">
+              <div v-else class="mt-4 space-y-3" v-auto-animate>
                 <div class="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p class="text-xs font-semibold text-slate-600">ที่อยู่ของฉัน</p>
@@ -201,9 +201,9 @@
                   />
                 </div>
 
-                <div class="space-y-2">
+                <div class="space-y-2" v-auto-animate>
                   <p v-if="addressesError" class="text-xs text-rose-600">{{ addressesError }}</p>
-                  <div v-else class="space-y-2">
+                  <div v-else class="space-y-2" v-auto-animate>
                     <div v-if="addressesLoading" class="text-sm text-slate-500">กำลังโหลดที่อยู่...</div>
                     <div v-else-if="addresses.length === 0" class="text-sm text-slate-500">ยังไม่มีที่อยู่จัดส่ง</div>
                     <div
@@ -271,7 +271,7 @@
               </div>
 
               <p v-if="myOrdersError" class="mt-2 text-xs text-rose-600">โหลดออเดอร์ไม่สำเร็จ: {{ myOrdersError }}</p>
-              <div v-else class="mt-3 space-y-2">
+              <div v-else class="mt-3 space-y-2" v-auto-animate>
                 <div v-if="!user" class="text-sm text-slate-500">เข้าสู่ระบบเพื่อดูออเดอร์</div>
                 <div v-else-if="myOrdersLoading" class="text-sm text-slate-500">กำลังโหลด...</div>
                 <div v-else-if="myOrders.length === 0" class="text-sm text-slate-500">ยังไม่มีออเดอร์</div>

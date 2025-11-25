@@ -4,7 +4,7 @@
       <p class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">Showcase</p>
       <h2 class="text-3xl font-bold">ลูกค้ากว่า 12,000 โปรเจกต์ไว้ใจเรา</h2>
     </div>
-    <div class="grid gap-6 md:grid-cols-3">
+    <div class="grid gap-6 md:grid-cols-3" v-auto-animate>
       <article
         v-for="item in showcase"
         :key="item.name"

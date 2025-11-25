@@ -15,7 +15,7 @@
       </button>
     </div>
     <p v-if="error" class="mt-2 text-xs text-rose-600">โหลดสต็อกไม่สำเร็จ: {{ error }}</p>
-    <div v-else class="mt-3 space-y-2 max-h-[340px] overflow-auto pr-1">
+    <div v-else class="mt-3 space-y-2 max-h-[340px] overflow-auto pr-1" v-auto-animate>
       <div v-if="loading" class="text-sm text-slate-500 px-1">กำลังโหลด...</div>
       <div v-else-if="items.length === 0" class="text-sm text-slate-500 px-1">ยังไม่มีสต็อก</div>
       <div

@@ -9,7 +9,7 @@
             <p class="text-xs font-semibold uppercase tracking-wide text-amber-600">Backoffice</p>
             <h1 class="mt-1 text-2xl font-bold text-slate-900">ภาพรวมออเดอร์และสต็อก</h1>
             <p class="mt-2 text-sm text-slate-600">
-              ตรวจออเดอร์ล่าสุด ปรับสถานะ ดูสต็อก และสินค้า/คอนเทนต์ที่แสดงหน้าเว็บ
+              ตรวจออเดอร์ล่าสุด ปรับสถานะ และสินค้าที่แสดงหน้าเว็บ
             </p>
           </div>
           <div v-if="user" class="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 shadow-sm">
@@ -48,29 +48,10 @@
                 <button
                   type="button"
                   class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left font-semibold transition"
-                  :class="activeMenu === 'order-config' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'text-slate-700 hover:bg-slate-50'"
-                  @click="activeMenu = 'order-config'"
-                >
-                  <span>Order config</span>
-                  <span class="text-[11px] text-slate-500">ตั้งค่า</span>
-                </button>
-                <button
-                  type="button"
-                  class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left font-semibold transition"
                   :class="activeMenu === 'orders' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'text-slate-700 hover:bg-slate-50'"
                   @click="activeMenu = 'orders'"
                 >
                   <span>ออเดอร์ล่าสุด</span>
-                  <span class="text-[11px] text-slate-500">20 รายการ</span>
-                </button>
-                <button
-                  type="button"
-                  class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left font-semibold transition"
-                  :class="activeMenu === 'inventory' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'text-slate-700 hover:bg-slate-50'"
-                  @click="activeMenu = 'inventory'"
-                >
-                  <span>สต็อกวัสดุ</span>
-                  <span class="text-[11px] text-slate-500">on hand</span>
                 </button>
                 <button
                   type="button"
@@ -78,29 +59,14 @@
                   :class="activeMenu === 'products' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'text-slate-700 hover:bg-slate-50'"
                   @click="activeMenu = 'products'"
                 >
-                  <span>สินค้า/คอนเทนต์</span>
-                  <span class="text-[11px] text-slate-500">หน้าเว็บ</span>
+                  <span>สินค้า</span>
                 </button>
               </nav>
             </aside>
 
             <div class="space-y-5">
-              <OrderConfigSection
-                v-if="activeMenu === 'order-config'"
-                :price="configForm.price"
-                :hold-minutes="configForm.holdMinutes"
-                :last-updated-at="orderConfigSafe.lastUpdatedAt"
-                :saving="configSaving"
-                :saved-message="configSavedMessage"
-                :error="configError"
-                :format-date="formatDate"
-                @update:price="configForm.price = $event"
-                @update:holdMinutes="configForm.holdMinutes = $event"
-                @save="handleConfigSave"
-              />
-
               <OrdersSection
-                v-else-if="activeMenu === 'orders'"
+                v-if="activeMenu === 'orders'"
                 :orders="orders"
                 :loading="ordersLoading"
                 :error="ordersError"
@@ -113,14 +79,6 @@
                 @refresh="loadOrders"
                 @update-draft="updateStatusDraft"
                 @save-status="handleStatusChange"
-              />
-
-              <InventorySection
-                v-else-if="activeMenu === 'inventory'"
-                :items="inventory"
-                :loading="inventoryLoading"
-                :error="inventoryError"
-                @refresh="loadInventory"
               />
 
               <ProductsSection
@@ -140,23 +98,19 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch, computed } from 'vue';
-import { useOrderConfig } from '~/composables/useOrderConfig';
+import { ref, watch, computed } from 'vue';
 import { useOrders } from '~/composables/useOrders';
-import OrderConfigSection from '~/components/backoffice/OrderConfigSection.vue';
 import OrdersSection from '~/components/backoffice/OrdersSection.vue';
-import InventorySection from '~/components/backoffice/InventorySection.vue';
 import ProductsSection from '~/components/backoffice/ProductsSection.vue';
 
 const { openAuthModal, user } = useAuthFlow();
 const supabase = useSupabaseClient();
 const { updateOrderStatus, cancelOrder } = useOrders();
-const { orderConfig, updateOrderConfig } = useOrderConfig();
 
 const orders = ref<Array<Record<string, any>>>([]);
 const ordersLoading = ref(false);
 const ordersError = ref<string | null>(null);
-const activeMenu = ref<'order-config' | 'orders' | 'inventory' | 'products'>('order-config');
+const activeMenu = ref<'orders' | 'products'>('orders');
 
 const statusOptions = [
   'รอชำระเงิน',
@@ -169,34 +123,6 @@ const statusOptions = [
 const statusDrafts = ref<Record<string, string>>({});
 const isUpdatingStatus = ref<Record<string, boolean>>({});
 const statusUpdateErrors = ref<Record<string, string | null>>({});
-const configForm = reactive({ price: 999, holdMinutes: 60 });
-const configSaving = ref(false);
-const configSavedMessage = ref<string | null>(null);
-const configError = ref<string | null>(null);
-let configMessageTimeout: ReturnType<typeof setTimeout> | null = null;
-
-watch(
-  orderConfig,
-  (next) => {
-    if (!next) return;
-    configForm.price = next.defaultPrice ?? configForm.price;
-    configForm.holdMinutes = next.holdMinutes ?? configForm.holdMinutes;
-  },
-  { immediate: true }
-);
-
-const orderConfigSafe = computed(() => {
-  return {
-    defaultPrice: orderConfig?.value?.defaultPrice ?? configForm.price,
-    holdMinutes: orderConfig?.value?.holdMinutes ?? configForm.holdMinutes,
-    lastUpdatedAt: orderConfig?.value?.lastUpdatedAt ?? null
-  };
-});
-
-const inventory = ref<Array<Record<string, any>>>([]);
-const inventoryLoading = ref(false);
-const inventoryError = ref<string | null>(null);
-
 const products = ref<Array<Record<string, any>>>([]);
 const productsLoading = ref(false);
 const productsError = ref<string | null>(null);
@@ -273,30 +199,6 @@ const handleStatusChange = async (orderId: string | number, newStatus: string) =
   }
 };
 
-const handleConfigSave = () => {
-  configSaving.value = true;
-  configError.value = null;
-  try {
-    const normalizedPrice = Math.max(0, Number(configForm.price));
-    const normalizedHold = Math.max(1, Number(configForm.holdMinutes));
-    updateOrderConfig({
-      defaultPrice: normalizedPrice,
-      holdMinutes: normalizedHold
-    });
-    configSavedMessage.value = 'บันทึกเรียบร้อย';
-    if (configMessageTimeout) {
-      clearTimeout(configMessageTimeout);
-    }
-    configMessageTimeout = setTimeout(() => {
-      configSavedMessage.value = null;
-    }, 2500);
-  } catch (error: any) {
-    configError.value = error?.message ?? 'ไม่สามารถบันทึก config ได้';
-  } finally {
-    configSaving.value = false;
-  }
-};
-
 const loadOrders = async () => {
   ordersLoading.value = true;
   ordersError.value = null;
@@ -318,21 +220,6 @@ const loadOrders = async () => {
   }
 };
 
-const loadInventory = async () => {
-  inventoryLoading.value = true;
-  inventoryError.value = null;
-  try {
-    const { data, error } = await supabase.from('inventory_items').select('*').order('updated_at', { ascending: false }).limit(50);
-    if (error) throw error;
-    inventory.value = data ?? [];
-  } catch (error: any) {
-    inventoryError.value = error?.message ?? 'เกิดข้อผิดพลาด';
-    inventory.value = [];
-  } finally {
-    inventoryLoading.value = false;
-  }
-};
-
 const loadProducts = async () => {
   productsLoading.value = true;
   productsError.value = null;
@@ -349,7 +236,7 @@ const loadProducts = async () => {
 };
 
 const loadAll = async () => {
-  await Promise.allSettled([loadOrders(), loadInventory(), loadProducts()]);
+  await Promise.allSettled([loadOrders(), loadProducts()]);
 };
 
 watch(
@@ -359,18 +246,11 @@ watch(
       loadAll();
     } else {
       orders.value = [];
-      inventory.value = [];
       products.value = [];
     }
   },
   { immediate: true }
 );
-
-onMounted(() => {
-  if (user?.value?.id) {
-    loadAll();
-  }
-});
 </script>
 
 <style scoped>

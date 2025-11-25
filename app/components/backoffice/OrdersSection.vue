@@ -19,7 +19,7 @@
       </button>
     </div>
     <p v-if="error" class="mt-2 text-xs text-rose-600">ไม่สามารถโหลดออเดอร์: {{ error }}</p>
-    <div v-else class="mt-3 overflow-x-auto">
+    <div v-else class="mt-3 overflow-x-auto" v-auto-animate>
       <table class="min-w-full text-sm">
         <thead>
           <tr class="text-left text-slate-500">

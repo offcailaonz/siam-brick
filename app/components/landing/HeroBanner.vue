@@ -32,7 +32,7 @@
             แกลลอรี่
           </button>
         </div>
-        <div class="flex flex-wrap gap-6 text-sm text-white/80">
+        <div class="flex flex-wrap gap-6 text-sm text-white/80" v-auto-animate>
           <div v-for="metric in data.metrics" :key="metric.label">
             <p class="text-2xl font-bold text-white">{{ metric.value }}</p>
             <p>{{ metric.label }}</p>

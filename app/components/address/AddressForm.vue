@@ -41,6 +41,7 @@
         <div
           v-if="areaQuery && filteredSuggestions.length"
           class="absolute left-0 right-0 z-20 mt-1 max-h-56 overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg"
+          v-auto-animate
         >
           <button
             v-for="(suggestion, idx) in filteredSuggestions"
