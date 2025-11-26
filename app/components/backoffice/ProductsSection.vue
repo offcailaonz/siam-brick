@@ -44,13 +44,25 @@
         class="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2"
       >
         <div class="flex items-center justify-between gap-2">
-          <div>
-            <p class="text-sm font-semibold text-slate-900">
-              {{ product.name }}
-            </p>
-            <p class="text-xs text-slate-500">
-              {{ product.slug || product.type || 'สินค้า' }}
-            </p>
+          <div class="flex items-center gap-3">
+            <div
+              v-if="productImage(product)"
+              class="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white"
+            >
+              <img
+                :src="productImage(product)"
+                alt="preview"
+                class="h-full w-full object-contain"
+              />
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-slate-900">
+                {{ product.name }}
+              </p>
+              <p class="text-xs text-slate-500">
+                {{ product.metadata.difficulty }}
+              </p>
+            </div>
           </div>
           <span
             class="badge"
@@ -59,24 +71,29 @@
             {{ product.active === false ? 'ปิด' : 'ขายอยู่' }}
           </span>
         </div>
-        <p class="text-xs text-slate-500 mt-1">
-          ราคา {{ product.price != null ? formatCurrency(product.price) : '—' }}
-        </p>
-        <div class="mt-2 flex items-center gap-2">
-          <button
-            type="button"
-            class="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-            @click="editProduct(product)"
-          >
-            แก้ไข
-          </button>
-          <button
-            type="button"
-            class="rounded-full border border-rose-200 bg-white px-3 py-1 text-[11px] font-semibold text-rose-700 shadow-sm hover:bg-rose-50"
-            @click="$emit('delete', product.id)"
-          >
-            ลบ
-          </button>
+        <div class="mt-2 flex items-center gap-2 justify-between">
+          <div>
+            <p class="text-xs text-slate-500 mt-1">
+              ราคา
+              {{ product.price != null ? formatCurrency(product.price) : '—' }}
+            </p>
+          </div>
+          <div>
+            <button
+              type="button"
+              class="me-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+              @click="editProduct(product)"
+            >
+              แก้ไข
+            </button>
+            <button
+              type="button"
+              class="rounded-full border border-rose-200 bg-white px-3 py-1 text-[11px] font-semibold text-rose-700 shadow-sm hover:bg-rose-50"
+              @click="$emit('delete', product.id)"
+            >
+              ลบ
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -332,6 +349,17 @@ const slugify = (value: string) =>
     .replace(/[^\p{L}\p{N}]+/gu, '-')
     .replace(/^-+|-+$/g, '')
     .replace(/--+/g, '-');
+
+const productImage = (product: Record<string, any>) => {
+  const candidates = [
+    product?.metadata?.image,
+    product?.metadata?.product_image,
+    product?.metadata?.product_preview,
+    product?.image
+  ];
+  const found = candidates.find((p) => typeof p === 'string' && p.trim());
+  return found ? String(found).trim() : null;
+};
 
 watch(
   () => form.name,

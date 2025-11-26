@@ -622,6 +622,41 @@ const handleSaveProduct = async (payload: any) => {
   productSaving.value = true;
   productSaveError.value = null;
   try {
+    const isEditing = payload.id != null && payload.id !== '';
+    const normalizeSlug = (value: string | null | undefined) =>
+      (value || '')
+        .toString()
+        .toLowerCase()
+        .trim()
+        .replace(/[^\p{L}\p{N}]+/gu, '-')
+        .replace(/^-+|-+$/g, '')
+        .replace(/--+/g, '-');
+
+    const baseSlug = normalizeSlug(payload.slug || payload.name || '');
+    if (!baseSlug) {
+      throw new Error('กรุณากรอกชื่อหรือ slug สินค้า');
+    }
+
+    // หา slug ที่ไม่ชน โดยเพิ่ม suffix -2, -3 ... ถ้าจำเป็น
+    const findAvailableSlug = async (base: string, currentId?: string | number | null) => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, slug')
+        .ilike('slug', `${base}%`);
+      if (error && error.code !== 'PGRST116') throw error;
+      const rows = data ?? [];
+      const isTakenByOther = (slug: string) =>
+        rows.some((row) => String(row.slug) === slug && String(row.id) !== String(currentId ?? ''));
+      if (!isTakenByOther(base)) return base;
+      for (let i = 2; i < 100; i++) {
+        const candidate = `${base}-${i}`;
+        if (!isTakenByOther(candidate)) return candidate;
+      }
+      throw new Error('ไม่สามารถสร้าง slug ที่ไม่ซ้ำได้');
+    };
+
+    const slug = await findAvailableSlug(baseSlug, isEditing ? payload.id : null);
+
     const metadata = {
       tag: payload.tag || null,
       studs: payload.studs ?? null,
@@ -631,23 +666,38 @@ const handleSaveProduct = async (payload: any) => {
       priceKit: payload.priceKit ?? null,
       format_price: payload.formatPriceMeta ?? null
     };
-    const { error } = await supabase
-      .from('products')
-      .upsert(
-        {
-          id: payload.id ?? undefined,
+
+    if (isEditing) {
+      const { error } = await supabase
+        .from('products')
+        .update({
           name: payload.name,
-          slug: payload.slug,
+          slug,
           price: payload.priceKit ?? 0,
           active: payload.active !== false,
           metadata
-        },
-        { onConflict: 'slug' }
-      );
-    if (error) throw error;
+        })
+        .eq('id', payload.id);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from('products').insert({
+        name: payload.name,
+        slug,
+        price: payload.priceKit ?? 0,
+        active: payload.active !== false,
+        metadata
+      });
+      if (error) throw error;
+    }
+
     await loadProducts();
   } catch (error: any) {
-    productSaveError.value = error?.message ?? 'บันทึกสินค้าไม่สำเร็จ';
+    const status = error?.code || error?.status;
+    if (status === '23505' || status === 409) {
+      productSaveError.value = 'slug นี้ซ้ำกับสินค้าอื่น หรือมี ID ซ้ำ กรุณาเปลี่ยนชื่อ/slug แล้วลองใหม่';
+    } else {
+      productSaveError.value = error?.message ?? 'บันทึกสินค้าไม่สำเร็จ';
+    }
   } finally {
     productSaving.value = false;
   }

@@ -39,10 +39,20 @@
           </tr>
           <tr v-else v-for="order in orders" :key="order.id" class="border-t border-slate-100 hover:bg-slate-50">
             <td class="px-2 py-2 font-semibold text-slate-900">
-              #{{ order.id }}
-              <span v-if="order.preview_url" class="ml-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-                preview
-              </span>
+              <div class="flex items-center gap-3">
+                <div
+                  class="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white"
+                  v-if="orderPreview(order)"
+                >
+                  <img :src="orderPreview(order)" alt="preview" class="h-full w-full object-contain" />
+                </div>
+                <div class="flex flex-col">
+                  <span>#{{ order.id }}</span>
+                  <span v-if="orderPreview(order)" class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 w-fit">
+                    preview
+                  </span>
+                </div>
+              </div>
             </td>
             <td class="px-2 py-2 text-slate-700">
               {{ order.customer_email || order.user_id || '-' }}
@@ -105,4 +115,16 @@ defineEmits<{
   (e: 'update-draft', orderId: string | number, value: string): void;
   (e: 'save-status', orderId: string | number, value: string): void;
 }>();
+
+const orderPreview = (order: Record<string, any>) => {
+  const candidates = [
+    order?.preview_url,
+    order?.preview,
+    order?.metadata?.image,
+    order?.metadata?.product_image,
+    order?.metadata?.product_preview
+  ];
+  const found = candidates.find((p) => typeof p === 'string' && p.trim());
+  return found ? String(found).trim() : null;
+};
 </script>
