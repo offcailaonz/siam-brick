@@ -64,6 +64,15 @@
                 <button
                   type="button"
                   class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left font-semibold transition"
+                  :class="activeMenu === 'formats' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'text-slate-700 hover:bg-slate-50'"
+                  @click="activeMenu = 'formats'"
+                >
+                  <span>รูปแบบ/ราคา</span>
+                  <span class="text-[11px] text-slate-500">10 ขนาด</span>
+                </button>
+                <button
+                  type="button"
+                  class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left font-semibold transition"
                   :class="activeMenu === 'users' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'text-slate-700 hover:bg-slate-50'"
                   @click="activeMenu = 'users'"
                 >
@@ -104,6 +113,19 @@
                   @delete="handleDeleteProduct"
                 />
 
+                <FormatPricesSection
+                  v-else-if="activeMenu === 'formats'"
+                  :formats="formatPrices"
+                  :loading="formatPricesLoading"
+                  :error="formatPricesError"
+                  :saving="formatPricesSaving"
+                  :adding="formatAdding"
+                  @refresh="loadFormatPrices"
+                  @save="handleSaveFormatPrice"
+                  @add="handleAddFormatSize"
+                  @delete="handleDeleteFormatSize"
+                />
+
                 <UserRolesSection
                   v-else-if="activeMenu === 'users'"
                   :roles="userRoles"
@@ -128,6 +150,7 @@ import { useOrders } from '~/composables/useOrders';
 import OrdersSection from '~/components/backoffice/OrdersSection.vue';
 import ProductsSection from '~/components/backoffice/ProductsSection.vue';
 import UserRolesSection from '~/components/backoffice/UserRolesSection.vue';
+import FormatPricesSection from '~/components/backoffice/FormatPricesSection.vue';
 
 definePageMeta({
   middleware: ['admin-only']
@@ -140,8 +163,7 @@ const { updateOrderStatus, cancelOrder } = useOrders();
 const orders = ref<Array<Record<string, any>>>([]);
 const ordersLoading = ref(false);
 const ordersError = ref<string | null>(null);
-const activeMenu = ref<'orders' | 'products' | 'users'>('orders');
-
+const activeMenu = ref<'orders' | 'products' | 'formats' | 'users'>('orders');
 const statusOptions = ['รอชำระเงิน', 'ชำระแล้ว', 'กำลังตรวจสอบ', 'กำลังจัดส่ง', 'สำเร็จ', 'ยกเลิก'];
 const statusDrafts = ref<Record<string, string>>({});
 const isUpdatingStatus = ref<Record<string, boolean>>({});
@@ -154,6 +176,26 @@ const userRolesLoading = ref(false);
 const userRolesError = ref<string | null>(null);
 const productSaving = ref(false);
 const productSaveError = ref<string | null>(null);
+const formatPrices = ref<Array<{ size: string; width?: number | null; height?: number | null; price: number | null }>>([]);
+const formatPricesLoading = ref(false);
+const formatPricesError = ref<string | null>(null);
+const formatPricesSaving = ref<Record<string, boolean>>({});
+const formatAdding = ref(false);
+
+const parseSizeText = (value: any): { width: number; height: number } | null => {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    const match = value.match(/(\d+)\s*[x×]\s*(\d+)/i);
+    if (match) {
+      return { width: Number(match[1]), height: Number(match[2]) };
+    }
+  } else if (typeof value === 'object' && value.width && value.height) {
+    const w = Number(value.width);
+    const h = Number(value.height);
+    if (!Number.isNaN(w) && !Number.isNaN(h)) return { width: w, height: h };
+  }
+  return null;
+};
 
 const formatCurrency = (value: number | string | null | undefined) => {
   const num = Number(value);
@@ -253,6 +295,125 @@ const loadProducts = async () => {
   }
 };
 
+const mergeFormatPrices = (records: Array<{ size: string; price: number | null }>) => {
+  const merge = records.map((item) => {
+    const parsed = parseSizeText(item.size);
+    return {
+      size: item.size,
+      width: (item as any).width ?? parsed?.width ?? null,
+      height: (item as any).height ?? parsed?.height ?? null,
+      price: item.price ?? null
+    };
+  });
+  return merge
+    .map((item) => {
+      const ordered = (() => {
+        const w = item.width ?? 0;
+        const h = item.height ?? 0;
+        if (w && h) {
+          const a = Math.min(w, h);
+          const b = Math.max(w, h);
+          return { width: a, height: b, size: `${a}x${b}` };
+        }
+        const parsed = parseSizeText(item.size);
+        if (parsed?.width && parsed?.height) {
+          const a = Math.min(parsed.width, parsed.height);
+          const b = Math.max(parsed.width, parsed.height);
+          return { width: a, height: b, size: `${a}x${b}` };
+        }
+        return { width: item.width ?? null, height: item.height ?? null, size: item.size };
+      })();
+      return { ...item, ...ordered };
+    })
+    .sort((a, b) => (a.size || '').localeCompare(b.size || '', 'en', { numeric: true }));
+};
+
+const loadFormatPrices = async () => {
+  formatPricesLoading.value = true;
+  formatPricesError.value = null;
+  try {
+    const { data, error } = await supabase.from('format_prices').select('size, price, width, height');
+    if (error) throw error;
+    formatPrices.value = mergeFormatPrices(data ?? []);
+  } catch (error: any) {
+    const message = error?.message ?? 'โหลดรูปแบบราคาไม่สำเร็จ';
+    formatPricesError.value = message;
+    // fallback แสดงรายการขนาดให้กรอกไว้ก่อน
+    formatPrices.value = mergeFormatPrices([]);
+    if (error?.code === '42P01' || error?.code === 'PGRST302') {
+      formatPricesError.value = `${message} (ตรวจสอบว่ามีตาราง format_prices หรือยัง)`;
+    }
+    console.error('loadFormatPrices error', error);
+  } finally {
+    formatPricesLoading.value = false;
+  }
+};
+
+const handleSaveFormatPrice = async (payload: { size: string; width: number | null; height: number | null; price: number | null }) => {
+  const key = payload.size.toLowerCase();
+  formatPricesSaving.value[key] = true;
+  formatPricesError.value = null;
+  try {
+    const toSave = {
+      size: payload.size,
+      width: payload.width != null && payload.height != null ? Math.min(payload.width, payload.height) : payload.width,
+      height: payload.width != null && payload.height != null ? Math.max(payload.width, payload.height) : payload.height,
+      price: payload.price ?? 0
+    };
+    const { error } = await supabase.from('format_prices').upsert(toSave, { onConflict: 'size' });
+    if (error) throw error;
+    await loadFormatPrices();
+  } catch (error: any) {
+    formatPricesError.value = error?.message ?? 'บันทึกราคาไม่สำเร็จ';
+  } finally {
+    formatPricesSaving.value[key] = false;
+  }
+};
+
+const handleAddFormatSize = async (payload: { width: number; height: number }) => {
+  const size = `${payload.width}x${payload.height}`;
+  const key = size.toLowerCase();
+  formatPricesSaving.value[key] = true;
+  formatAdding.value = true;
+  formatPricesError.value = null;
+  try {
+    const { error } = await supabase.from('format_prices').upsert({ size, width: Math.min(payload.width, payload.height), height: Math.max(payload.width, payload.height), price: 0 }, { onConflict: 'size' });
+    if (error) throw error;
+    await loadFormatPrices();
+  } catch (error: any) {
+    formatPricesError.value = error?.message ?? 'เพิ่มรูปแบบไม่สำเร็จ';
+  } finally {
+    formatPricesSaving.value[key] = false;
+    formatAdding.value = false;
+  }
+};
+
+const handleDeleteFormatSize = async (size: string) => {
+  const key = size.toLowerCase();
+  formatPricesSaving.value[key] = true;
+  formatPricesError.value = null;
+  try {
+    const parsed = parseSizeText(size);
+    const w = parsed?.width ?? null;
+    const h = parsed?.height ?? null;
+    const ordered = w && h ? `${Math.min(w, h)}x${Math.max(w, h)}` : size;
+    const alt = w && h ? `${Math.max(w, h)}x${Math.min(w, h)}` : null;
+    const orFilters = [`size.eq.${ordered}`];
+    if (alt && alt !== ordered) orFilters.push(`size.eq.${alt}`);
+    if (w && h) {
+      orFilters.push(`and(width.eq.${Math.min(w, h)},height.eq.${Math.max(w, h)})`);
+      orFilters.push(`and(width.eq.${Math.max(w, h)},height.eq.${Math.min(w, h)})`);
+    }
+    const { error } = await supabase.from('format_prices').delete().or(orFilters.join(','));
+    if (error) throw error;
+    await loadFormatPrices();
+  } catch (error: any) {
+    formatPricesError.value = error?.message ?? 'ลบรูปแบบไม่สำเร็จ';
+  } finally {
+    formatPricesSaving.value[key] = false;
+  }
+};
+
 const loadUserRoles = async () => {
   userRolesLoading.value = true;
   userRolesError.value = null;
@@ -332,7 +493,7 @@ const handleDeleteProduct = async (id: number | string) => {
 };
 
 const loadAll = async () => {
-  await Promise.allSettled([loadOrders(), loadProducts(), loadUserRoles()]);
+  await Promise.allSettled([loadOrders(), loadProducts(), loadUserRoles(), loadFormatPrices()]);
 };
 
 watch(

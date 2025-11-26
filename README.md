@@ -137,4 +137,29 @@ curl -i "$SUPABASE_URL/auth/v1/token?grant_type=password" \
    - `yarn install` → `yarn dev`
    - ตรวจวัด branding: ห้ามใช้คำว่า “Lego” ใน source (เช็คด้วย `rg -ni "lego"`)
    - ให้น้ำหนักกับ responsive design และ performance
+
+## 9. Backoffice & Roles (อัปเดต)
+- Backoffice เมนู: Orders / Products / Users (admin เท่านั้นด้วย middleware `admin-only`)
+- ตาราง `user_roles` กำหนด role (`user`/`admin`) — ต้องมีแถว admin ถึงจะเข้า `/backoffice` ได้
+- ตั้ง admin ด้วย SQL (ใช้ service key):
+```sql
+insert into public.user_roles (user_id,email,role)
+values ('<auth.users.id>', 'admin@siam-brick.com', 'admin')
+on conflict (user_id) do update set role='admin';
+```
+- RLS ที่ใช้:
+  - `products_public_select` (อ่านเฉพาะ active=true สำหรับ landing)
+  - `products_admin_select` / `products_admin_write` ใช้ฟังก์ชัน `is_admin(auth.uid())`
+
+## 10. Products (ล่าสุด)
+- Landing `ReadyKitsGrid` ดึงสินค้า active จาก Supabase (fallback mock) และแสดง preview/fullscreen
+- Backoffice > Products:
+  - ปุ่ม “เพิ่มสินค้า” เปิดโมดัล generator (BrickArtRemixApp) → กด “ใช้ผลลัพธ์นี้” เติมภาพ/ขนาด/studs
+  - ฟอร์มบันทึก: ชื่อ, ราคาเดียว (ชุดเต็ม), tag, studs, difficulty, size (อ่านจาก gen), รูป preview; slug สร้างอัตโนมัติจากชื่อ
+  - Upsert ไปตาราง `products` (metadata: tag, studs, difficulty, size, image)
+
+## 11. Checkout (ล่าสุด)
+- แสดง breakdown ชิ้นส่วน (ฐาน 32/16, ตัวล็อก, ขอบ, studs) คำนวณจากขนาดภาพด้วย `getFrameAndBase(width, height)`
+- จำนวนตัวต่อแสดง “≈ … (เผื่อ 2–5% ต่อสี)”
+- เพิ่มที่อยู่ใน checkout ผ่านโมดัล (ใช้ AddressForm ใน BaseModal)
 # siam-brick

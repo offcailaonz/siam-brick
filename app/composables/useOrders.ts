@@ -9,6 +9,7 @@ type OrderPayload = {
   cropInteraction?: Record<string, any> | null;
   originalImage?: string | null;
   shipping?: Record<string, any> | null;
+  metadata?: Record<string, any> | null;
 };
 
 export const useOrders = () => {
@@ -21,6 +22,7 @@ export const useOrders = () => {
       preview_url: payload.previewUrl ?? null,
       source: payload.source ?? 'checkout'
     };
+    const metaFromShipping = payload.shipping ? { shipping_snapshot: payload.shipping } : {};
 
     if (payload.cropInteraction !== undefined) {
       insertPayload.crop_interaction = payload.cropInteraction;
@@ -34,6 +36,9 @@ export const useOrders = () => {
     if (payload.paymentReference !== undefined) {
       insertPayload.payment_ref = payload.paymentReference;
     }
+    if (payload.metadata !== undefined || payload.shipping) {
+      insertPayload.metadata = { ...(payload.metadata ?? {}), ...metaFromShipping };
+    }
 
     const { data, error } = await supabase
       .from('orders')
@@ -43,18 +48,12 @@ export const useOrders = () => {
 
     if (error) throw error;
 
-    if (payload.shipping) {
-      await supabase
-        .from('order_shipping')
-        .upsert({ order_id: data.id, ...payload.shipping }, { onConflict: 'order_id' });
-    }
-
     return data;
   };
 
   const updateOrderAssets = async (
     orderId: string | number,
-    payload: Pick<OrderPayload, 'previewUrl' | 'source' | 'cropInteraction' | 'originalImage'>,
+    payload: Pick<OrderPayload, 'previewUrl' | 'source' | 'cropInteraction' | 'originalImage' | 'metadata'>,
     userId?: string
   ) => {
     const updatePayload: Record<string, any> = {};
@@ -62,6 +61,7 @@ export const useOrders = () => {
     if (payload.source !== undefined) updatePayload.source = payload.source;
     if (payload.cropInteraction !== undefined) updatePayload.crop_interaction = payload.cropInteraction;
     if (payload.originalImage !== undefined) updatePayload.original_image = payload.originalImage;
+    if (payload.metadata !== undefined) updatePayload.metadata = payload.metadata;
 
     let query = supabase.from('orders').update(updatePayload).eq('id', orderId);
     if (userId) {

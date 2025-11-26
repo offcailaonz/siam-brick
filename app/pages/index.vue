@@ -23,8 +23,16 @@
       <LandingComingSoonSection />
     </div>
 
+    <div class="brick-bg--faq">
+      <LandingFormatPriceGrid :formats="formatPrices" :loading="formatPricePending" />
+    </div>
+
     <div class="brick-bg--readykits" ref="readyKitsRef">
-      <LandingReadyKitsGrid :kits="readyKits" :loading="readyKitsPending && !(readyKitsData?.length)" />
+      <LandingReadyKitsGrid
+        :kits="readyKits"
+        :loading="readyKitsPending && !(readyKitsData?.length)"
+        @order="goCheckoutFromKit"
+      />
     </div>
 
     <div class="brick-bg--faq">
@@ -44,10 +52,12 @@ import LandingMaterialsSection from '~/components/landing/MaterialsSection.vue';
 import LandingShowcaseGrid from '~/components/landing/ShowcaseGrid.vue';
 import LandingFaqAccordion from '~/components/landing/FaqAccordion.vue';
 import LandingComingSoonSection from '~/components/landing/ComingSoonSection.vue';
+import LandingFormatPriceGrid from '~/components/landing/FormatPriceGrid.vue';
 
 import { heroData, readyKits as mockReadyKits, steps, materials, showcase, faqs } from '~/mockup-api-data';
 
 const hero = heroData;
+const router = useRouter();
 const readyKitsRef = ref<HTMLElement | null>(null);
 const supabase = useSupabaseClient();
 const { data: readyKitsData, pending: readyKitsPending } = await useAsyncData('ready-kits', async () => {
@@ -74,8 +84,22 @@ const { data: readyKitsData, pending: readyKitsPending } = await useAsyncData('r
   );
 });
 const readyKits = computed(() => readyKitsData.value?.length ? readyKitsData.value : mockReadyKits);
+const { data: formatPriceData, pending: formatPricePending } = await useAsyncData('format-prices', async () => {
+  const { data, error } = await supabase
+    .from('format_prices')
+    .select('size, price, width, height')
+    .order('size', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+});
+const formatPrices = computed(() => formatPriceData.value ?? []);
 const scrollToReady = () => {
   readyKitsRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+const goCheckoutFromKit = (kit: { slug?: string; id?: string | number }) => {
+  const identifier = kit.slug || kit.id;
+  if (!identifier) return;
+  router.push({ path: '/checkout', query: { product: String(identifier) } });
 };
 const demoCropInteraction = {
     "active": false,

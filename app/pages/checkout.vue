@@ -25,6 +25,7 @@
           </div>
           <div class="flex flex-wrap gap-3 py-4">
             <NuxtLink
+              v-if="!isProductMode"
               :to="brickLink"
               class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
             >
@@ -53,15 +54,15 @@
                   <p
                     class="text-xs font-semibold uppercase tracking-wide text-indigo-600"
                   >
-                    ตรวจสอบรูป
+                    {{ previewMeta.title }}
                   </p>
                   <p class="text-sm text-slate-600">
-                    พรีวิว Step 3 ล่าสุด (รวมการแก้สีแล้ว)
+                    {{ previewMeta.subtitle }}
                   </p>
                 </div>
                 <span
                   class="rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700"
-                  >พร้อมสั่ง</span
+                  >{{ previewMeta.badge }}</span
                 >
               </div>
               <div
@@ -73,31 +74,51 @@
                   class="w-full max-h-[420px] object-contain bg-white"
                 />
               </div>
-              <p class="mt-2 text-xs text-slate-500">
+              <p v-if="!isProductMode" class="mt-2 text-xs text-slate-500">
                 ถ้าอยากแก้อีกครั้ง กดกลับไป Step 3 ก่อน แล้วค่อยกลับมาชำระเงิน
+              </p>
+              <p v-else class="mt-2 text-xs text-slate-500">
+                สินค้าจาก Ready Kit แก้ไขภาพไม่ได้ เลือกที่อยู่และดำเนินการชำระเงินได้เลย
               </p>
             </div>
             <div
               v-else-if="isPreviewLoading"
-              class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm animate-pulse"
+              class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
             >
               <div class="flex items-center justify-between gap-3">
-                <div>
+                <div class="space-y-2">
                   <p
                     class="text-xs font-semibold uppercase tracking-wide text-indigo-600"
                   >
                     กำลังโหลดพรีวิว
                   </p>
                   <p class="text-sm text-slate-600">
-                    ดึงรูปจากออเดอร์ที่ลิงก์มา...
+                    {{ isProductMode ? 'กำลังโหลดข้อมูลสินค้า...' : 'ดึงรูปจากออเดอร์ที่ลิงก์มา...' }}
                   </p>
+                  <div class="mt-2 space-y-2">
+                    <div class="h-4 w-28 rounded-full bg-slate-100 animate-pulse" />
+                    <div class="h-3 w-44 rounded-full bg-slate-100 animate-pulse" />
+                  </div>
                 </div>
                 <span
                   class="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-600"
                   >loading</span
                 >
               </div>
-              <div class="mt-3 h-64 rounded-lg bg-slate-100"></div>
+              <div class="mt-3 space-y-3">
+                <div class="h-64 rounded-lg bg-slate-100 animate-pulse"></div>
+                <div class="h-3 w-1/2 rounded bg-slate-100 animate-pulse"></div>
+                <div class="h-3 w-1/3 rounded bg-slate-100 animate-pulse"></div>
+              </div>
+            </div>
+            <div
+              v-else-if="productError"
+              class="rounded-xl border border-rose-100 bg-rose-50 px-4 py-4 shadow-sm"
+            >
+              <p class="text-sm font-semibold text-rose-700">
+                โหลดสินค้าที่เลือกไม่สำเร็จ
+              </p>
+              <p class="text-xs text-rose-600 mt-1">{{ productError }}</p>
             </div>
             <div
               v-else-if="studPreviewError"
@@ -114,49 +135,70 @@
             <section
               class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
             >
-              <div class="flex items-center justify-between gap-3">
-                <div>
-                  <p class="text-sm font-semibold text-slate-900">
-                    สรุปออเดอร์
+              <template v-if="isSummaryLoading">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="h-4 w-24 rounded bg-slate-100 animate-pulse" />
+                  <div class="h-6 w-16 rounded-full bg-slate-100 animate-pulse" />
+                </div>
+                <div class="mt-3 space-y-2">
+                  <div class="h-3 w-full rounded bg-slate-100 animate-pulse" />
+                  <div class="h-3 w-5/6 rounded bg-slate-100 animate-pulse" />
+                  <div class="h-3 w-2/3 rounded bg-slate-100 animate-pulse" />
+                </div>
+                <div class="mt-4 h-12 rounded-lg bg-slate-100 animate-pulse"></div>
+              </template>
+              <template v-else>
+                <div class="flex items-center justify-between gap-3">
+                  <div>
+                    <p class="text-sm font-semibold text-slate-900">
+                      สรุปออเดอร์
+                    </p>
+                  </div>
+                  <span
+                    class="rounded-full px-3 py-1 text-[11px] font-semibold"
+                    :class="summaryStatusBadge.color"
+                  >
+                    {{ summaryStatusBadge.text }}
+                  </span>
+                </div>
+                <div class="mt-3 space-y-2 text-sm text-slate-600">
+                  <div class="flex justify-between">
+                    <span class="text-slate-500">ออเดอร์เลขที่</span>
+                    <span
+                      class="font-semibold text-slate-900"
+                      >{{ summaryOrderId ?? '-' }}</span
+                    >
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-500">สร้างเมื่อ</span>
+                    <span
+                      class="font-semibold text-slate-900"
+                      >{{ formatDateTime(summaryCreatedAt) }}</span
+                    >
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-500">อัปเดตล่าสุด</span>
+                    <span
+                      class="font-semibold text-slate-900"
+                      >{{ formatDateTime(summaryUpdatedAt) }}</span
+                    >
+                  </div>
+                </div>
+                <div
+                  class="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700"
+                >
+                  <p class="mt-1 text-2xl font-bold text-emerald-700">
+                    {{ formatCurrency(summaryPrice) }}
+                  </p>
+                  <p
+                    v-if="isProductMode && productInfo"
+                    class="mt-1 text-xs text-slate-500"
+                  >
+                    {{ productInfo.name }} · {{ productInfo.size || 'ขนาดไม่ระบุ' }} ·
+                    {{ productInfo.studs || 0 }} studs
                   </p>
                 </div>
-                <span
-                  class="rounded-full px-3 py-1 text-[11px] font-semibold"
-                  :class="summaryStatusBadge.color"
-                >
-                  {{ summaryStatusBadge.text }}
-                </span>
-              </div>
-              <div class="mt-3 space-y-2 text-sm text-slate-600">
-                <div class="flex justify-between">
-                  <span class="text-slate-500">ออเดอร์เลขที่</span>
-                  <span
-                    class="font-semibold text-slate-900"
-                    >{{ summaryOrderId ?? '-' }}</span
-                  >
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-slate-500">สร้างเมื่อ</span>
-                  <span
-                    class="font-semibold text-slate-900"
-                    >{{ formatDateTime(summaryCreatedAt) }}</span
-                  >
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-slate-500">อัปเดตล่าสุด</span>
-                  <span
-                    class="font-semibold text-slate-900"
-                    >{{ formatDateTime(summaryUpdatedAt) }}</span
-                  >
-                </div>
-              </div>
-              <div
-                class="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700"
-              >
-                <p class="mt-1 text-2xl font-bold text-emerald-700">
-                  {{ formatCurrency(summaryPrice) }}
-                </p>
-              </div>
+              </template>
             </section>
             <section
               class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
@@ -312,8 +354,9 @@ import { useAddresses } from '~/composables/useAddresses';
 import { useThaiAddressSearch } from '~/composables/useThaiAddressSearch';
 
 const route = useRoute();
+const supabase = useSupabaseClient();
 const { openAuthModal, user, requireAuth } = useAuthFlow();
-const { recordPendingPaymentOrder, fetchMyOrders, fetchOrderById, updateOrderAssets, upsertOrderShipping } = useOrders();
+const { recordPendingPaymentOrder, fetchMyOrders, fetchOrderById, updateOrderAssets } = useOrders();
 const { fetchAddresses, createAddress, deleteAddress, setDefaultAddress } = useAddresses();
 const { loadAddressData } = useThaiAddressSearch();
 const DEFAULT_ORDER_PRICE = 999;
@@ -346,6 +389,20 @@ const addressDefaulting = ref<Record<number, boolean>>({});
 const addressSavedMessage = ref<string | null>(null);
 const selectedAddressId = ref<number | null>(null);
 const showAddressModal = ref(false);
+const productInfo = ref<{
+  id: number | string;
+  slug: string | null;
+  name: string;
+  price: number | null;
+  image: string | null;
+  studs: number;
+  size: string;
+  resolution: { width: number; height: number };
+  difficulty: string;
+  tag: string;
+} | null>(null);
+const productLoading = ref(false);
+const productError = ref<string | null>(null);
 const addressForm = reactive({
   label: '',
   recipient_name: '',
@@ -368,13 +425,22 @@ const step2PreviewSource = computed(() => linkedOrderStep2Preview.value ?? step2
 const studPreview = ref<string | null>(null);
 const studPreviewError = ref<string | null>(null);
 const studPreviewLoading = ref(false);
-const checkoutPreview = computed(() => studPreview.value ?? finalPreview.value ?? null);
+const checkoutPreview = computed(() => {
+  if (hasProductQuery.value && (productLoading.value || !productInfo.value)) {
+    return null;
+  }
+  return studPreview.value ?? finalPreview.value ?? null;
+});
 const latestOrder = computed(() => (hasLinkedOrder.value ? selectedOrder.value : myOrders.value?.[0] ?? null));
-const isPreviewLoading = computed(
-  () =>
+const isPreviewLoading = computed(() => {
+  if (hasProductQuery.value) {
+    return productLoading.value;
+  }
+  return (
     (hasLinkedOrder.value && (selectedOrderLoading.value || (!selectedOrder.value && !selectedOrderError.value))) ||
     studPreviewLoading.value
-);
+  );
+});
 const currentOrderId = computed(() => selectedOrderId.value ?? orderSuccess.value?.id ?? latestOrder.value?.id ?? null);
 const brickLink = computed(() => (currentOrderId.value ? `/brick?id=${currentOrderId.value}` : '/brick'));
 const selectedOrderShipping = computed(() => {
@@ -387,6 +453,28 @@ const selectedOrderShipping = computed(() => {
 const selectedAddress = computed(() => {
   const id = selectedAddressId.value == null ? null : Number(selectedAddressId.value);
   return id != null ? addresses.value.find((addr) => Number(addr.id) === id) ?? null : null;
+});
+const productQuery = computed(() => (typeof route.query.product === 'string' ? route.query.product : null));
+const hasProductQuery = computed(() => Boolean(productQuery.value));
+const isProductMode = computed(() => hasProductQuery.value && Boolean(productInfo.value));
+const previewMeta = computed(() =>
+  isProductMode.value
+    ? {
+        title: 'สินค้าพร้อมสร้าง',
+        subtitle: 'รูปตัวอย่างจาก Ready Kit (แก้ไขรูปไม่ได้)',
+        badge: 'Ready kit'
+      }
+    : {
+        title: 'ตรวจสอบรูป',
+        subtitle: 'พรีวิว Step 3 ล่าสุด (รวมการแก้สีแล้ว)',
+        badge: 'พร้อมสั่ง'
+      }
+);
+const productPrice = computed(() => {
+  if (!isProductMode.value) return null;
+  const priceValue = productInfo.value?.price;
+  const priceNum = priceValue != null ? Number(priceValue) : NaN;
+  return Number.isNaN(priceNum) ? null : priceNum;
 });
 
 const mapAddressToShipping = (address: Record<string, any> | null | undefined) => {
@@ -575,8 +663,10 @@ const updateStudPreviewFromStep2 = async (src: string | null) => {
   const currentTask = ++studPreviewTaskId;
   studPreviewError.value = null;
   if (!src) {
-    studPreviewLoading.value = false;
-    studPreview.value = null;
+    if (!isProductMode.value) {
+      studPreviewLoading.value = false;
+      studPreview.value = null;
+    }
     return;
   }
   studPreviewLoading.value = true;
@@ -606,6 +696,7 @@ onMounted(() => {
 watch(
   () => step2PreviewSource.value,
   (next) => {
+    if (isProductMode.value) return;
     updateStudPreviewFromStep2(next);
     if (hasLinkedOrder.value) {
       finalPreview.value = null;
@@ -624,6 +715,7 @@ watch(
 watch(
   () => finalPreview.value,
   (next) => {
+    if (isProductMode.value) return;
     if (step2PreviewSource.value) return;
     studPreview.value = next ?? null;
   }
@@ -794,10 +886,20 @@ const summaryOrderId = computed(() => summaryOrder.value?.id ?? currentOrderId.v
 const summaryCreatedAt = computed(() => summaryOrder.value?.created_at ?? null);
 const summaryUpdatedAt = computed(() => summaryOrder.value?.updated_at ?? summaryOrder.value?.created_at ?? null);
 const summaryStatusBadge = computed(() => statusBadge(summaryOrder.value?.status));
+const isSummaryLoading = computed(() => {
+  if (hasProductQuery.value) return productLoading.value;
+  if (hasLinkedOrder.value) return selectedOrderLoading.value;
+  return false;
+});
 const summaryPrice = computed(() => {
+  if (hasProductQuery.value && productLoading.value) return null;
   const rawAmount = summaryOrder.value?.total_amount;
-  const normalized = typeof rawAmount === 'number' ? rawAmount : Number(rawAmount ?? DEFAULT_ORDER_PRICE);
-  return !Number.isNaN(normalized) && normalized > 0 ? normalized : DEFAULT_ORDER_PRICE;
+  const normalized = rawAmount != null ? Number(rawAmount) : NaN;
+  if (!Number.isNaN(normalized) && normalized > 0) return normalized;
+  if (productPrice.value != null) {
+    return productPrice.value;
+  }
+  return DEFAULT_ORDER_PRICE;
 });
 
 const previewResolution = ref({ width: 0, height: 0 });
@@ -899,18 +1001,115 @@ watch(
   }
 );
 
+const parseSizeText = (value: any): { width: number; height: number } | null => {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    const match = value.match(/(\d+)\s*[x×]\s*(\d+)/i);
+    if (match) {
+      return { width: Number(match[1]), height: Number(match[2]) };
+    }
+  } else if (typeof value === 'object' && value.width && value.height) {
+    const w = Number(value.width);
+    const h = Number(value.height);
+    if (!Number.isNaN(w) && !Number.isNaN(h)) return { width: w, height: h };
+  }
+  return null;
+};
+
+const mapProductRow = (row: any) => {
+  const meta = row?.metadata ?? {};
+  const size = meta.size ?? meta.resolution ?? null;
+  const resolution = parseSizeText(size) ?? { width: 0, height: 0 };
+  const studs = Number(meta.studs ?? meta.totalStuds ?? meta.studCount ?? 0) || 0;
+  const price = meta.priceKit ?? row?.price ?? meta.price ?? null;
+  return {
+    id: row?.id,
+    slug: row?.slug ?? null,
+    name: row?.name ?? 'Ready kit',
+    price: price != null ? Number(price) : null,
+    image: meta.image ?? meta.preview ?? meta.thumbnail ?? '/placeholder.png',
+    studs,
+    size: typeof size === 'string' ? size : resolution.width && resolution.height ? `${resolution.width}x${resolution.height}` : '',
+    resolution,
+    difficulty: meta.difficulty ?? 'Beginner',
+    tag: meta.tag ?? meta.type ?? 'พร้อมสร้าง'
+  };
+};
+
+const loadProduct = async () => {
+  if (!productQuery.value) {
+    productInfo.value = null;
+    return;
+  }
+  productLoading.value = true;
+  productError.value = null;
+  try {
+    const identifier = productQuery.value;
+    const parsedId = Number(identifier);
+    const filters = [`slug.eq.${identifier}`];
+    if (!Number.isNaN(parsedId)) {
+      filters.push(`id.eq.${parsedId}`);
+    }
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, slug, name, price, active, metadata')
+      .or(filters.join(','))
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) {
+      productInfo.value = null;
+      productError.value = 'ไม่พบสินค้าที่เลือก';
+      return;
+    }
+    const mapped = mapProductRow(data);
+    productInfo.value = mapped;
+    studPreview.value = mapped.image ?? null;
+    previewResolution.value = mapped.resolution;
+    if (mapped.image && (!mapped.resolution.width || !mapped.resolution.height) && typeof window !== 'undefined') {
+      const img = new Image();
+      img.onload = () => {
+        previewResolution.value = { width: img.naturalWidth, height: img.naturalHeight };
+      };
+      img.src = mapped.image;
+    }
+  } catch (error: any) {
+    productError.value = error?.message ?? 'โหลดสินค้าไม่สำเร็จ';
+    productInfo.value = null;
+  } finally {
+    productLoading.value = false;
+  }
+};
+
+watch(
+  () => productQuery.value,
+  () => {
+    studPreview.value = null;
+    studPreviewError.value = null;
+    finalPreview.value = null;
+    loadProduct();
+  },
+  { immediate: true }
+);
+
 const handleCreateOrder = async () => {
   orderError.value = null;
   if (!user.value) {
     requireAuth(() => handleCreateOrder());
     return;
   }
-  if (!step2PreviewSource.value) {
-    orderError.value = 'ยังไม่มีรูป Step 2 กรุณากลับไปสร้างก่อน';
-    return;
-  }
-  if (!checkoutPreview.value) {
-    orderError.value = 'ยังไม่มีรูป Step 3 กรุณากลับไปสร้างก่อน';
+  const productFlow = isProductMode.value;
+  if (!productFlow) {
+    if (!step2PreviewSource.value) {
+      orderError.value = 'ยังไม่มีรูป Step 2 กรุณากลับไปสร้างก่อน';
+      return;
+    }
+    if (!checkoutPreview.value) {
+      orderError.value = 'ยังไม่มีรูป Step 3 กรุณากลับไปสร้างก่อน';
+      return;
+    }
+  } else if (!productInfo.value) {
+    orderError.value = 'ไม่พบข้อมูลสินค้า';
     return;
   }
   if (!effectiveShipping.value) {
@@ -920,27 +1119,43 @@ const handleCreateOrder = async () => {
   isCreatingOrder.value = true;
   try {
     let data: any = null;
-    if (hasLinkedOrder.value && selectedOrderId.value) {
+    const shippingSnapshot = effectiveShipping.value ? { shipping_snapshot: effectiveShipping.value } : {};
+    const mergedMetadataForLinked = hasLinkedOrder.value
+      ? { ...(selectedOrder.value?.metadata ?? {}), ...shippingSnapshot }
+      : shippingSnapshot;
+    if (!productFlow && hasLinkedOrder.value && selectedOrderId.value) {
       data = await updateOrderAssets(
         selectedOrderId.value,
         {
           previewUrl: step2PreviewSource.value,
           source: 'checkout:linked',
           cropInteraction: cropInteractionForOrder.value ?? null,
-          originalImage: originalImage.value ?? null
+          originalImage: originalImage.value ?? null,
+          metadata: mergedMetadataForLinked
         },
         user.value.id
       );
       orderSuccess.value = { id: selectedOrderId.value };
-      await upsertOrderShipping(selectedOrderId.value, effectiveShipping.value);
     } else {
       data = await recordPendingPaymentOrder({
         userId: user.value.id,
-        previewUrl: step2PreviewSource.value,
-        source: 'checkout',
-        cropInteraction: cropInteractionForOrder.value ?? null,
-        originalImage: originalImage.value ?? null,
-        shipping: effectiveShipping.value
+        previewUrl: productFlow ? productInfo.value?.image ?? null : step2PreviewSource.value,
+        source: productFlow ? 'checkout:product' : 'checkout',
+        cropInteraction: productFlow ? null : cropInteractionForOrder.value ?? null,
+        originalImage: productFlow ? null : originalImage.value ?? null,
+        totalAmount: productFlow ? productPrice.value ?? DEFAULT_ORDER_PRICE : undefined,
+        metadata: productFlow
+          ? {
+              product_id: productInfo.value?.id ?? null,
+              product_slug: productInfo.value?.slug ?? null,
+              product_name: productInfo.value?.name ?? null,
+              size: productInfo.value?.size ?? null,
+              studs: productInfo.value?.studs ?? null,
+              difficulty: productInfo.value?.difficulty ?? null,
+              tag: productInfo.value?.tag ?? null,
+              shipping_snapshot: effectiveShipping.value ?? null
+            }
+          : { ...shippingSnapshot }
       });
       orderSuccess.value = { id: data?.id ?? 'new' };
     }

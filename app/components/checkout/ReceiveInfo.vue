@@ -33,7 +33,7 @@
       <div
         class="rounded-lg border border-amber-100 bg-white/80 px-3 py-2 flex items-center justify-between"
       >
-        <span>ที่แขวนกรอบภาพ</span>
+        <span>รูแขวนกรอบภาพ</span>
         <span class="font-semibold">{{ breakdown.clips }} ชิ้น</span>
       </div>
       <div
