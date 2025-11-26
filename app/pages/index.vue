@@ -12,6 +12,7 @@
         <BrickArtRemixApp
           :initial-resolution="{ width: 64, height: 64 }"
           :show-step4="false"
+          :enable-price-fetch="false"
           redirect-on-upload="/brick"
           default-image-src="/zuzu.png"
           :initial-crop-interaction="demoCropInteraction"

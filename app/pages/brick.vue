@@ -48,6 +48,7 @@
 
       <BrickArtRemixApp
         :enable-persistence="true"
+        :enable-price-fetch="true"
         :initial-crop-interaction="initialCropInteraction"
         :default-image-src="initialImageSrc"
         :editing-order-id="orderId"

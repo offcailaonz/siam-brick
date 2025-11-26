@@ -13,38 +13,94 @@
           {{ props.generateLabel }}
         </button>
       </div>
-      <div v-if="isPreviewFrameLoading" class="loading-bar" aria-live="polite">
-        <div class="loading-bar__track">
-          <div class="loading-bar__fill"></div>
-        </div>
-      </div>
-      <div v-else style="height: 14px;"></div>
-      <div class="grid gap-6 lg:grid-cols-3">
-        <article class=" rounded-xl border border-slate-100 bg-white/80 p-4">
-          <div v-show="uploadedImage" class="text-sm text-slate-600 mb-4">
-            <div
-              ref="cropPreviewContainer"
-              class="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-black/5"
-            >
-              <canvas ref="step1Canvas" class="w-full"></canvas>
-              <div
-                v-show="step1Ready"
-                class="absolute cursor-move rounded-lg border-2 border-white/90 bg-white/5"
-                :style="cropOverlayStyle"
-                @pointerdown.prevent="beginCropInteraction($event, 'move')"
+      <article
+        v-if="props.showStep4"
+        class="rounded-xl border border-amber-100 bg-amber-50/70 p-4 lg:col-span-3"
+      >
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h3 class="text-lg font-semibold text-slate-900">
+              ชำระเงินเพื่อรับอุปกรณ์ครบเซต
+            </h3>
+            <p class="text-xs text-slate-600">
+              ขนาด {{ targetResolution.width }} ×
+              {{ targetResolution.height }} pixel
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <div class="my-auto ml-auto text-right">
+              <p
+                v-if="formatPriceLoading"
+                class="text-sm font-semibold text-amber-700 inline-flex items-center gap-2"
               >
+                <span
+                  class="h-2 w-2 animate-ping rounded-full bg-amber-500"
+                ></span>
+                กำลังคำนวณ...
+              </p>
+              <p
+                v-else-if="formatPrice != null"
+                class="text-2xl font-black text-amber-700 leading-tight"
+              >
+                {{ formatCurrency(formatPrice) }}
+              </p>
+              <p
+                v-else-if="formatPriceError"
+                class="text-sm font-semibold text-rose-600"
+              >
+                {{ formatPriceError }}
+              </p>
+              <p v-else class="text-sm font-semibold text-slate-600"></p>
+            </div>
+            <button
+              class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
+              type="button"
+              :disabled="!step3Ready || isStep2Processing || isCreatingCheckoutOrder"
+              @click="goToCheckout"
+            >
+              <span v-if="isCreatingCheckoutOrder">กำลังสร้างออเดอร์...</span>
+              <span v-else>ชำระเงิน เพื่อรับชุดเต็ม</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                fill="currentColor"
+                viewBox="0 0 16 16"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M1 8a.75.75 0 0 1 .75-.75h10.638L9.23 4.09a.75.75 0 1 1 1.04-1.08l4.25 4.1a.75.75 0 0 1 0 1.08l-4.25 4.1a.75.75 0 0 1-1.04-1.08l3.158-3.16H1.75A.75.75 0 0 1 1 8"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </article>
+      <div class="grid gap-6 lg:grid-cols-3 mt-3">
+        <article class=" rounded-xl border border-slate-100 bg-white/80 p-4">
+          <div class="text-sm text-slate-600 mb-4">
+            <div class="preview-square border border-slate-200 bg-black">
+              <div ref="cropPreviewContainer" class="preview-media-container">
+                <canvas ref="step1Canvas" class="preview-media"></canvas>
                 <div
-                  class="pointer-events-none absolute inset-0 rounded-md"
-                  style="box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35)"
-                ></div>
-                <div
-                  class="pointer-events-auto absolute top-1/2 -left-3 h-4 w-4 -translate-y-1/2 rounded-full border border-white bg-indigo-500 cursor-ew-resize"
-                  @pointerdown.stop.prevent="beginCropInteraction($event, 'resize-left')"
-                ></div>
-                <div
-                  class="pointer-events-auto absolute top-1/2 -right-3 h-4 w-4 -translate-y-1/2 rounded-full border border-white bg-indigo-500 cursor-ew-resize"
-                  @pointerdown.stop.prevent="beginCropInteraction($event, 'resize-right')"
-                ></div>
+                  v-show="step1Ready"
+                  class="absolute cursor-move rounded-lg border-2 border-white/90 bg-white/5"
+                  :style="cropOverlayStyle"
+                  @pointerdown.prevent="beginCropInteraction($event, 'move')"
+                >
+                  <div
+                    class="pointer-events-none absolute inset-0 rounded-md"
+                    style="box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35)"
+                  ></div>
+                  <div
+                    class="pointer-events-auto absolute top-1/2 -left-3 h-4 w-4 -translate-y-1/2 rounded-full border border-white bg-indigo-500 cursor-ew-resize"
+                    @pointerdown.stop.prevent="beginCropInteraction($event, 'resize-left')"
+                  ></div>
+                  <div
+                    class="pointer-events-auto absolute top-1/2 -right-3 h-4 w-4 -translate-y-1/2 rounded-full border border-white bg-indigo-500 cursor-ew-resize"
+                    @pointerdown.stop.prevent="beginCropInteraction($event, 'resize-right')"
+                  ></div>
+                </div>
               </div>
             </div>
             <!-- <p v-if="imageDimensions" class="text-xs text-slate-500">
@@ -148,12 +204,16 @@
           </p>
 
           <canvas ref="step2Canvas" class="hidden"></canvas>
-          <canvas
-            v-show="step2Ready"
-            ref="step2UpscaledCanvas"
-            class="w-full rounded-xl border border-indigo-200 mb-4"
-            :style="{ imageRendering: 'pixelated', width: '100%', height: 'auto' }"
-          ></canvas>
+          <div class="preview-square border border-indigo-200 mb-4">
+            <canvas
+              v-show="step2Ready"
+              ref="step2UpscaledCanvas"
+              class="preview-media"
+              :style="{
+                imageRendering: 'pixelated'
+              }"
+            ></canvas>
+          </div>
           <div class="flex items-center justify-between">
             <div>
               <h3 class="text-lg font-semibold text-slate-900">
@@ -166,18 +226,19 @@
               >Step 2</span
             >
           </div>
-          <p v-if="step2Ready" class="text-xs text-slate-500">
+          <p class="text-xs text-slate-500">
             ความละเอียดปัจจุบัน {{ targetResolution.width }} ×
             {{ targetResolution.height }} Pixel (อัตราขยาย ×{{ SCALING_FACTOR}})
           </p>
 
-          <div v-if="step2Ready" class="mt-3 flex flex-wrap items-center gap-2">
+          <div class="mt-3 flex flex-wrap items-center gap-2">
             <button
+              :disabled="!step2Ready"
               type="button"
               class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
               @click="openEditModal"
             >
-              แก้ไขสี (Step 2)
+              แก้ไขสี
             </button>
             <button
               v-if="hasPixelRemap"
@@ -200,115 +261,7 @@
             กำลังใช้การ remap สีหลังจากปรับโทน/แก้สีพิกเซล
           </p>
 
-          <!-- <div v-if="step2Ready" class="mt-3">
-            <button
-              type="button"
-              class="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
-              @click="openEditModal"
-            >
-              แก้ไขภาพ
-            </button>
-          </div> -->
-
-          <div
-            v-if="step2Ready"
-            class="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-600"
-          >
-            <!-- <div class="relative">
-              <button
-                class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm font-semibold text-indigo-700 shadow-sm"
-                type="button"
-                @click="toggleToolDropdown"
-              >
-                <svg v-if="selectedPaintTool === 'brush'" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                  <path
-                    d="M15.825.12a.5.5 0 0 1 .132.584c-1.53 3.43-4.743 8.17-7.095 10.64a6.067 6.067 0 0 1-2.373 1.534c-.018.227-.06.538-.16.868-.201.659-.667 1.479-1.708 1.74a8.118 8.118 0 0 1-3.078.132 3.659 3.659 0 0 1-.562-.135 1.382 1.382 0 0 1-.466-.247.714.714 0 0 1-.204-.288.622.622 0 0 1 .004-.443c.095-.245.316-.38.461-.452.394-.197.625-.453.867-.826.095-.144.184-.297.287-.472l.117-.198c.151-.255.326-.54.546-.848.528-.739 1.201-.925 1.746-.896.126.007.243.025.348.048.062-.172.142-.38.238-.608.261-.619.658-1.419 1.187-2.069 2.176-2.67 6.18-6.206 9.117-8.104a.5.5 0 0 1 .596.04z"
-                  />
-                </svg>
-                <svg v-else-if="selectedPaintTool === 'eraser'" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                  <path
-                    d="M8.086 2.207a2 2 0 0 1 2.828 0l3.879 3.879a2 2 0 0 1 0 2.828l-5.5 5.5A2 2 0 0 1 7.879 15H5.12a2 2 0 0 1-1.414-.586l-2.5-2.5a2 2 0 0 1 0-2.828l6.879-6.879zm.66 11.34L3.453 8.254 1.914 9.793a1 1 0 0 0 0 1.414l2.5 2.5a1 1 0 0 0 .707.293H7.88a1 1 0 0 0 .707-.293l.16-.16z"
-                  />
-                </svg>
-                <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                  <path
-                    d="M13.354.646a1.207 1.207 0 0 0-1.708 0L8.5 3.793l-.646-.647a.5.5 0 1 0-.708.708L8.293 5l-7.147 7.146A.5.5 0 0 0 1 12.5v1.793l-.854.853a.5.5 0 1 0 .708.707L1.707 15H3.5a.5.5 0 0 0 .354-.146L11 7.707l1.146 1.147a.5.5 0 0 0 .708-.708l-.647-.646 3.147-3.146a1.207 1.207 0 0 0 0-1.708l-2-2zM2 12.707l7-7L10.293 7l-7 7H2v-1.293z"
-                  />
-                </svg>
-                <span>{{ paintToolLabel }}</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.25 8.29a.75.75 0 01-.02-1.08z" clip-rule="evenodd" />
-                </svg>
-              </button>
-              <div
-                v-if="isToolDropdownOpen"
-                class="absolute z-10 mt-1 w-44 rounded-lg border border-slate-200 bg-white shadow-lg"
-              >
-                <button
-                  v-for="tool in paintToolOptions"
-                  :key="tool.value"
-                  class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-indigo-50"
-                  type="button"
-                  @click="selectPaintTool(tool.value)"
-                >
-                  <component :is="tool.icon" class="h-4 w-4" />
-                  <span>{{ tool.label }}</span>
-                </button>
-              </div>
-            </div> -->
-
-            <!-- <div class="relative">
-              <button
-                class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm font-semibold text-indigo-700 shadow-sm"
-                type="button"
-                @click="toggleColorDropdown"
-              >
-                <span
-                  class="h-4 w-4 rounded-sm border border-slate-200"
-                  :style="{ backgroundColor: paintColorHex }"
-                ></span>
-                <span class="max-w-[120px] truncate">{{ paintColorLabel }}</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.25 8.29a.75.75 0 01-.02-1.08z" clip-rule="evenodd" />
-                </svg>
-              </button>
-              <div
-                v-if="isColorDropdownOpen"
-                class="absolute z-10 mt-1 max-h-64 w-56 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg"
-              >
-                <button
-                  v-for="color in ALL_BRICKLINK_SOLID_COLORS"
-                  :key="color.hex"
-                  type="button"
-                  class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-indigo-50"
-                  @click="selectPaintColor(color.hex)"
-                >
-                  <span class="h-4 w-4 rounded-sm border border-slate-200" :style="{ backgroundColor: color.hex }"></span>
-                  <span class="truncate">{{ color.name }}</span>
-                </button>
-              </div>
-            </div> -->
-
-            <!-- <button
-              class="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm font-semibold text-rose-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
-              type="button"
-              :disabled="!hasPaintOverrides"
-              @click="handleClearPaintOverrides"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                <path
-                  d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0z"
-                />
-              </svg>
-              ล้างการแก้สี
-            </button> -->
-
-            <!-- <span class="text-[11px] text-slate-500">
-              คลิกที่พรีวิวเพื่อใช้เครื่องมือ Paintbrush/Eraser/Dropper
-            </span> -->
-          </div>
-
-          <div>
+          <div class="mt-3">
             <div class="grid gap-3 md:grid-cols-3">
               <label class="text-sm text-slate-600"
                 >Hue (°)
@@ -425,18 +378,20 @@
 
           <div>
             <canvas ref="step3Canvas" class="hidden"></canvas>
-            <canvas
-              ref="step3UpscaledCanvas"
-              class="w-full rounded-xl border border-emerald-200 mb-4"
-              style="image-rendering: pixelated; width: 100%; height: auto"
-              v-show="step3Ready && !showApiStep3Preview"
-            ></canvas>
-            <img
-              v-if="showApiStep3Preview && apiStep3Preview"
-              :src="apiStep3Preview || undefined"
-              alt="Step 3 preview from order"
-              class="w-full rounded-xl border border-emerald-200 mb-4 bg-white object-contain"
-            />
+            <div class="preview-square border border-emerald-200 mb-4">
+              <canvas
+                ref="step3UpscaledCanvas"
+                class="preview-media"
+                style="image-rendering: pixelated;"
+                v-show="step3Ready && !showApiStep3Preview"
+              ></canvas>
+              <img
+                v-if="showApiStep3Preview && apiStep3Preview"
+                :src="apiStep3Preview || undefined"
+                alt="Step 3 preview from order"
+                class="preview-media bg-white object-contain"
+              />
+            </div>
             <div class="flex items-center justify-between">
               <div>
                 <h3 class="text-lg font-semibold text-slate-900">
@@ -467,27 +422,29 @@
             <p v-else class="text-xs text-slate-500">
               สร้าง Step 2 ให้เสร็จก่อนจึงจะแสดงตัวอย่าง Step 3 ได้
             </p>
-            <!-- <label
-              class="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-slate-600"
-            >
-              <input
-                type="checkbox"
-                class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                v-model="isHighQualityColorMode"
-              />
-              <span>
-                High quality colors (ไม่ลดสีที่ใช้ ≤
-                {{ SPARSE_COLOR_THRESHOLD }} studs)
-              </span>
-            </label> -->
+
+            <div class="mt-3">
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
+                :disabled="!step3Ready || isGeneratingPdf || isStep2Processing"
+                @click="handleGenerateInstructions"
+              >
+                <span v-if="isGeneratingPdf">กำลังสร้างไฟล์…</span>
+                <span v-else>ดาวน์โหลดตัวอย่าง</span>
+              </button>
+            </div>
+            <div class="flex mt-3">
+              <label class="text-sm text-slate-600">
+                สีที่ใช้ {{ step3StudUsage.length }} สี | รวม
+                {{ formatNumber(step3StudTotal) }} studs
+              </label>
+            </div>
 
             <div
-              v-if="step3Ready"
-              class="text-sm text-slate-600 max-h-48 overflow-y-auto mt-3"
+              class="text-sm text-slate-600 overflow-y-auto mt-1"
+              style="max-height: 100px; height: 100px;"
             >
-              <p class="font-semibold text-slate-800">
-                สีที่ใช้ ({{ step3StudUsage.length }})
-              </p>
               <div class="grid gap-2 sm:grid-cols-2">
                 <div
                   v-for="usage in step3StudUsage"
@@ -510,113 +467,45 @@
                   >
                 </div>
               </div>
-              <p class="mt-2 text-xs text-slate-500">
-                รวม {{ formatNumber(step3StudTotal) }} studs
-              </p>
             </div>
           </div>
           <p class="text-sm text-rose-600" v-if="step3Error">
             {{ step3Error }}
           </p>
         </article>
+      </div>
+      <div v-if="isPreviewFrameLoading" class="loading-bar" aria-live="polite">
+        <div class="loading-bar__track">
+          <div class="loading-bar__fill"></div>
+        </div>
+      </div>
+      <div v-else style="height: 14px;">
+        <div v-if="isGeneratingPdf">
+          <div class="h-2 w-full rounded-full bg-white/60">
+            <div
+              class="h-2 rounded-full bg-amber-500 transition-all duration-200"
+              :style="{ width: pdfProgressPercent + '%' }"
+            ></div>
+          </div>
+          <p class="text-xs font-medium text-amber-900">
+            {{ pdfProgressLabel || 'กำลังเตรียมไฟล์...' }}
+          </p>
+        </div>
 
-        <article
-          v-if="props.showStep4"
-          class="rounded-xl border border-amber-100 bg-amber-50/70 p-4 lg:col-span-3"
+        <!-- <p
+          v-else-if="pdfError"
+          class="text-sm text-rose-600 mt-3"
+          style="height: 36px;"
         >
-          <div class="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <h3 class="text-lg font-semibold text-slate-900">
-                Step 4 – ชำระเงินเพื่อปลดล็อก PDF เต็ม + รับอุปกรณ์ครบเซต
-              </h3>
-              <p class="text-xs text-slate-600 mt-1">
-                ได้ทั้งคู่มือต่อทุกหน้า พร้อมชุดตัวต่อ ฐานต่อ และกรอบตัวต่อภาพ
-              </p>
-            </div>
-            <span
-              style="min-width: 64px;"
-              class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800"
-              >Step 4</span
-            >
-          </div>
-
-          <div v-if="isGeneratingPdf" class="mt-4 space-y-2">
-            <div class="h-2 w-full rounded-full bg-white/60">
-              <div
-                class="h-2 rounded-full bg-amber-500 transition-all duration-200"
-                :style="{ width: pdfProgressPercent + '%' }"
-              ></div>
-            </div>
-            <p class="text-xs font-medium text-amber-900">
-              {{ pdfProgressLabel || 'กำลังเตรียมไฟล์...' }}
-            </p>
-          </div>
-
-          <p
-            v-else-if="pdfError"
-            class="text-sm text-rose-600 mt-3"
-            style="height: 36px;"
-          >
-            {{ pdfError }}
-          </p>
-          <p
-            v-else-if="pdfSuccessMessage"
-            class="text-sm text-emerald-600 mt-3"
-            style="height: 36px;"
-          >
-            {{ pdfSuccessMessage }}
-          </p>
-          <p v-else style="height: 36px;"></p>
-
-          <div class="mt-4 flex flex-wrap items-center gap-4 justify-end">
-            <!-- <label
-              class="inline-flex items-center gap-2 text-sm text-slate-700"
-            >
-              <input
-                type="checkbox"
-                class="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
-                v-model="useHighQualityPdf"
-              />
-              <span>
-                export แบบ <strong>High quality</strong> ({{ HIGH_DPI }} DPI,
-                ไฟล์เดียว)
-              </span>
-            </label> -->
-
-            <div class="flex flex-wrap gap-3">
-              <button
-                class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-white px-4 py-2 text-sm font-semibold text-amber-800 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                type="button"
-                :disabled="!step3Ready || isGeneratingPdf || isStep2Processing"
-                @click="handleGenerateInstructions"
-              >
-                <span v-if="isGeneratingPdf">กำลังสร้างไฟล์…</span>
-                <span v-else>ดาวน์โหลดตัวอย่าง PDF</span>
-              </button>
-              <button
-                class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
-                type="button"
-                :disabled="!step3Ready || isStep2Processing || isCreatingCheckoutOrder"
-                @click="goToCheckout"
-              >
-                <span v-if="isCreatingCheckoutOrder">กำลังสร้างออเดอร์...</span>
-                <span v-else>ชำระเงิน เพื่อรับชุดเต็ม</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  fill="currentColor"
-                  viewBox="0 0 16 16"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M1 8a.75.75 0 0 1 .75-.75h10.638L9.23 4.09a.75.75 0 1 1 1.04-1.08l4.25 4.1a.75.75 0 0 1 0 1.08l-4.25 4.1a.75.75 0 0 1-1.04-1.08l3.158-3.16H1.75A.75.75 0 0 1 1 8"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </article>
+          {{ pdfError }}
+        </p>
+        <p
+          v-else-if="pdfSuccessMessage"
+          class="text-sm text-emerald-600 mt-3"
+          style="height: 36px;"
+        >
+          {{ pdfSuccessMessage }}
+        </p> -->
       </div>
     </section>
     <p v-if="checkoutOrderError" class="mt-2 text-sm text-rose-600">
@@ -832,6 +721,8 @@ type CropInteractionState = {
   startY: number;
   containerWidth: number;
   containerHeight: number;
+  offsetX: number;
+  offsetY: number;
   rectSnapshot: {
     left: number;
     top: number;
@@ -882,6 +773,7 @@ const props = withDefaults(
     defaultImageSrc?: string | null;
     initialCropInteraction?: CropInteractionState | null;
     enablePersistence?: boolean;
+    enablePriceFetch?: boolean;
     editingOrderId?: string | number | null;
     initialStep2Preview?: string | null;
     initialStep3Preview?: string | null;
@@ -895,6 +787,7 @@ const props = withDefaults(
     defaultImageSrc: null,
     initialCropInteraction: null,
     enablePersistence: false,
+    enablePriceFetch: true,
     editingOrderId: null,
     initialStep2Preview: null,
     initialStep3Preview: null,
@@ -919,6 +812,7 @@ const emit = defineEmits<{
 const router = useRouter();
 const { user, requireAuth } = useAuthFlow();
 const { recordPendingPaymentOrder, updateOrderAssets } = useOrders();
+const supabase = useSupabaseClient();
 const currentUserId = computed(() => user.value?.id ?? 'guest');
 const studMapEntries = reactive(studMaps);
 const availableSetIds = Object.keys(studMapEntries) as StudMapId[];
@@ -953,6 +847,9 @@ const step2PreviewForOrder = useState<string | null>('brick-step2-preview', () =
 const finalStep3Preview = useState<string | null>('brick-final-step3-preview', () => null);
 const originalImageForOrder = useState<string | null>('brick-original-image', () => null);
 const cropInteractionForOrder = useState<CropInteractionState | null>('brick-crop-interaction', () => null);
+const formatPrice = useState<number | null>('brick-format-price', () => null);
+const formatPriceLoading = useState<boolean>('brick-format-price-loading', () => false);
+const formatPriceError = useState<string | null>('brick-format-price-error', () => null);
 const isCreatingCheckoutOrder = ref(false);
 const checkoutOrderError = ref<string | null>(null);
 const shouldSkipPersistence = computed(() => Boolean(props.editingOrderId || props.defaultImageSrc));
@@ -1361,6 +1258,15 @@ const totalStudCount = (studMap: Record<string, number>) =>
   Object.values(studMap).reduce((sum, count) => sum + count, 0);
 
 const formatNumber = (value: number) => new Intl.NumberFormat('th-TH').format(value);
+const formatCurrency = (value: number | string | null | undefined) => {
+  const num = Number(value);
+  if (Number.isNaN(num)) return '—';
+  return new Intl.NumberFormat('th-TH', {
+    style: 'currency',
+    currency: 'THB',
+    maximumFractionDigits: 0
+  }).format(num);
+};
 
 const colorName = (hex: string) => HEX_TO_COLOR_NAME[hex.toLowerCase()] ?? HEX_TO_COLOR_NAME[hex];
 
@@ -1481,8 +1387,8 @@ const ciede2000ColorDistance = (rgb1: number[] | Uint8ClampedArray, rgb2: number
 };
 
 const targetResolution = reactive({
-  width: 64,
-  height: 64
+  width: 32,
+  height: 32
 });
 
 if (props.initialResolution?.width) {
@@ -1499,14 +1405,25 @@ const cropRect = reactive({
   height: 1
 });
 const persistedCropRect = ref<BrickWorkflowSession['crop'] | null>(null);
+const measuredPreviewRect = ref<{ width: number; height: number; offsetX: number; offsetY: number }>({
+  width: 0,
+  height: 0,
+  offsetX: 0,
+  offsetY: 0
+});
 
-const cropOverlayStyle = computed(() => ({
-  width: `${cropRect.width * 100}%`,
-  height: `${cropRect.height * 100}%`,
-  left: `${cropRect.left * 100}%`,
-  top: `${cropRect.top * 100}%`,
-  boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.35)'
-}));
+const cropOverlayStyle = computed(() => {
+  const rect = measuredPreviewRect.value;
+  const width = rect.width || 1;
+  const height = rect.height || 1;
+  return {
+    width: `${cropRect.width * width}px`,
+    height: `${cropRect.height * height}px`,
+    left: `${rect.offsetX + cropRect.left * width}px`,
+    top: `${rect.offsetY + cropRect.top * height}px`,
+    boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.35)'
+  };
+});
 
 type CropInteractionType = 'move' | 'resize-left' | 'resize-right';
 
@@ -1517,6 +1434,8 @@ const cropInteraction = reactive<CropInteractionState>({
   startY: 0,
   containerWidth: 1,
   containerHeight: 1,
+  offsetX: 0,
+  offsetY: 0,
   rectSnapshot: {
     left: 0,
     top: 0,
@@ -1852,10 +1771,25 @@ const syncCropRectToAspect = () => {
   cropRect.top = clamp(centerY - cropRect.height / 2, 0, 1 - cropRect.height);
 };
 
+const measurePreviewRect = () => {
+  const container = cropPreviewContainer.value;
+  const canvas = step1Canvas.value;
+  if (!container || !canvas) return;
+  const containerBounds = container.getBoundingClientRect();
+  const canvasBounds = canvas.getBoundingClientRect();
+  measuredPreviewRect.value = {
+    width: canvasBounds.width,
+    height: canvasBounds.height,
+    offsetX: canvasBounds.left - containerBounds.left,
+    offsetY: canvasBounds.top - containerBounds.top
+  };
+};
+
 const beginCropInteraction = (event: PointerEvent, type: CropInteractionType) => {
   if (!step1Ready.value) {
     return;
   }
+  measurePreviewRect();
   const container = cropPreviewContainer.value;
   if (!container) {
     return;
@@ -1865,12 +1799,23 @@ const beginCropInteraction = (event: PointerEvent, type: CropInteractionType) =>
   }
   event.preventDefault();
   const bounds = container.getBoundingClientRect();
+  const previewRect = measuredPreviewRect.value;
+  if (!previewRect.width || !previewRect.height) {
+    return;
+  }
+  const pointerX = event.clientX - bounds.left - previewRect.offsetX;
+  const pointerY = event.clientY - bounds.top - previewRect.offsetY;
+  if (pointerX < 0 || pointerY < 0 || pointerX > previewRect.width || pointerY > previewRect.height) {
+    return;
+  }
   cropInteraction.active = true;
   cropInteraction.type = type;
-  cropInteraction.startX = event.clientX;
-  cropInteraction.startY = event.clientY;
-  cropInteraction.containerWidth = bounds.width || 1;
-  cropInteraction.containerHeight = bounds.height || 1;
+  cropInteraction.startX = pointerX;
+  cropInteraction.startY = pointerY;
+  cropInteraction.containerWidth = previewRect.width || 1;
+  cropInteraction.containerHeight = previewRect.height || 1;
+  cropInteraction.offsetX = previewRect.offsetX;
+  cropInteraction.offsetY = previewRect.offsetY;
   cropInteraction.rectSnapshot = { ...cropRect };
   window.addEventListener('pointermove', handleCropPointerMove);
   window.addEventListener('pointerup', endCropInteraction);
@@ -1882,8 +1827,15 @@ const handleCropPointerMove = (event: PointerEvent) => {
   if (!cropInteraction.active || cropInteraction.type == null) {
     return;
   }
-  const deltaX = (event.clientX - cropInteraction.startX) / cropInteraction.containerWidth;
-  const deltaY = (event.clientY - cropInteraction.startY) / cropInteraction.containerHeight;
+  const container = cropPreviewContainer.value;
+  if (!container) return;
+  const bounds = container.getBoundingClientRect();
+  const pointerX = event.clientX - bounds.left - cropInteraction.offsetX;
+  const pointerY = event.clientY - bounds.top - cropInteraction.offsetY;
+  const clampedX = clamp(pointerX, 0, cropInteraction.containerWidth);
+  const clampedY = clamp(pointerY, 0, cropInteraction.containerHeight);
+  const deltaX = (clampedX - cropInteraction.startX) / cropInteraction.containerWidth;
+  const deltaY = (clampedY - cropInteraction.startY) / cropInteraction.containerHeight;
   const aspect = getAspectRatio();
   const { canvasWidth, canvasHeight } = getCanvasDimensions();
 
@@ -2036,6 +1988,8 @@ onMounted(async () => {
       await applyInitialStep2Preview(props.initialStep2Preview);
     }
   }
+  nextTick().then(() => measurePreviewRect());
+  window.addEventListener('resize', measurePreviewRect);
 });
 
 watch(currentUserId, async () => {
@@ -2055,6 +2009,7 @@ watch(
   (ready) => {
     if (ready) {
       applyInitialCrop();
+      nextTick().then(() => measurePreviewRect());
     }
   }
 );
@@ -2270,6 +2225,7 @@ const drawImagePreview = (src: string, options: { skipAutoStep2?: boolean } = {}
     if (!skipAutoStep2) {
       nextTick().then(() => scheduleStep2Processing(10));
     }
+    nextTick().then(() => measurePreviewRect());
     isProcessing.value = false;
   };
   img.onerror = () => {
@@ -2309,7 +2265,51 @@ const onFileChange = (event: Event) => {
   reader.readAsDataURL(file);
 };
 
+const fetchFormatPrice = async () => {
+  if (!step1Ready.value || !props.enablePriceFetch) {
+    formatPriceLoading.value = false;
+    formatPriceError.value = null;
+    if (!props.enablePriceFetch) {
+      formatPrice.value = null;
+    }
+    return;
+  }
+  formatPriceLoading.value = true;
+  formatPriceError.value = null;
+  try {
+    const normalizeSize = (width: number, height: number) => {
+      const a = Math.min(width, height);
+      const b = Math.max(width, height);
+      return { width: a, height: b, size: `${a}x${b}` };
+    };
+    const { width, height, size } = normalizeSize(targetResolution.width, targetResolution.height);
+    const { data, error } = await supabase
+      .from('format_prices')
+      .select('size, width, height, price')
+      .or(`size.eq.${size},and(width.eq.${width},height.eq.${height}),and(width.eq.${height},height.eq.${width})`)
+      .maybeSingle();
+
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+    if (!data) {
+      formatPrice.value = null;
+      formatPriceError.value = 'ไม่พบราคาฟอร์แมตนี้';
+      return;
+    }
+
+    formatPrice.value = data.price ?? null;
+  } catch (error: any) {
+    formatPrice.value = null;
+    formatPriceError.value =
+      error?.data?.statusMessage || error?.message || 'ไม่สามารถคำนวณราคาได้';
+  } finally {
+    formatPriceLoading.value = false;
+  }
+};
+
 let step2Timeout: ReturnType<typeof setTimeout> | null = null;
+let formatPriceTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const scheduleStep2Processing = (delay = 120) => {
   if (!step1Ready.value) {
@@ -3095,6 +3095,15 @@ watch(
 );
 
 watch(
+  () => [targetResolution.width, targetResolution.height, step1Ready.value],
+  () => {
+    if (!step1Ready.value) return;
+    if (formatPriceTimeout) clearTimeout(formatPriceTimeout);
+    formatPriceTimeout = setTimeout(() => fetchFormatPrice(), 200);
+  }
+);
+
+watch(
   () => [hsvControls.hue, hsvControls.saturation, hsvControls.value, hsvControls.brightness, hsvControls.contrast],
   () => {
     markApiPreviewDirty();
@@ -3114,6 +3123,10 @@ watch(isHighQualityColorMode, () => {
   if (step2Ready.value) {
     runStep3Pipeline();
   }
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', measurePreviewRect);
 });
 </script>
 
@@ -3152,6 +3165,36 @@ watch(isHighQualityColorMode, () => {
   font-size: 0.75rem;
   font-weight: 600;
   color: #4338ca;
+}
+
+.preview-square {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #00000000;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.preview-media {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  border-radius: 0.5rem;
+}
+
+.preview-media-container {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
 }
 
 @keyframes loading-bar-slide {

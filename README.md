@@ -32,7 +32,7 @@
 - Props ใน `BrickArtRemixApp` ที่ใช้บน landing:
   - `initialResolution`, `initialCropInteraction`, `defaultImageSrc` สำหรับ seed UI
   - `showStep4`, `redirectOnUpload` ใช้ซ่อน Step 4 และเปลี่ยน flow บน landing
-- Step 4: `ดาวน์โหลดตัวอย่าง PDF` (3–4 หน้าแรกชัด, ที่เหลือเบลอ) + CTA `ปลดล็อกชุดเต็ม`
+- Step 4: `ดาวน์โหลดตัวอย่าง` (3–4 หน้าแรกชัด, ที่เหลือเบลอ) + CTA `ปลดล็อกชุดเต็ม`
 - High-quality color toggle (ปิด/เปิดการรวมสีที่ใช้ ≤ 10 studs)
 - PDF export เป็น A4 + watermark ขวาบน; อนาคตล็อกอิน + จ่ายเงินแล้วดาวน์โหลดไฟล์เต็มได้
 
@@ -124,7 +124,7 @@ curl -i "$SUPABASE_URL/auth/v1/token?grant_type=password" \
 
 2. **Flow ปัจจุบัน**
    - ผู้ใช้กด CTA → `/` auto preview (Step 1–3) → ถ้ากดเลือกไฟล์จะถูกพาไป `/brick` เพื่อทำงานเต็ม
-   - หน้า `/brick` (เต็ม) ยังคง Step 1–4 → ดาวน์โหลดตัวอย่าง PDF 3–4 หน้า → ปลดล็อกหลังซื้อ (ยังไม่เชื่อม payment)
+   - หน้า `/brick` (เต็ม) ยังคง Step 1–4 → ดาวน์โหลดตัวอย่าง 3–4 หน้า → ปลดล็อกหลังซื้อ (ยังไม่เชื่อม payment)
    - ค่าคงที่ `SPARSE_COLOR_THRESHOLD = 10` ใช้กำหนดการรวมสีที่ใช้ไม่เกิน 10 studs (ปิดด้วย toggle)
 
 3. **งานที่จะทำถัดไป**
@@ -177,7 +177,7 @@ curl -i "$SUPABASE_URL/auth/v1/token?grant_type=password" \
       ('frame-edge',4.61), ('frame-corner',4.94),
       ('hanger',3.30), ('stud-pack',0.09)
     on conflict (part_key) do update set price = excluded.price;
-    ```
+  ```
 
 ## 10. Ready Kits & Checkout (ล่าสุด)
 - Landing `ReadyKitsGrid` ดึงสินค้า active จาก Supabase (fallback mock) และแสดง preview/fullscreen; ปุ่ม “สั่งชุดเต็ม” ส่งต่อไป `/checkout?product=<slug|id>`
@@ -187,7 +187,18 @@ curl -i "$SUPABASE_URL/auth/v1/token?grant_type=password" \
   - Breakdowns ใช้ `getFrameAndBase(width,height)` แสดง ฐาน 32/16, studs, มุม, ที่แขวน, ขอบสั้น/ยาว
   - ที่อยู่จัดส่งเป็นโมดัล; ลด API call ที่ `order_shipping` (เก็บ snapshot ใน metadata แทน)
 
-## 11. API / Tables ที่ใช้งาน
+## 11. Pricing API (สำหรับหน้า /brick)
+- Server route: `GET /api/price?width=<w>&height=<h>` (ใช้ด้านสั้นxยาว normalize)
+- ดึงราคาจากตาราง `format_prices` (ใช้ service key ถ้ามี `SUPABASE_SERVICE_KEY`, ตกลงใช้ public key ถ้าไม่ตั้ง)
+- Response: `{ request:{width,height,size}, result:{size,width,height,price} }` ถ้าไม่พบขนาดคืน 404
+
+## 12. Generator UI updates (ล่าสุด)
+- Preview Step 1–3 เป็นสี่เหลี่ยมจัตุรัส (letterbox สีดำ) scale ภาพคงอัตราส่วน
+- Overlay ครอป Step 1 ผูกกับขนาดภาพจริงใน square preview ลาก/resize ไม่เกินขอบภาพ
+- Fetch ราคาใช้ Supabase client โดยตรง (`format_prices`); prop `enablePriceFetch` เปิด/ปิด (landing ปิด, `/brick` เปิด)
+- ป้องกัน double-fetch ราคาโดยเรียกผ่าน watcher debounce
+
+## 13. API / Tables ที่ใช้งาน
 - `products` (active=true สำหรับ landing)
 - `user_roles` (role admin สำหรับ Backoffice)
 - `format_prices` (width/height/size/price, normalize ด้านสั้น x ด้านยาว)
