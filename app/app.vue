@@ -7,7 +7,7 @@
     <main class="flex-1">
       <NuxtLayout>
         <Transition name="page-fade" mode="out-in" appear>
-          <NuxtPage :page-key="route.fullPath" />
+          <NuxtPage :page-key="route?.fullPath || route?.path || ''" />
         </Transition>
       </NuxtLayout>
     </main>

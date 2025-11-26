@@ -23,9 +23,9 @@
       <LandingComingSoonSection />
     </div>
 
-    <div class="brick-bg--faq">
+    <!-- <div class="brick-bg--faq">
       <LandingFormatPriceGrid :formats="formatPrices" :loading="formatPricePending" />
-    </div>
+    </div> -->
 
     <div class="brick-bg--readykits" ref="readyKitsRef">
       <LandingReadyKitsGrid

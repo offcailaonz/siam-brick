@@ -1,71 +1,54 @@
 <template>
-  <section class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+  <section
+    class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
+  >
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <p class="text-sm font-semibold text-slate-900">กำหนดราคาแต่ละขนาด</p>
         <p class="text-xs text-slate-500">เพิ่ม/ลบ รูปแบบได้ (บาท/ชุดเต็ม)</p>
       </div>
       <div class="flex items-center gap-2">
-        <div class="flex items-center gap-1 text-sm text-slate-700">
-          <input
-            type="number"
-            min="1"
-            class="w-20 rounded border border-slate-200 px-2 py-1 text-sm text-slate-800 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200"
-            placeholder="กว้าง"
-            v-model.number="newWidth"
-            @keyup.enter="addFormat"
-          />
-          <span class="px-1 text-xs text-slate-500">x</span>
-          <input
-            type="number"
-            min="1"
-            class="w-20 rounded border border-slate-200 px-2 py-1 text-sm text-slate-800 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200"
-            placeholder="สูง"
-            v-model.number="newHeight"
-            @keyup.enter="addFormat"
-          />
-        </div>
         <button
           type="button"
-          class="rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60"
-          :disabled="adding || !newWidth || !newHeight"
-          @click="addFormat"
+          class="rounded-full bg-amber-500 px-3 py-1 text-xs font-semibold text-white shadow hover:bg-amber-600 disabled:opacity-60"
+          :disabled="partsLoading || savingAllPartsFlag"
+          @click="emitSaveAllParts"
         >
-          {{ adding ? 'กำลังเพิ่ม...' : 'เพิ่มรูปแบบ' }}
-        </button>
-        <button
-          type="button"
-          class="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-          :disabled="loading"
-          @click="$emit('refresh')"
-        >
-          รีเฟรช
+          {{ savingAllPartsFlag ? 'กำลังบันทึกราคาชิ้นส่วน...' : 'บันทึกราคาชิ้นส่วน' }}
         </button>
       </div>
     </div>
 
-    <div v-if="error" class="mt-3 rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+    <div
+      v-if="error"
+      class="mt-3 rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-xs text-rose-700"
+    >
       {{ error }}
     </div>
 
     <div class="mt-4 overflow-hidden rounded-lg border border-slate-200 w-full">
-      <div class="grid" :style="{ gridTemplateColumns: `repeat(${partCosts.length}, minmax(140px, 1fr))` }">
+      <div
+        class="grid"
+        :style="{ gridTemplateColumns: `repeat(${partsSafe.length}, minmax(140px, 1fr))` }"
+      >
         <div
-          v-for="part in partCosts"
+          v-for="part in partsSafe"
           :key="part.key"
           class="bg-slate-50 px-3 py-2 text-[12px] font-semibold text-slate-600 uppercase tracking-wide text-center"
         >
           {{ part.name }}
         </div>
         <div
-          v-for="part in partCosts"
+          v-for="part in partsSafe"
           :key="`${part.key}-input`"
           class="px-3 py-3 border-t border-slate-200 flex items-center justify-center"
         >
           <div class="w-full max-w-[160px]">
             <label class="sr-only">ราคา {{ part.name }}</label>
             <div class="relative">
-              <span class="absolute left-2 top-1.5 text-xs text-slate-500">฿</span>
+              <span class="absolute left-2 top-1.5 text-xs text-slate-500"
+                >฿</span
+              >
               <input
                 type="number"
                 class="w-full rounded border border-slate-200 px-5 py-1.5 text-sm text-slate-800 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 text-right"
@@ -80,8 +63,55 @@
         </div>
       </div>
     </div>
+    <div class="flex flex-wrap items-center justify-end gap-3 my-3 mt-6">
+      <div class="flex items-center gap-1 text-sm text-slate-700">
+        <input
+          type="number"
+          min="1"
+          class="w-20 rounded border border-slate-200 px-2 py-1 text-sm text-slate-800 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200"
+          placeholder="กว้าง"
+          v-model.number="newWidth"
+          @keyup.enter="addFormat"
+        />
+        <span class="px-1 text-xs text-slate-500">x</span>
+        <input
+          type="number"
+          min="1"
+          class="w-20 rounded border border-slate-200 px-2 py-1 text-sm text-slate-800 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200"
+          placeholder="สูง"
+          v-model.number="newHeight"
+          @keyup.enter="addFormat"
+        />
+      </div>
+      <button
+        type="button"
+        class="rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60"
+        :disabled="adding || !newWidth || !newHeight"
+        @click="addFormat"
+      >
+        {{ adding ? 'กำลังเพิ่ม...' : 'เพิ่มรูปแบบ' }}
+      </button>
+      <button
+        type="button"
+        class="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+        :disabled="loading"
+        @click="$emit('refresh')"
+      >
+        รีเฟรช
+      </button>
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="rounded-full bg-indigo-600 px-3 py-1 text-xs font-semibold text-white shadow hover:bg-indigo-700 disabled:opacity-60"
+          :disabled="loading || savingAllFormatsFlag"
+          @click="emitSaveAllFormats"
+        >
+          {{ savingAllFormatsFlag ? 'กำลังบันทึกขนาด...' : 'บันทึกราคาขนาด' }}
+        </button>
+      </div>
+    </div>
 
-    <div class="mt-6 overflow-hidden rounded-lg border border-slate-200 w-full">
+    <div class="overflow-hidden rounded-lg border border-slate-200 w-full">
       <div
         class="grid grid-cols-[110px,110px,90px,90px,90px,70px,70px,70px,90px,120px,130px] md:grid-cols-[1fr,1fr,0.8fr,0.8fr,0.8fr,0.6fr,0.6fr,0.6fr,0.8fr,1fr,1.1fr] items-center bg-slate-50 px-3 py-2 text-[12px] font-semibold text-slate-600 uppercase tracking-wide"
       >
@@ -96,7 +126,6 @@
         <span class="text-right">studs</span>
         <span class="text-right">ราคา (บาท)</span>
         <span class="text-right">จัดการ</span>
-
       </div>
       <div v-if="loading" class="divide-y divide-slate-200">
         <div
@@ -104,16 +133,36 @@
           :key="n"
           class="grid grid-cols-[110px,110px,90px,90px,90px,70px,70px,70px,90px,120px,130px] md:grid-cols-[1fr,1fr,0.8fr,0.8fr,0.8fr,0.6fr,0.6fr,0.6fr,0.8fr,1fr,1.1fr] items-center px-3 py-3"
         >
-          <div class="flex justify-center"><div class="h-5 w-16 rounded bg-slate-100 animate-pulse"></div></div>
-          <div class="flex justify-center"><div class="h-5 w-16 rounded bg-slate-100 animate-pulse"></div></div>
-          <div class="flex justify-end"><div class="h-5 w-12 rounded bg-slate-100 animate-pulse"></div></div>
-          <div class="flex justify-end"><div class="h-5 w-12 rounded bg-slate-100 animate-pulse"></div></div>
-          <div class="flex justify-end"><div class="h-5 w-12 rounded bg-slate-100 animate-pulse"></div></div>
-          <div class="flex justify-end"><div class="h-5 w-12 rounded bg-slate-100 animate-pulse"></div></div>
-          <div class="flex justify-end"><div class="h-5 w-12 rounded bg-slate-100 animate-pulse"></div></div>
-          <div class="flex justify-end"><div class="h-9 w-28 rounded bg-slate-100 animate-pulse"></div></div>
-          <div class="flex justify-end"><div class="h-9 w-20 rounded bg-slate-100 animate-pulse"></div></div>
-          <div class="flex justify-end"><div class="h-9 w-20 rounded bg-slate-100 animate-pulse"></div></div>
+          <div class="flex justify-center">
+            <div class="h-5 w-16 rounded bg-slate-100 animate-pulse"></div>
+          </div>
+          <div class="flex justify-center">
+            <div class="h-5 w-16 rounded bg-slate-100 animate-pulse"></div>
+          </div>
+          <div class="flex justify-end">
+            <div class="h-5 w-12 rounded bg-slate-100 animate-pulse"></div>
+          </div>
+          <div class="flex justify-end">
+            <div class="h-5 w-12 rounded bg-slate-100 animate-pulse"></div>
+          </div>
+          <div class="flex justify-end">
+            <div class="h-5 w-12 rounded bg-slate-100 animate-pulse"></div>
+          </div>
+          <div class="flex justify-end">
+            <div class="h-5 w-12 rounded bg-slate-100 animate-pulse"></div>
+          </div>
+          <div class="flex justify-end">
+            <div class="h-5 w-12 rounded bg-slate-100 animate-pulse"></div>
+          </div>
+          <div class="flex justify-end">
+            <div class="h-9 w-28 rounded bg-slate-100 animate-pulse"></div>
+          </div>
+          <div class="flex justify-end">
+            <div class="h-9 w-20 rounded bg-slate-100 animate-pulse"></div>
+          </div>
+          <div class="flex justify-end">
+            <div class="h-9 w-20 rounded bg-slate-100 animate-pulse"></div>
+          </div>
         </div>
       </div>
       <div v-else class="divide-y divide-slate-200">
@@ -128,13 +177,27 @@
           <div class="text-center text-sm font-semibold text-slate-800">
             {{ normalizedSize(item).height ?? '-' }}
           </div>
-          <div class="text-right text-sm text-slate-700">{{ stats(item)?.base16 ?? 0 }}</div>
-          <div class="text-right text-sm text-slate-700">{{ stats(item)?.base32 ?? 0 }}</div>
-          <div class="text-right text-sm text-slate-700">{{ stats(item)?.corners ?? 0 }}</div>
-          <div class="text-right text-sm text-slate-700">{{ stats(item)?.clips ?? 0 }}</div>
-          <div class="text-right text-sm text-slate-700">{{ stats(item)?.sideShort ?? 0 }}</div>
-          <div class="text-right text-sm text-slate-700">{{ stats(item)?.sideLong ?? 0 }}</div>
-          <div class="text-right text-sm text-slate-700">{{ stats(item)?.studs?.toLocaleString?.() ?? 0 }}</div>
+          <div class="text-right text-sm text-slate-700">
+            {{ stats(item)?.base16 ?? 0 }}
+          </div>
+          <div class="text-right text-sm text-slate-700">
+            {{ stats(item)?.base32 ?? 0 }}
+          </div>
+          <div class="text-right text-sm text-slate-700">
+            {{ stats(item)?.corners ?? 0 }}
+          </div>
+          <div class="text-right text-sm text-slate-700">
+            {{ stats(item)?.clips ?? 0 }}
+          </div>
+          <div class="text-right text-sm text-slate-700">
+            {{ stats(item)?.sideShort ?? 0 }}
+          </div>
+          <div class="text-right text-sm text-slate-700">
+            {{ stats(item)?.sideLong ?? 0 }}
+          </div>
+          <div class="text-right text-sm text-slate-700">
+            {{ stats(item)?.studs?.toLocaleString?.() ?? 0 }}
+          </div>
           <div class="flex justify-end">
             <input
               type="number"
@@ -145,14 +208,6 @@
             />
           </div>
           <div class="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              class="rounded-full bg-indigo-600 px-3 py-1 text-xs font-semibold text-white shadow hover:bg-indigo-700 disabled:opacity-50"
-              :disabled="saving?.[itemKey(item)]"
-              @click="onSave(item)"
-            >
-              {{ saving?.[itemKey(item)] ? 'กำลังบันทึก...' : 'บันทึก' }}
-            </button>
             <button
               type="button"
               class="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-40"
@@ -177,6 +232,12 @@ const props = defineProps<{
   error?: string | null;
   saving?: Record<string, boolean>;
   adding?: boolean;
+  parts?: Array<{ key: string; name: string; price: number | null }>;
+  partsLoading?: boolean;
+  partSaving?: Record<string, boolean>;
+  partError?: string | null;
+  savingAllFormats?: boolean;
+  savingAllParts?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -184,13 +245,19 @@ const emit = defineEmits<{
   (e: 'save', payload: { size: string; width: number | null; height: number | null; price: number | null }): void;
   (e: 'delete', size: string): void;
   (e: 'add', payload: { width: number; height: number }): void;
+  (e: 'save-part', key: string, price: number | null): void;
+  (e: 'save-all-formats', payloads: Array<{ size: string; width: number | null; height: number | null; price: number | null }>): void;
+  (e: 'save-all-parts', payloads: Array<{ key: string; price: number | null }>): void;
 }>();
 
 const drafts = reactive<Record<string, string | number>>({});
 const newWidth = ref<number | null>(null);
 const newHeight = ref<number | null>(null);
 const adding = computed(() => props.adding === true);
-
+const partsSafe = computed(() => props.parts ?? []);
+const partPriceDrafts = reactive<Record<string, string | number>>({});
+const savingAllFormatsFlag = computed(() => props.savingAllFormats === true);
+const savingAllPartsFlag = computed(() => props.savingAllParts === true);
 const normalizedSize = (item: any): { size: string; width: number | null; height: number | null } => {
   const w = Number(item.width ?? 0);
   const h = Number(item.height ?? 0);
@@ -277,20 +344,15 @@ const formatNumber = (value: number | string | null | undefined) => {
   return num.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-const partCosts = [
-  { key: 'base16', name: 'ฐาน 16x16', price: 16.13 },
-  { key: 'base32', name: 'ฐาน 32x32', price: 16.13 },
-  { key: 'frame', name: 'ชิ้นส่วนกรอบ (ขอบ)', price: 4.61 },
-  { key: 'corners', name: 'ชิ้นส่วนกรอบ (มุม)', price: 4.94 },
-  { key: 'clips', name: 'รูแขวน', price: 3.3 },
-  { key: 'studs', name: 'Stud', price: 0.09 }
-] as const;
-
-const partPriceDrafts = reactive<Record<string, string | number>>(
-  partCosts.reduce((acc, p) => {
-    acc[p.key] = p.price;
-    return acc;
-  }, {} as Record<string, string | number>)
+watch(
+  () => props.parts,
+  (next) => {
+    if (!next) return;
+    next.forEach((p) => {
+      partPriceDrafts[p.key] = p.price ?? '';
+    });
+  },
+  { deep: true, immediate: true }
 );
 
 watch(
@@ -300,4 +362,29 @@ watch(
   },
   { deep: true }
 );
+
+const emitSaveAllFormats = () => {
+  const payloads = (props.formats ?? []).map((item) => {
+    const ordered = normalizedSize(item);
+    const key = itemKey(item);
+    const pRaw = drafts[key];
+    const price = pRaw === '' || pRaw == null ? item.price ?? null : Number(pRaw);
+    return {
+      size: ordered.size,
+      width: ordered.width,
+      height: ordered.height,
+      price: Number.isNaN(price as number) ? null : (price as number)
+    };
+  });
+  emit('save-all-formats', payloads);
+};
+
+const emitSaveAllParts = () => {
+  const payloads = partsSafe.value.map((p) => {
+    const val = partPriceDrafts[p.key];
+    const num = val === '' || val == null ? null : Number(val);
+    return { key: p.key, price: Number.isNaN(num as number) ? null : (num as number) };
+  });
+  emit('save-all-parts', payloads);
+};
 </script>

@@ -120,10 +120,19 @@
                   :error="formatPricesError"
                   :saving="formatPricesSaving"
                   :adding="formatAdding"
-                  @refresh="loadFormatPrices"
+                  :parts="partPrices"
+                  :parts-loading="partPricesLoading"
+                  :part-saving="partPricesSaving"
+                  :part-error="partPricesError"
+                  :saving-all-formats="formatPricesLoading"
+                  :saving-all-parts="partPricesSavingAll"
+                  @refresh="() => { loadFormatPrices(); loadPartPrices(); }"
                   @save="handleSaveFormatPrice"
+                  @save-all-formats="handleSaveAllFormatPrices"
                   @add="handleAddFormatSize"
                   @delete="handleDeleteFormatSize"
+                  @save-part="handleSavePartPrice"
+                  @save-all-parts="handleSaveAllPartPrices"
                 />
 
                 <UserRolesSection
@@ -181,7 +190,71 @@ const formatPricesLoading = ref(false);
 const formatPricesError = ref<string | null>(null);
 const formatPricesSaving = ref<Record<string, boolean>>({});
 const formatAdding = ref(false);
+const defaultPartPrices = [
+  { key: 'plate-16', name: 'ฐาน 16x16', price: 16.13 },
+  { key: 'plate-32', name: 'ฐาน 32x32', price: 16.13 },
+  { key: 'frame-edge', name: 'ชิ้นส่วนกรอบ (ขอบ)', price: 4.61 },
+  { key: 'frame-corner', name: 'ชิ้นส่วนกรอบ (มุม)', price: 4.94 },
+  { key: 'hanger', name: 'รูแขวน', price: 3.3 },
+  { key: 'stud-pack', name: '3024 Brick 1x1 (ต่อชิ้น)', price: 0.09 }
+];
+const partPrices = ref<Array<{ key: string; name: string; price: number | null }>>(defaultPartPrices);
+const partPricesLoading = ref(false);
+const partPricesSaving = ref<Record<string, boolean>>({});
+const partPricesError = ref<string | null>(null);
+const partPricesSavingAll = ref(false);
+const loadPartPrices = async () => {
+  partPricesLoading.value = true;
+  partPricesError.value = null;
+  try {
+    const { data, error } = await supabase.from('part_prices').select('part_key, price');
+    if (error) throw error;
+    const map = new Map<string, number | null>();
+    data?.forEach((row: any) => {
+      map.set(String(row.part_key), row.price != null ? Number(row.price) : null);
+    });
+    partPrices.value = defaultPartPrices.map((p) => ({
+      ...p,
+      price: map.has(p.key) ? map.get(p.key) ?? null : p.price ?? null
+    }));
+  } catch (error: any) {
+    partPricesError.value = error?.message ?? 'โหลดราคาชิ้นส่วนไม่สำเร็จ';
+    partPrices.value = defaultPartPrices;
+  } finally {
+    partPricesLoading.value = false;
+  }
+};
 
+const handleSavePartPrice = async (key: string, price: number | null) => {
+  const normalized = key;
+  partPricesSaving.value[normalized] = true;
+  partPricesError.value = null;
+  try {
+    const { error } = await supabase.from('part_prices').upsert({ part_key: normalized, price: price ?? 0 }, { onConflict: 'part_key' });
+    if (error) throw error;
+    await loadPartPrices();
+  } catch (error: any) {
+    partPricesError.value = error?.message ?? 'บันทึกราคาชิ้นส่วนไม่สำเร็จ';
+  } finally {
+    partPricesSaving.value[normalized] = false;
+  }
+};
+
+const handleSaveAllPartPrices = async (payloads: Array<{ key: string; price: number | null }>) => {
+  if (!Array.isArray(payloads) || payloads.length === 0) return;
+  partPricesSavingAll.value = true;
+  partPricesError.value = null;
+  try {
+    const rows = payloads.map((p) => ({ part_key: p.key, price: p.price ?? 0 }));
+    const { error } = await supabase.from('part_prices').upsert(rows, { onConflict: 'part_key' });
+    if (error) throw error;
+    await loadPartPrices();
+  } catch (error: any) {
+    partPricesError.value = error?.message ?? 'บันทึกราคาชิ้นส่วนไม่สำเร็จ';
+  } finally {
+    partPricesSavingAll.value = false;
+  }
+};
 const parseSizeText = (value: any): { width: number; height: number } | null => {
   if (!value) return null;
   if (typeof value === 'string') {
@@ -370,6 +443,27 @@ const handleSaveFormatPrice = async (payload: { size: string; width: number | nu
   }
 };
 
+const handleSaveAllFormatPrices = async (payloads: Array<{ size: string; width: number | null; height: number | null; price: number | null }>) => {
+  if (!Array.isArray(payloads) || payloads.length === 0) return;
+  formatPricesLoading.value = true;
+  formatPricesError.value = null;
+  try {
+    const rows = payloads.map((p) => ({
+      size: p.size,
+      width: p.width,
+      height: p.height,
+      price: p.price ?? 0
+    }));
+    const { error } = await supabase.from('format_prices').upsert(rows, { onConflict: 'size' });
+    if (error) throw error;
+    await loadFormatPrices();
+  } catch (error: any) {
+    formatPricesError.value = error?.message ?? 'บันทึกแบบขนาดไม่สำเร็จ';
+  } finally {
+    formatPricesLoading.value = false;
+  }
+};
+
 const handleAddFormatSize = async (payload: { width: number; height: number }) => {
   const size = `${payload.width}x${payload.height}`;
   const key = size.toLowerCase();
@@ -493,7 +587,7 @@ const handleDeleteProduct = async (id: number | string) => {
 };
 
 const loadAll = async () => {
-  await Promise.allSettled([loadOrders(), loadProducts(), loadUserRoles(), loadFormatPrices()]);
+  await Promise.allSettled([loadOrders(), loadProducts(), loadUserRoles(), loadFormatPrices(), loadPartPrices()]);
 };
 
 watch(
