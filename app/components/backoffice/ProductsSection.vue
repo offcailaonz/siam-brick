@@ -235,7 +235,8 @@ const form = reactive({
   difficulty: 'Beginner',
   size: '',
   image: '',
-  active: true
+  active: true,
+  formatPriceMeta: null as any
 });
 
 const saveSuccess = ref('');
@@ -253,6 +254,7 @@ const resetForm = () => {
   form.size = '';
   form.image = '';
   form.active = true;
+  form.formatPriceMeta = null;
   saveSuccess.value = '';
 };
 
@@ -267,6 +269,7 @@ const editProduct = (p: any) => {
   form.size = p.metadata?.size ?? '';
   form.image = p.metadata?.image ?? '';
   form.active = p.active !== false;
+  form.formatPriceMeta = p.metadata?.format_price ?? null;
   saveSuccess.value = '';
   showModal.value = true;
 };
@@ -313,6 +316,11 @@ const handleGeneratedProduct = (payload: any) => {
   form.tag = form.tag || 'พร้อมสร้าง';
   form.difficulty = form.difficulty || 'Intermediate';
   form.size = `${payload.resolution?.width ?? ''}x${payload.resolution?.height ?? ''}`.trim();
+  const priceAmount = payload.formatPrice ?? payload.formatPriceMeta?.amount ?? null;
+  if (priceAmount != null && !Number.isNaN(Number(priceAmount))) {
+    form.priceKit = Number(priceAmount);
+  }
+  form.formatPriceMeta = payload.formatPriceMeta ?? form.formatPriceMeta;
   showGeneratorModal.value = false;
   showModal.value = true;
 };

@@ -52,15 +52,37 @@
         :initial-crop-interaction="initialCropInteraction"
         :default-image-src="initialImageSrc"
         :editing-order-id="orderId"
+        :initial-format-price="initialFormatPrice"
         :initial-step2-preview="initialStep2Preview"
         :initial-step3-preview="initialStep3Preview"
         :initial-step3-base="initialStep3Base"
+        @preview-modal="handlePreviewModal"
       />
     </div>
   </div>
+  <BaseModal :open="previewModalOpen" title="ตัวอย่าง Step 3" max-width-class="max-w-4xl" @close="closePreviewModal">
+    <div class="mt-2 flex items-center justify-center bg-slate-50 rounded-xl border border-slate-200 p-3">
+      <img
+        v-if="previewModalSrc"
+        :src="previewModalSrc"
+        alt="Step 3 preview"
+        class="max-h-[80vh] w-full object-contain rounded-lg bg-white"
+      />
+      <p v-else class="text-sm text-slate-500">ยังไม่มีรูปตัวอย่าง</p>
+    </div>
+  </BaseModal>
 </template>
 
 <script setup lang="ts">
+type FormatPriceMeta = {
+  amount: number;
+  width?: number | null;
+  height?: number | null;
+  size?: string | null;
+};
+
+import BaseModal from '~/components/ui/BaseModal.vue';
+
 const route = useRoute();
 const router = useRouter();
 const { user, requireAuth } = useAuthFlow();
@@ -74,16 +96,83 @@ const initialCropInteraction = ref<any | null>(null);
 const initialStep2Preview = ref<string | null>(null);
 const initialStep3Preview = ref<string | null>(null);
 const initialStep3Base = ref<string | null>(null);
+const initialFormatPrice = ref<number | null>(null);
 const savingEdits = ref(false);
 const saveMessage = ref<string | null>(null);
 const lastLoadedKey = ref<string | null>(null);
+const orderMetadata = ref<Record<string, any> | null>(null);
+const previewModalOpen = ref(false);
+const previewModalSrc = ref<string | null>(null);
 
 const step2PreviewForOrder = useState<string | null>('brick-step2-preview', () => null);
 const finalPreview = useState<string | null>('brick-final-step3-preview', () => null);
 const originalImageForOrder = useState<string | null>('brick-original-image', () => null);
 const cropInteractionForOrder = useState<Record<string, any> | null>('brick-crop-interaction', () => null);
+const formatPrice = useState<number | null>('brick-format-price', () => null);
+const formatPriceMeta = useState<FormatPriceMeta | null>('brick-format-price-meta', () => null);
 
 const checkoutLink = computed(() => (orderId.value ? `/checkout?id=${orderId.value}` : '/checkout'));
+const handlePreviewModal = (payload: { src: string | null }) => {
+  previewModalSrc.value = payload?.src ?? null;
+  previewModalOpen.value = Boolean(payload?.src);
+};
+const closePreviewModal = () => {
+  previewModalOpen.value = false;
+  previewModalSrc.value = null;
+};
+const normalizeFormatPriceMeta = (meta: any): FormatPriceMeta | null => {
+  if (!meta || meta.amount == null) return null;
+  const amount = Number(meta.amount);
+  if (Number.isNaN(amount)) return null;
+  const width = meta.width != null ? Number(meta.width) : null;
+  const height = meta.height != null ? Number(meta.height) : null;
+  const size =
+    typeof meta.size === 'string' && meta.size.trim()
+      ? meta.size
+      : width != null && height != null
+        ? `${Math.min(width, height)}x${Math.max(width, height)}`
+        : null;
+  return {
+    amount,
+    width,
+    height,
+    size
+  };
+};
+const mergeOrderMetadata = (normalizedAmount: number | null): Record<string, any> | undefined => {
+  const baseMetadata = orderMetadata.value ?? {};
+  const sourceMeta = formatPriceMeta.value ?? (normalizedAmount != null ? { amount: normalizedAmount } : null);
+  const amount = normalizedAmount ?? (sourceMeta?.amount != null ? Number(sourceMeta.amount) : null);
+  const width = sourceMeta?.width != null ? Number(sourceMeta.width) : null;
+  const height = sourceMeta?.height != null ? Number(sourceMeta.height) : null;
+  const size =
+    sourceMeta?.size && typeof sourceMeta.size === 'string' && sourceMeta.size.trim()
+      ? sourceMeta.size
+      : width != null && height != null
+        ? `${Math.min(width, height)}x${Math.max(width, height)}`
+        : null;
+
+  const formatPricePayload =
+    amount != null && !Number.isNaN(amount)
+      ? {
+          amount,
+          width,
+          height,
+          size
+        }
+      : null;
+
+  if (!formatPricePayload && !orderMetadata.value) {
+    return undefined;
+  }
+
+  const merged = {
+    ...baseMetadata,
+    ...(formatPricePayload ? { format_price: formatPricePayload } : {})
+  };
+
+  return Object.keys(merged).length > 0 ? merged : undefined;
+};
 
 const loadOrderForEdit = async (force = false) => {
   if (!orderId.value) return;
@@ -112,11 +201,16 @@ const loadOrderForEdit = async (force = false) => {
     }
     initialImageSrc.value = data.original_image || null;
     initialCropInteraction.value = data.crop_interaction || null;
+    orderMetadata.value = data.metadata ?? null;
     const apiStep3Base =
       (typeof data.preview_base === 'string' && data.preview_base) ||
       (typeof data.step3_base === 'string' && data.step3_base) ||
       null;
     initialStep3Base.value = apiStep3Base;
+    const metaPriceRaw = data.metadata?.format_price?.amount ?? data.total_amount ?? null;
+    const metaPrice = metaPriceRaw != null ? Number(metaPriceRaw) : null;
+    initialFormatPrice.value = metaPrice != null && !Number.isNaN(metaPrice) ? metaPrice : null;
+    formatPriceMeta.value = normalizeFormatPriceMeta(data.metadata?.format_price);
     initialStep2Preview.value = data.preview_url || null;
     step2PreviewForOrder.value = data.preview_url || null;
     initialStep3Preview.value = null;
@@ -156,6 +250,9 @@ const handleSaveEdits = async (): Promise<boolean> => {
     saveMessage.value = 'ยังไม่มีภาพ Step 2 หลังแก้ไข กรุณาบันทึกอีกครั้ง';
     return false;
   }
+  const normalizedAmount = formatPrice.value != null ? Number(formatPrice.value) : null;
+  const priceAmount = normalizedAmount != null && !Number.isNaN(normalizedAmount) ? normalizedAmount : null;
+  const mergedMetadata = mergeOrderMetadata(priceAmount);
   savingEdits.value = true;
   try {
     await updateOrderAssets(
@@ -164,10 +261,15 @@ const handleSaveEdits = async (): Promise<boolean> => {
         previewUrl: step2PreviewForOrder.value,
         source: 'brick:edit',
         cropInteraction: cropInteractionForOrder.value ?? null,
-        originalImage: originalImageForOrder.value ?? null
+        originalImage: originalImageForOrder.value ?? null,
+        totalAmount: priceAmount ?? undefined,
+        metadata: mergedMetadata
       },
       user.value.id
     );
+    if (mergedMetadata) {
+      orderMetadata.value = mergedMetadata;
+    }
     saveMessage.value = 'บันทึกการแก้ไขเรียบร้อย';
     return true;
   } catch (error: any) {

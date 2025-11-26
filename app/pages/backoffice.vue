@@ -627,7 +627,9 @@ const handleSaveProduct = async (payload: any) => {
       studs: payload.studs ?? null,
       difficulty: payload.difficulty || null,
       size: payload.size || null,
-      image: payload.image || null
+      image: payload.image || null,
+      priceKit: payload.priceKit ?? null,
+      format_price: payload.formatPriceMeta ?? null
     };
     const { error } = await supabase
       .from('products')

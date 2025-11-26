@@ -896,6 +896,9 @@ const summaryPrice = computed(() => {
   const rawAmount = summaryOrder.value?.total_amount;
   const normalized = rawAmount != null ? Number(rawAmount) : NaN;
   if (!Number.isNaN(normalized) && normalized > 0) return normalized;
+  const metadataAmount = summaryOrder.value?.metadata?.format_price?.amount;
+  const normalizedMetadata = metadataAmount != null ? Number(metadataAmount) : NaN;
+  if (!Number.isNaN(normalizedMetadata) && normalizedMetadata > 0) return normalizedMetadata;
   if (productPrice.value != null) {
     return productPrice.value;
   }

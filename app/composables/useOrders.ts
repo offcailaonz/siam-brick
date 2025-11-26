@@ -53,7 +53,7 @@ export const useOrders = () => {
 
   const updateOrderAssets = async (
     orderId: string | number,
-    payload: Pick<OrderPayload, 'previewUrl' | 'source' | 'cropInteraction' | 'originalImage' | 'metadata'>,
+    payload: Pick<OrderPayload, 'previewUrl' | 'source' | 'cropInteraction' | 'originalImage' | 'metadata' | 'totalAmount'>,
     userId?: string
   ) => {
     const updatePayload: Record<string, any> = {};
@@ -61,6 +61,7 @@ export const useOrders = () => {
     if (payload.source !== undefined) updatePayload.source = payload.source;
     if (payload.cropInteraction !== undefined) updatePayload.crop_interaction = payload.cropInteraction;
     if (payload.originalImage !== undefined) updatePayload.original_image = payload.originalImage;
+    if (payload.totalAmount !== undefined) updatePayload.total_amount = payload.totalAmount;
     if (payload.metadata !== undefined) updatePayload.metadata = payload.metadata;
 
     let query = supabase.from('orders').update(updatePayload).eq('id', orderId);

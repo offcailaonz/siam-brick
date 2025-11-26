@@ -255,8 +255,18 @@
                   :key="order.id"
                   class="rounded-lg border border-slate-100 bg-slate-50 px-3 py-3"
                 >
-                  <div class="flex items-center justify-between gap-2">
-                    <div>
+                  <div class="flex items-start gap-3">
+                    <div
+                      v-if="orderPreview(order)"
+                      class="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white"
+                    >
+                      <img
+                        :src="orderPreview(order)"
+                        alt="order preview"
+                        class="h-full w-full object-contain"
+                      />
+                    </div>
+                    <div class="flex-1">
                       <p class="text-sm font-semibold text-slate-900">
                         ออเดอร์ #{{ order.id }}
                       </p>
@@ -264,59 +274,70 @@
                         อัปเดต
                         {{ formatDateTime(order.updated_at || order.created_at) }}
                       </p>
-                    </div>
-                    <span
-                      class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold"
-                      :class="statusBadge(order.status).color"
-                    >
-                      {{ statusBadge(order.status).text }}
-                    </span>
-                  </div>
-                  <div
-                    class="mt-2 flex items-center justify-between text-sm text-slate-600"
-                  >
-                    <span>ยอดรวม</span>
-                    <span
-                      class="font-semibold text-slate-900"
-                      >{{ formatCurrency(order.total_amount) }}</span
-                    >
-                  </div>
-                  <div
-                    v-if="isPending(order.status)"
-                    class="mt-3 flex flex-wrap items-center gap-2"
-                  >
-                    <template v-if="paymentLink(order)">
-                      <a
-                        :href="paymentLink(order)"
-                        target="_blank"
-                        rel="noopener"
-                        class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
-                      >
-                        ไปชำระเงิน
-                      </a>
-                      <p class="text-xs text-slate-500">
-                        เปิดลิงก์จ่ายในหน้าต่างใหม่
-                      </p>
-                    </template>
-                    <template v-else>
-                      <div class="flex flex-wrap items-center gap-2">
-                        <NuxtLink
-                          :to="`/brick?id=${order.id}`"
-                          class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                      <div class="mt-1 flex flex-wrap items-center gap-2">
+                        <span
+                          class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold"
+                          :class="statusBadge(order.status).color"
                         >
-                          แก้ไขรูปภาพ
-                        </NuxtLink>
-                        <NuxtLink
-                          :to="`/checkout?id=${order.id}`"
-                          class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
+                          {{ statusBadge(order.status).text }}
+                        </span>
+                        <span
+                          v-if="isReadyKitOrder(order)"
+                          class="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700 border border-amber-100"
                         >
-                          ชำระเงิน
-                        </NuxtLink>
+                          Ready Kit
+                        </span>
+                        <span
+                          v-if="order.is_locked_for_edits"
+                          class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-700 border border-slate-200"
+                        >
+                          ล็อกแก้ไข
+                        </span>
                       </div>
-                      <p class="text-xs text-slate-500">
-                        {{ order.payment_ref ? `เลขอ้างอิงการจ่าย: ${order.payment_ref}` : 'ยังไม่มีลิงก์จ่าย ทีมงานจะติดต่อให้ชำระ' }}
-                      </p>
-                    </template>
+                    </div>
+                    <div class="text-end text-xl text-slate-600">
+                      <span
+                        class="font-semibold text-slate-900"
+                        >{{ formatCurrency(order.total_amount) }}</span
+                      >
+                      <div
+                        v-if="isPending(order.status)"
+                        class="mt-3 flex flex-wrap items-center gap-2"
+                      >
+                        <template v-if="paymentLink(order)">
+                          <a
+                            :href="paymentLink(order)"
+                            target="_blank"
+                            rel="noopener"
+                            class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
+                          >
+                            ไปชำระเงิน
+                          </a>
+                          <p class="text-xs text-slate-500">
+                            เปิดลิงก์จ่ายในหน้าต่างใหม่
+                          </p>
+                        </template>
+                        <template v-else>
+                          <div
+                            class="flex flex-wrap items-center gap-2 items-center"
+                          >
+                            <NuxtLink
+                              v-if="canEditOrder(order)"
+                              :to="`/brick?id=${order.id}`"
+                              class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                            >
+                              แก้ไขรูปภาพ
+                            </NuxtLink>
+                            <NuxtLink
+                              :to="`/checkout?id=${order.id}`"
+                              class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
+                            >
+                              ชำระเงิน
+                            </NuxtLink>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div
@@ -460,6 +481,31 @@ const formatCurrency = (value: number | string | null | undefined) => {
   const num = Number(value);
   if (Number.isNaN(num)) return '—';
   return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', maximumFractionDigits: 0 }).format(num);
+};
+
+const isReadyKitOrder = (order: Record<string, any>) => {
+  if (!order) return false;
+  const source = typeof order.source === 'string' ? order.source.toLowerCase() : '';
+  const meta = order.metadata ?? {};
+  return source.includes('product') || Boolean(meta.product_id || meta.product_slug || meta.product_name);
+};
+
+const canEditOrder = (order: Record<string, any>) => {
+  if (!order) return false;
+  if (order.is_locked_for_edits) return false;
+  return !isReadyKitOrder(order);
+};
+
+const orderPreview = (order: Record<string, any>) => {
+  const candidates = [
+    order?.preview_url,
+    order?.preview,
+    order?.metadata?.image,
+    order?.metadata?.product_image,
+    order?.metadata?.product_preview
+  ];
+  const found = candidates.find((p) => typeof p === 'string' && p.trim());
+  return found ? String(found).trim() : null;
 };
 
 const isPending = (status: string | null | undefined) => {

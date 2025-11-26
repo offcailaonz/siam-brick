@@ -381,15 +381,17 @@
             <div class="preview-square border border-emerald-200 mb-4">
               <canvas
                 ref="step3UpscaledCanvas"
-                class="preview-media"
+                class="preview-media cursor-zoom-in"
                 style="image-rendering: pixelated;"
                 v-show="step3Ready && !showApiStep3Preview"
+                @click="step3Ready ? openPreviewModal() : null"
               ></canvas>
               <img
                 v-if="showApiStep3Preview && apiStep3Preview"
                 :src="apiStep3Preview || undefined"
                 alt="Step 3 preview from order"
-                class="preview-media bg-white object-contain"
+                class="preview-media bg-white object-contain cursor-zoom-in"
+                @click="openPreviewModal"
               />
             </div>
             <div class="flex items-center justify-between">
@@ -764,6 +766,12 @@ type StepImageSnapshot = {
 
 type PixelColorReplacement = [number, number, number, number?];
 type PixelColorRemap = Record<string, PixelColorReplacement>;
+type FormatPriceMeta = {
+  amount: number;
+  width?: number | null;
+  height?: number | null;
+  size?: string | null;
+};
 
 const props = withDefaults(
   defineProps<{
@@ -772,28 +780,30 @@ const props = withDefaults(
     redirectOnUpload?: string | null;
     defaultImageSrc?: string | null;
     initialCropInteraction?: CropInteractionState | null;
-    enablePersistence?: boolean;
-    enablePriceFetch?: boolean;
-    editingOrderId?: string | number | null;
-    initialStep2Preview?: string | null;
-    initialStep3Preview?: string | null;
-    initialStep3Base?: string | null;
-    showGenerateAction?: boolean;
-    generateLabel?: string;
+  enablePersistence?: boolean;
+  enablePriceFetch?: boolean;
+  editingOrderId?: string | number | null;
+  initialFormatPrice?: number | null;
+  initialStep2Preview?: string | null;
+  initialStep3Preview?: string | null;
+  initialStep3Base?: string | null;
+  showGenerateAction?: boolean;
+  generateLabel?: string;
   }>(),
   {
     showStep4: true,
     redirectOnUpload: null,
     defaultImageSrc: null,
-    initialCropInteraction: null,
-    enablePersistence: false,
-    enablePriceFetch: true,
-    editingOrderId: null,
-    initialStep2Preview: null,
-    initialStep3Preview: null,
-    initialStep3Base: null,
-    showGenerateAction: false,
-    generateLabel: 'ใช้ผลลัพธ์นี้'
+  initialCropInteraction: null,
+  enablePersistence: false,
+  enablePriceFetch: true,
+  editingOrderId: null,
+  initialFormatPrice: null,
+  initialStep2Preview: null,
+  initialStep3Preview: null,
+  initialStep3Base: null,
+  showGenerateAction: false,
+  generateLabel: 'ใช้ผลลัพธ์นี้'
   }
 );
 
@@ -805,8 +815,11 @@ const emit = defineEmits<{
       studs: number;
       studUsage: Array<{ hex: string; name?: string; count: number }>;
       resolution: { width: number; height: number };
+      formatPrice?: number | null;
+      formatPriceMeta?: FormatPriceMeta | null;
     }
   ): void;
+  (e: 'preview-modal', payload: { src: string | null }): void;
 }>();
 
 const router = useRouter();
@@ -850,6 +863,8 @@ const cropInteractionForOrder = useState<CropInteractionState | null>('brick-cro
 const formatPrice = useState<number | null>('brick-format-price', () => null);
 const formatPriceLoading = useState<boolean>('brick-format-price-loading', () => false);
 const formatPriceError = useState<string | null>('brick-format-price-error', () => null);
+const formatPriceMeta = useState<FormatPriceMeta | null>('brick-format-price-meta', () => null);
+const skipInitialPriceFetch = ref<boolean>(Boolean(props.editingOrderId && props.initialFormatPrice != null));
 const isCreatingCheckoutOrder = ref(false);
 const checkoutOrderError = ref<string | null>(null);
 const shouldSkipPersistence = computed(() => Boolean(props.editingOrderId || props.defaultImageSrc));
@@ -1582,11 +1597,6 @@ const resetStep2Edits = () => {
 
 const confirmResetEditsForStep1Change = () => {
   if (!hasStep2Edits.value) {
-    useStep2PixelsAsSource.value = false;
-    step2Ready.value = false;
-    step3Ready.value = false;
-    showApiStep3Preview.value = false;
-    finalStep3Preview.value = null;
     return true;
   }
   const ok = window.confirm('การเปลี่ยนขนาด/ตำแหน่งครอปจะรีเซ็ตการแก้ไข Step 2/3 ทั้งหมด ต้องการดำเนินการต่อหรือไม่?');
@@ -1628,12 +1638,24 @@ const emitGenerated = () => {
     apiStep3Preview.value ||
     null;
   const studs = step3StudTotal.value;
+  const priceAmount = formatPrice.value != null ? Number(formatPrice.value) : null;
   emit('generated', {
     preview,
     studs,
     studUsage: step3StudUsage.value,
-    resolution: { width: targetResolution.width, height: targetResolution.height }
+    resolution: { width: targetResolution.width, height: targetResolution.height },
+    formatPrice: priceAmount,
+    formatPriceMeta: formatPriceMeta.value ?? (priceAmount != null ? buildFormatPriceMeta(priceAmount) : null)
   });
+};
+
+const openPreviewModal = () => {
+  const preview =
+    step3UpscaledCanvas.value?.toDataURL('image/png') ||
+    finalStep3Preview.value ||
+    apiStep3Preview.value ||
+    null;
+  emit('preview-modal', { src: preview });
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
@@ -2265,42 +2287,55 @@ const onFileChange = (event: Event) => {
   reader.readAsDataURL(file);
 };
 
+const buildFormatPriceMeta = (amount: number, width?: number, height?: number): FormatPriceMeta => {
+  const w = width ?? targetResolution.width;
+  const h = height ?? targetResolution.height;
+  const minSide = Math.min(w, h);
+  const maxSide = Math.max(w, h);
+  return {
+    amount,
+    width: w,
+    height: h,
+    size: `${minSide}x${maxSide}`
+  };
+};
+
 const fetchFormatPrice = async () => {
   if (!step1Ready.value || !props.enablePriceFetch) {
     formatPriceLoading.value = false;
     formatPriceError.value = null;
     if (!props.enablePriceFetch) {
       formatPrice.value = null;
+      formatPriceMeta.value = null;
     }
     return;
   }
+  if (skipInitialPriceFetch.value && formatPrice.value != null) {
+    skipInitialPriceFetch.value = false;
+    return;
+  }
+  skipInitialPriceFetch.value = false;
   formatPriceLoading.value = true;
   formatPriceError.value = null;
   try {
-    const normalizeSize = (width: number, height: number) => {
-      const a = Math.min(width, height);
-      const b = Math.max(width, height);
-      return { width: a, height: b, size: `${a}x${b}` };
-    };
-    const { width, height, size } = normalizeSize(targetResolution.width, targetResolution.height);
-    const { data, error } = await supabase
-      .from('format_prices')
-      .select('size, width, height, price')
-      .or(`size.eq.${size},and(width.eq.${width},height.eq.${height}),and(width.eq.${height},height.eq.${width})`)
-      .maybeSingle();
-
-    if (error && error.code !== 'PGRST116') {
-      throw error;
-    }
-    if (!data) {
+    const lookup = await lookupFormatPrice();
+    if (!lookup) {
       formatPrice.value = null;
-      formatPriceError.value = 'ไม่พบราคาฟอร์แมตนี้';
+      formatPriceMeta.value = null;
       return;
     }
-
-    formatPrice.value = data.price ?? null;
+    if (lookup.notFound) {
+      formatPrice.value = null;
+      formatPriceError.value = 'ไม่พบราคาฟอร์แมตนี้';
+      formatPriceMeta.value = null;
+      return;
+    }
+    formatPrice.value = lookup.price ?? null;
+    formatPriceMeta.value =
+      lookup.price != null ? buildFormatPriceMeta(Number(lookup.price), lookup.width, lookup.height) : null;
   } catch (error: any) {
     formatPrice.value = null;
+    formatPriceMeta.value = null;
     formatPriceError.value =
       error?.data?.statusMessage || error?.message || 'ไม่สามารถคำนวณราคาได้';
   } finally {
@@ -2310,6 +2345,40 @@ const fetchFormatPrice = async () => {
 
 let step2Timeout: ReturnType<typeof setTimeout> | null = null;
 let formatPriceTimeout: ReturnType<typeof setTimeout> | null = null;
+
+const lookupFormatPrice = async (): Promise<{
+  price: number | null;
+  size: string;
+  width: number;
+  height: number;
+  notFound?: boolean;
+} | null> => {
+  if (!step1Ready.value || !props.enablePriceFetch) return null;
+  const normalizeSize = (width: number, height: number) => {
+    const a = Math.min(width, height);
+    const b = Math.max(width, height);
+    return { width: a, height: b, size: `${a}x${b}` };
+  };
+  const { width, height, size } = normalizeSize(targetResolution.width, targetResolution.height);
+  const { data, error } = await supabase
+    .from('format_prices')
+    .select('size, width, height, price')
+    .or(`size.eq.${size},and(width.eq.${width},height.eq.${height}),and(width.eq.${height},height.eq.${width})`)
+    .maybeSingle();
+
+  if (error && error.code !== 'PGRST116') {
+    throw error;
+  }
+  if (!data) {
+    return { price: null, size, width, height, notFound: true };
+  }
+  return {
+    price: data.price ?? null,
+    size: data.size ?? size,
+    width: data.width ?? width,
+    height: data.height ?? height
+  };
+};
 
 const scheduleStep2Processing = (delay = 120) => {
   if (!step1Ready.value) {
@@ -2836,6 +2905,28 @@ const goToCheckout = async () => {
     checkoutOrderError.value = 'ยังไม่มีภาพจาก Step 2 กรุณาสร้างและบันทึกก่อน';
     return;
   }
+  if (props.enablePriceFetch) {
+    try {
+      const latestPrice = await lookupFormatPrice();
+      if (!latestPrice || latestPrice.notFound || latestPrice.price == null) {
+        checkoutOrderError.value = 'ไม่พบราคาสำหรับขนาดนี้ กรุณาปรับขนาดหรือกรอกข้อมูลราคา';
+        return;
+      }
+      formatPrice.value = latestPrice.price;
+      formatPriceError.value = null;
+      formatPriceMeta.value = buildFormatPriceMeta(
+        Number(latestPrice.price),
+        latestPrice.width,
+        latestPrice.height
+      );
+    } catch (error: any) {
+      checkoutOrderError.value = error?.message ?? 'ไม่สามารถตรวจสอบราคาได้';
+      return;
+    }
+  }
+  const latestFormatMeta =
+    formatPriceMeta.value ??
+    (formatPrice.value != null ? buildFormatPriceMeta(Number(formatPrice.value)) : null);
   isCreatingCheckoutOrder.value = true;
   try {
     let orderId = props.editingOrderId ?? null;
@@ -2846,7 +2937,9 @@ const goToCheckout = async () => {
           previewUrl: step2PreviewForOrder.value,
           source: 'brick:edit',
           cropInteraction: cropInteractionForOrder.value ?? null,
-          originalImage: originalImageForOrder.value ?? uploadedImage.value ?? null
+          originalImage: originalImageForOrder.value ?? uploadedImage.value ?? null,
+          totalAmount: latestFormatMeta?.amount ?? undefined,
+          metadata: latestFormatMeta ? { format_price: latestFormatMeta } : undefined
         },
         user.value.id
       );
@@ -2856,7 +2949,9 @@ const goToCheckout = async () => {
         previewUrl: step2PreviewForOrder.value,
         source: 'checkout',
         cropInteraction: cropInteractionForOrder.value ?? null,
-        originalImage: originalImageForOrder.value ?? uploadedImage.value ?? null
+        originalImage: originalImageForOrder.value ?? uploadedImage.value ?? null,
+        totalAmount: latestFormatMeta?.amount ?? undefined,
+        metadata: latestFormatMeta ? { format_price: latestFormatMeta } : undefined
       });
       orderId = data?.id ?? null;
     }
@@ -3128,6 +3223,35 @@ watch(isHighQualityColorMode, () => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', measurePreviewRect);
 });
+
+// preset price for edit mode if provided
+const applyInitialFormatPrice = (price: number | null) => {
+  formatPrice.value = price;
+  formatPriceError.value = null;
+  if (price == null) {
+    formatPriceMeta.value = null;
+    return;
+  }
+  const existing = formatPriceMeta.value;
+  if (existing && Number(existing.amount) === Number(price)) {
+    return;
+  }
+  formatPriceMeta.value = buildFormatPriceMeta(Number(price));
+};
+
+if (props.initialFormatPrice != null) {
+  applyInitialFormatPrice(props.initialFormatPrice);
+}
+
+watch(
+  () => props.initialFormatPrice,
+  (next) => {
+    if (next != null) {
+      applyInitialFormatPrice(next);
+      skipInitialPriceFetch.value = Boolean(props.editingOrderId && next != null);
+    }
+  }
+);
 </script>
 
 <style scoped>
