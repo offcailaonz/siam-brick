@@ -138,28 +138,60 @@ curl -i "$SUPABASE_URL/auth/v1/token?grant_type=password" \
    - ตรวจวัด branding: ห้ามใช้คำว่า “Lego” ใน source (เช็คด้วย `rg -ni "lego"`)
    - ให้น้ำหนักกับ responsive design และ performance
 
-## 9. Backoffice & Roles (อัปเดต)
-- Backoffice เมนู: Orders / Products / Users (admin เท่านั้นด้วย middleware `admin-only`)
-- ตาราง `user_roles` กำหนด role (`user`/`admin`) — ต้องมีแถว admin ถึงจะเข้า `/backoffice` ได้
-- ตั้ง admin ด้วย SQL (ใช้ service key):
-```sql
-insert into public.user_roles (user_id,email,role)
-values ('<auth.users.id>', 'admin@siam-brick.com', 'admin')
-on conflict (user_id) do update set role='admin';
-```
-- RLS ที่ใช้:
-  - `products_public_select` (อ่านเฉพาะ active=true สำหรับ landing)
-  - `products_admin_select` / `products_admin_write` ใช้ฟังก์ชัน `is_admin(auth.uid())`
+## 9. Backoffice, Roles & Pricing (อัปเดตล่าสุด)
+- เมนู: Orders / Products / Users / รูปแบบ/ราคา (admin-only ด้วย middleware `admin-only`)
+- Roles: ตาราง `user_roles` กำหนด role (`user`/`admin`) — ต้องมีแถว admin ถึงจะเข้า `/backoffice` ได้  
+  ```sql
+  insert into public.user_roles (user_id,email,role)
+  values ('<auth.users.id>', 'admin@siam-brick.com', 'admin')
+  on conflict (user_id) do update set role='admin';
+  ```
+- Products: upsert ไปตาราง `products` (metadata: tag, studs, difficulty, size, image) ผ่านฟอร์ม/โมดัล generator (BrickArtRemixApp) → “ใช้ผลลัพธ์นี้” เติมภาพ/ขนาด/studs → บันทึกครั้งเดียว
+- รูปแบบ/ราคา (Format prices):
+  - ตาราง `format_prices` เก็บขนาด (normalize ด้านสั้น x ด้านยาว) + width/height + price
+  - UI แสดง columns: ด้าน A/B, ฐาน 16x16, ฐาน 32x32, studs, มุม, ที่แขวน, ขอบ (รวมสั้น+ยาว), ราคาทุน (คำนวณจาก part prices), ราคาขาย, กำไร/กำไร %, จัดการ
+  - ปุ่ม “บันทึกราคาขนาด” ส่ง payload รวม (ลดจำนวน API call)
+  - RLS/สิทธิแนะนำ: select/insert/update/delete ให้ role admin/authenticated ตามที่ใช้ใน Backoffice
+- ต้นทุนเพิ่มเติม (Extra costs):
+  - ตาราง `extra_costs` (id serial, name text, amount numeric) ใช้บวกเพิ่มในราคาทุนทุกขนาด
+  - โมดัล “ราคาต้นทุนเพิ่มเติม” เพิ่ม/ลบรายการ แล้วกดบันทึกจะ upsert+ลบรายการที่หายไป ให้โหลดกลับมาเมื่อเปิดหน้า
+  - แสดงยอดรวมต้นทุนเพิ่มข้างปุ่มในหัวตาราง (คำนวณจากรายการล่าสุด)
+  - ตัวอย่าง DDL:  
+    ```sql
+    create table if not exists public.extra_costs (
+      id serial primary key,
+      name text not null,
+      amount numeric not null default 0,
+      created_at timestamptz default now()
+    );
+    grant select, insert, update, delete on public.extra_costs to authenticated;
+    ```
+- ราคาชิ้นส่วน (Part prices):
+  - ตาราง `part_prices` (part_key primary key, price numeric)
+  - UI แสดงชื่อชิ้นส่วนเป็น header และมี input แถวเดียว → ปุ่ม “บันทึกราคาชิ้นส่วน” ยิงครั้งเดียวด้วย payload รวม (ลด API call ซ้ำ)
+  - คีย์ที่ใช้: `plate-16`, `plate-32`, `frame-edge`, `frame-corner`, `hanger`, `stud-pack`
+  - ตัวอย่าง seed:
+    ```sql
+    insert into public.part_prices(part_key, price) values
+      ('plate-16',16.13), ('plate-32',16.13),
+      ('frame-edge',4.61), ('frame-corner',4.94),
+      ('hanger',3.30), ('stud-pack',0.09)
+    on conflict (part_key) do update set price = excluded.price;
+    ```
 
-## 10. Products (ล่าสุด)
-- Landing `ReadyKitsGrid` ดึงสินค้า active จาก Supabase (fallback mock) และแสดง preview/fullscreen
-- Backoffice > Products:
-  - ปุ่ม “เพิ่มสินค้า” เปิดโมดัล generator (BrickArtRemixApp) → กด “ใช้ผลลัพธ์นี้” เติมภาพ/ขนาด/studs
-  - ฟอร์มบันทึก: ชื่อ, ราคาเดียว (ชุดเต็ม), tag, studs, difficulty, size (อ่านจาก gen), รูป preview; slug สร้างอัตโนมัติจากชื่อ
-  - Upsert ไปตาราง `products` (metadata: tag, studs, difficulty, size, image)
+## 10. Ready Kits & Checkout (ล่าสุด)
+- Landing `ReadyKitsGrid` ดึงสินค้า active จาก Supabase (fallback mock) และแสดง preview/fullscreen; ปุ่ม “สั่งชุดเต็ม” ส่งต่อไป `/checkout?product=<slug|id>`
+- Checkout รองรับโหมด Ready Kit:
+  - ใช้ภาพ/ขนาด/studs จากสินค้าเป็น preview (แก้รูปไม่ได้)
+  - สร้างออเดอร์ครั้งเดียวเมื่อกดชำระเงิน พร้อม metadata `{ product_id, product_slug, ... }`
+  - Breakdowns ใช้ `getFrameAndBase(width,height)` แสดง ฐาน 32/16, studs, มุม, ที่แขวน, ขอบสั้น/ยาว
+  - ที่อยู่จัดส่งเป็นโมดัล; ลด API call ที่ `order_shipping` (เก็บ snapshot ใน metadata แทน)
 
-## 11. Checkout (ล่าสุด)
-- แสดง breakdown ชิ้นส่วน (ฐาน 32/16, ตัวล็อก, ขอบ, studs) คำนวณจากขนาดภาพด้วย `getFrameAndBase(width, height)`
-- จำนวนตัวต่อแสดง “≈ … (เผื่อ 2–5% ต่อสี)”
-- เพิ่มที่อยู่ใน checkout ผ่านโมดัล (ใช้ AddressForm ใน BaseModal)
+## 11. API / Tables ที่ใช้งาน
+- `products` (active=true สำหรับ landing)
+- `user_roles` (role admin สำหรับ Backoffice)
+- `format_prices` (width/height/size/price, normalize ด้านสั้น x ด้านยาว)
+- `part_prices` (part_key, price)
+- `orders`, `order_shipping` (ใช้อัปเดตสินค้าหรือ ready kit ผ่าน checkout)
+
 # siam-brick

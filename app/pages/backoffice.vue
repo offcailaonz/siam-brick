@@ -3,17 +3,32 @@
     <main
       class="min-h-[calc(100vh-68px-68px)] w-full flex flex-col px-4 py-10 lg:px-8 lg:py-14 text-slate-800"
     >
-      <section class="rounded-2xl border border-slate-200 bg-white/90 shadow-sm overflow-hidden">
-        <header class="border-b border-slate-200 bg-slate-50/80 px-5 py-4 flex items-center justify-between gap-3">
+      <section
+        class="rounded-2xl border border-slate-200 bg-white/90 shadow-sm overflow-hidden"
+      >
+        <header
+          class="border-b border-slate-200 bg-slate-50/80 px-5 py-4 flex items-center justify-between gap-3"
+        >
           <div>
-            <p class="text-xs font-semibold uppercase tracking-wide text-amber-600">Backoffice</p>
-            <h1 class="mt-1 text-2xl font-bold text-slate-900">ภาพรวมออเดอร์และสต็อก</h1>
+            <p
+              class="text-xs font-semibold uppercase tracking-wide text-amber-600"
+            >
+              Backoffice
+            </p>
+            <h1 class="mt-1 text-2xl font-bold text-slate-900">
+              ภาพรวมออเดอร์และสต็อก
+            </h1>
             <p class="mt-2 text-sm text-slate-600">
               ตรวจออเดอร์ล่าสุด ปรับสถานะ และสินค้าที่แสดงหน้าเว็บ
             </p>
           </div>
-          <div v-if="user" class="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 shadow-sm">
-            <span class="h-7 w-7 rounded-full bg-emerald-600 text-white flex items-center justify-center">
+          <div
+            v-if="user"
+            class="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 shadow-sm"
+          >
+            <span
+              class="h-7 w-7 rounded-full bg-emerald-600 text-white flex items-center justify-center"
+            >
               {{ user.email?.charAt(0)?.toUpperCase() || 'U' }}
             </span>
             <span>{{ user.email }}</span>
@@ -21,10 +36,16 @@
         </header>
 
         <div v-if="!user" class="px-5 py-6">
-          <div class="rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-4 flex flex-wrap items-center justify-between gap-3">
+          <div
+            class="rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-4 flex flex-wrap items-center justify-between gap-3"
+          >
             <div>
-              <p class="text-sm font-semibold text-slate-900">กรุณาเข้าสู่ระบบ</p>
-              <p class="text-xs text-slate-600">เพื่อเข้าถึงข้อมูลออเดอร์และสต็อก</p>
+              <p class="text-sm font-semibold text-slate-900">
+                กรุณาเข้าสู่ระบบ
+              </p>
+              <p class="text-xs text-slate-600">
+                เพื่อเข้าถึงข้อมูลออเดอร์และสต็อก
+              </p>
             </div>
             <button
               type="button"
@@ -32,8 +53,16 @@
               @click="openAuthModal"
             >
               เข้าสู่ระบบ
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M6.146 11.354a.5.5 0 0 1 0-.708L8.793 8 6.146 5.354a.5.5 0 1 1 .708-.708l3 3a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0"/>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                fill="currentColor"
+                viewBox="0 0 16 16"
+              >
+                <path
+                  d="M6.146 11.354a.5.5 0 0 1 0-.708L8.793 8 6.146 5.354a.5.5 0 1 1 .708-.708l3 3a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0"
+                />
               </svg>
             </button>
           </div>
@@ -41,7 +70,9 @@
 
         <div v-else class="px-5 py-6">
           <div class="grid gap-6 lg:grid-cols-[260px,1fr]">
-            <aside class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm h-fit sticky top-4 space-y-2">
+            <aside
+              class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm h-fit sticky top-4 space-y-2"
+            >
               <p class="text-sm font-semibold text-slate-900">เมนูจัดการ</p>
               <p class="text-[11px] text-slate-500">เลือกหมวดเพื่อแก้ไข</p>
               <nav class="mt-2 space-y-1 text-sm">
@@ -126,12 +157,16 @@
                   :part-error="partPricesError"
                   :saving-all-formats="formatPricesLoading"
                   :saving-all-parts="partPricesSavingAll"
-                  @refresh="() => { loadFormatPrices(); loadPartPrices(); }"
+                  :extras="extraCosts"
+                  :extras-loading="extraCostsLoading"
+                  :extras-saving="extraCostsSaving"
+                  @refresh="() => { loadFormatPrices(); loadPartPrices(); loadExtraCosts(); }"
                   @save="handleSaveFormatPrice"
                   @save-all-formats="handleSaveAllFormatPrices"
                   @add="handleAddFormatSize"
                   @delete="handleDeleteFormatSize"
                   @save-part="handleSavePartPrice"
+                  @save-extras="handleSaveExtraCosts"
                   @save-all-parts="handleSaveAllPartPrices"
                 />
 
@@ -190,13 +225,16 @@ const formatPricesLoading = ref(false);
 const formatPricesError = ref<string | null>(null);
 const formatPricesSaving = ref<Record<string, boolean>>({});
 const formatAdding = ref(false);
+const extraCosts = ref<Array<{ id?: number; name: string; amount: number | null }>>([]);
+const extraCostsLoading = ref(false);
+const extraCostsSaving = ref(false);
 const defaultPartPrices = [
-  { key: 'plate-16', name: 'ฐาน 16x16', price: 16.13 },
-  { key: 'plate-32', name: 'ฐาน 32x32', price: 16.13 },
-  { key: 'frame-edge', name: 'ชิ้นส่วนกรอบ (ขอบ)', price: 4.61 },
-  { key: 'frame-corner', name: 'ชิ้นส่วนกรอบ (มุม)', price: 4.94 },
-  { key: 'hanger', name: 'รูแขวน', price: 3.3 },
-  { key: 'stud-pack', name: '3024 Brick 1x1 (ต่อชิ้น)', price: 0.09 }
+  { key: 'plate-16', name: 'ฐาน 16x16', price: 0 },
+  { key: 'plate-32', name: 'ฐาน 32x32', price: 0 },
+  { key: 'frame-edge', name: 'ชิ้นส่วนกรอบ (ขอบ)', price: 0 },
+  { key: 'frame-corner', name: 'ชิ้นส่วนกรอบ (มุม)', price: 0 },
+  { key: 'hanger', name: 'รูแขวน', price: 0 },
+  { key: 'stud-pack', name: 'Stud', price: 0 }
 ];
 const partPrices = ref<Array<{ key: string; name: string; price: number | null }>>(defaultPartPrices);
 const partPricesLoading = ref(false);
@@ -253,6 +291,43 @@ const handleSaveAllPartPrices = async (payloads: Array<{ key: string; price: num
     partPricesError.value = error?.message ?? 'บันทึกราคาชิ้นส่วนไม่สำเร็จ';
   } finally {
     partPricesSavingAll.value = false;
+  }
+};
+
+const loadExtraCosts = async () => {
+  extraCostsLoading.value = true;
+  try {
+    const { data, error } = await supabase.from('extra_costs').select('id, name, amount').order('id', { ascending: true });
+    if (error) throw error;
+    extraCosts.value = data ?? [];
+  } catch (error) {
+    extraCosts.value = [];
+  } finally {
+    extraCostsLoading.value = false;
+  }
+};
+
+const handleSaveExtraCosts = async (payloads: Array<{ id?: number | string; name: string; amount: number | null }>) => {
+  extraCostsSaving.value = true;
+  try {
+    const sanitized = payloads
+      .filter((p) => p.name && p.name.trim())
+      .map((p) => ({ id: p.id ? Number(p.id) : undefined, name: p.name.trim(), amount: p.amount ?? 0 }));
+    const ids = sanitized.filter((p) => p.id != null).map((p) => Number(p.id));
+    if (ids.length === 0) {
+      await supabase.from('extra_costs').delete().neq('id', 0);
+    } else {
+      await supabase.from('extra_costs').delete().not('id', 'in', `(${ids.join(',')})`);
+    }
+    if (sanitized.length > 0) {
+      const { error } = await supabase.from('extra_costs').upsert(sanitized, { onConflict: 'id' });
+      if (error) throw error;
+    }
+    await loadExtraCosts();
+  } catch (error) {
+    // ignore
+  } finally {
+    extraCostsSaving.value = false;
   }
 };
 const parseSizeText = (value: any): { width: number; height: number } | null => {
@@ -587,7 +662,7 @@ const handleDeleteProduct = async (id: number | string) => {
 };
 
 const loadAll = async () => {
-  await Promise.allSettled([loadOrders(), loadProducts(), loadUserRoles(), loadFormatPrices(), loadPartPrices()]);
+  await Promise.allSettled([loadOrders(), loadProducts(), loadUserRoles(), loadFormatPrices(), loadPartPrices(), loadExtraCosts()]);
 };
 
 watch(
