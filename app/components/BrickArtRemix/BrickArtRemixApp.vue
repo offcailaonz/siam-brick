@@ -3009,7 +3009,7 @@ const buildInstructionPdf = async (isHighQuality: boolean) => {
     targetResolution.width % DEFAULT_PLATE_WIDTH !== 0 ||
     targetResolution.height % DEFAULT_PLATE_WIDTH !== 0
   ) {
-    throw new Error('ขนาดภาพต้องหารด้วย 16 (ขนาดฐานแผ่น) ลงตัว');
+    throw new Error('ขนาดภาพต้องหารด้วย 32 (ขนาดฐานแผ่น) ลงตัว');
   }
   const { jsPDF } = await import('jspdf');
   const pixelArray = getPixelArrayFromCanvas(step3Canvas.value);
@@ -3032,6 +3032,8 @@ const buildInstructionPdf = async (isHighQuality: boolean) => {
     (targetResolution.width * targetResolution.height) /
     (DEFAULT_PLATE_WIDTH * DEFAULT_PLATE_WIDTH);
   const totalPages = totalPlates + 1;
+  const previewClearPageLimit =
+    totalPages <= PREVIEW_CLEAR_PAGE_COUNT ? Math.max(1, totalPages - 1) : PREVIEW_CLEAR_PAGE_COUNT;
 
   const updateProgress = (completedPages: number, label: string) => {
     pdfProgress.value = Math.min(1, completedPages / totalPages);
@@ -3131,6 +3133,7 @@ const buildInstructionPdf = async (isHighQuality: boolean) => {
     );
     setCanvasDpi(instructionCanvas, dpi);
     currentPageNumber += 1;
+    // const isPreviewPage = currentPageNumber <= previewClearPageLimit;
     const isPreviewPage = currentPageNumber <= PREVIEW_CLEAR_PAGE_COUNT;
     const instructionImg = isPreviewPage
       ? instructionCanvas.toDataURL('image/png', 1.0)

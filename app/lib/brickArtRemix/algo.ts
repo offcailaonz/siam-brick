@@ -3,6 +3,7 @@ import {
   PIXEL_TYPE_TO_FLATTENED,
   HEX_TO_COLOR_NAME,
   COLOR_NAME_TO_ID,
+  HEX_TO_SHORTCODE,
 } from "./bricklinkColors";
 
 export function hexToRgb(hex) {
@@ -17,6 +18,18 @@ export function hexToRgb(hex) {
 export function rgbToHex(r, g, b) {
   return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 }
+
+const normalizeHexKey = (hex: string) => (typeof hex === "string" ? hex.trim().toLowerCase() : "");
+const getStudLabel = (hex: string, fallbackIndex: number | string) => {
+  const key = normalizeHexKey(hex);
+  const label = HEX_TO_SHORTCODE[key];
+  if (label && `${label}`.trim()) {
+    return `${label}`.trim();
+  }
+  return `${fallbackIndex}`;
+};
+const calcLabelOffset = (label: string, scalingFactor: number) =>
+  (scalingFactor * Math.max(1, `${label}`.length)) / 9;
 
 function lightenHex(hex, amount) {
   const [r, g, b] = hexToRgb(hex);
@@ -1208,10 +1221,10 @@ export function drawStudCountForContext(
   const radius = scalingFactor / 2;
   ctx.font = `${scalingFactor / 2}px Arial`;
   availableStudHexList.forEach((pixelHex, i) => {
-    const number = i + 1;
+    const label = getStudLabel(pixelHex, i + 1);
     ctx.beginPath();
     const x = horizontalOffset;
-    const y = verticalOffset + radius * 2.5 * number;
+    const y = verticalOffset + radius * 2.5 * (i + 1);
     drawPixel(
       ctx,
       x - radius,
@@ -1223,8 +1236,8 @@ export function drawStudCountForContext(
     );
     ctx.fillStyle = inverseHex(pixelHex);
     ctx.fillText(
-      number,
-      x - (scalingFactor * (1 + Math.floor(number / 2) / 6)) / 8,
+      label,
+      x - calcLabelOffset(label, scalingFactor),
       y + scalingFactor / 8
     );
     ctx.fillStyle = "#000000";
@@ -1400,7 +1413,7 @@ export function generateInstructionTitlePage(
     );
   } else {
     legendHexList.forEach((pixelHex, index) => {
-      const number = index + 1;
+      const label = getStudLabel(pixelHex, index + 1);
       const column = index % columns;
       const row = Math.floor(index / columns);
       const baseX = legendStartX + column * legendColumnWidth;
@@ -1421,7 +1434,7 @@ export function generateInstructionTitlePage(
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(
-        `${number}`,
+        `${label}`,
         baseX + numberBoxWidth / 2,
         baseY + swatchSize / 2
       );
@@ -1532,9 +1545,10 @@ export function generateInstructionPage(
 
   ctx.lineWidth = 1;
 
-  const studToNumber = {};
+  const studToLabel = {};
   availableStudHexList.forEach((stud, i) => {
-    studToNumber[stud] = i + 1;
+    const key = normalizeHexKey(stud);
+    studToLabel[key] = getStudLabel(stud, i + 1);
   });
 
   ctx.font = `${scalingFactor / 2}px Arial`;
@@ -1547,6 +1561,11 @@ export function generateInstructionPage(
         pixelArray[pixelIndex * 4 + 1],
         pixelArray[pixelIndex * 4 + 2]
       );
+      const pixelKey = normalizeHexKey(pixelHex);
+      const studLabel =
+        studToLabel[pixelKey] ??
+        studToLabel[pixelHex] ??
+        getStudLabel(pixelHex, i * plateWidth + j + 1);
       ctx.beginPath();
       const x = pictureWidth * 0.75 + (j * 2 + 1) * radius;
       const y = pictureHeight * 0.2 + ((i % plateWidth) * 2 + 1) * radius;
@@ -1561,10 +1580,8 @@ export function generateInstructionPage(
       );
       ctx.fillStyle = inverseHex(pixelHex);
       ctx.fillText(
-        studToNumber[pixelHex],
-        x -
-          (scalingFactor * (1 + Math.floor(studToNumber[pixelHex] / 2) / 6)) /
-            8,
+        studLabel,
+        x - calcLabelOffset(studLabel, scalingFactor),
         y + scalingFactor / 8
       );
     }

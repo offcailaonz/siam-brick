@@ -2,7 +2,7 @@ import type { jsPDF } from "jspdf";
 
 export const LOW_DPI = 48;
 export const HIGH_DPI = 96;
-export const DEFAULT_PLATE_WIDTH = 16;
+export const DEFAULT_PLATE_WIDTH = 32;
 export const PDF_MARGIN_MM = 10;
 
 export const DEFAULT_WATERMARK = {

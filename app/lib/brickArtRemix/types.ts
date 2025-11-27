@@ -12,4 +12,5 @@ export interface BricklinkColor {
   name: string;
   hex: string;
   id: string;
+  shortCode: string;
 }
