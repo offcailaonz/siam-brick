@@ -191,11 +191,11 @@
                     {{ formatCurrency(summaryPrice) }}
                   </p>
                   <p
-                    v-if="isProductMode && productInfo"
+                    v-if="isProductMode && activeProductInfo"
                     class="mt-1 text-xs text-slate-500"
                   >
-                    {{ productInfo.name }} · {{ productInfo.size || 'ขนาดไม่ระบุ' }} ·
-                    {{ productInfo.studs || 0 }} studs
+                    {{ activeProductInfo.name }} · {{ activeProductInfo.size || 'ขนาดไม่ระบุ' }} ·
+                    {{ activeProductInfo.studs || 0 }} studs
                   </p>
                 </div>
               </template>
@@ -361,6 +361,7 @@ const { fetchAddresses, createAddress, deleteAddress, setDefaultAddress } = useA
 const { loadAddressData } = useThaiAddressSearch();
 const DEFAULT_ORDER_PRICE = 999;
 const STUD_COLOR_SET = new Set(ALL_BRICKLINK_SOLID_COLORS.map((c) => c.hex.toLowerCase()));
+const MAX_STUD_PREVIEW_PIXELS = 20000;
 const SCALING_FACTOR = 30;
 const SPARSE_COLOR_THRESHOLD = 10;
 const DEFAULT_PIXEL_TYPE = PIXEL_TYPE_OPTIONS[0]?.number ?? 3024;
@@ -401,6 +402,18 @@ const productInfo = ref<{
   difficulty: string;
   tag: string;
 } | null>(null);
+const linkedProductInfo = ref<{
+  id: number | string;
+  slug: string | null;
+  name: string;
+  price: number | null;
+  image: string | null;
+  studs: number;
+  size: string;
+  resolution: { width: number; height: number };
+  difficulty: string;
+  tag: string;
+} | null>(null);
 const productLoading = ref(false);
 const productError = ref<string | null>(null);
 const addressForm = reactive({
@@ -421,15 +434,28 @@ const linkedOrderStep2Preview = computed(() => {
   const trimmed = preview.trim();
   return trimmed || null;
 });
-const step2PreviewSource = computed(() => linkedOrderStep2Preview.value ?? step2Preview.value ?? null);
+const step2PreviewSource = computed(() => {
+  // ถ้ามีลิงก์ออเดอร์ ให้รอข้อมูลจาก API เพื่อหลีกเลี่ยงการโชว์พรีวิวเก่าจาก state เดิม
+  if (hasLinkedOrder.value && !selectedOrder.value) {
+    return null;
+  }
+  if (hasLinkedOrder.value) {
+    return linkedOrderStep2Preview.value ?? null;
+  }
+  return step2Preview.value ?? null;
+});
 const studPreview = ref<string | null>(null);
 const studPreviewError = ref<string | null>(null);
 const studPreviewLoading = ref(false);
+const STUD_PREVIEW_TIMEOUT_MS = 7000;
 const checkoutPreview = computed(() => {
   if (hasProductQuery.value && (productLoading.value || !productInfo.value)) {
     return null;
   }
-  return studPreview.value ?? finalPreview.value ?? null;
+  if (hasLinkedOrder.value && !selectedOrder.value) {
+    return null;
+  }
+  return studPreview.value ?? (hasLinkedOrder.value ? null : finalPreview.value) ?? null;
 });
 const latestOrder = computed(() => (hasLinkedOrder.value ? selectedOrder.value : myOrders.value?.[0] ?? null));
 const isPreviewLoading = computed(() => {
@@ -456,7 +482,8 @@ const selectedAddress = computed(() => {
 });
 const productQuery = computed(() => (typeof route.query.product === 'string' ? route.query.product : null));
 const hasProductQuery = computed(() => Boolean(productQuery.value));
-const isProductMode = computed(() => hasProductQuery.value && Boolean(productInfo.value));
+const activeProductInfo = computed(() => (hasProductQuery.value ? productInfo.value : linkedProductInfo.value));
+const isProductMode = computed(() => hasProductQuery.value || Boolean(linkedProductInfo.value));
 const previewMeta = computed(() =>
   isProductMode.value
     ? {
@@ -471,8 +498,9 @@ const previewMeta = computed(() =>
       }
 );
 const productPrice = computed(() => {
-  if (!isProductMode.value) return null;
-  const priceValue = productInfo.value?.price;
+  const info = activeProductInfo.value;
+  if (!isProductMode.value || !info) return null;
+  const priceValue = info.price;
   const priceNum = priceValue != null ? Number(priceValue) : NaN;
   return Number.isNaN(priceNum) ? null : priceNum;
 });
@@ -512,29 +540,59 @@ const effectiveShipping = computed(() => {
 });
 
 const loadImagePixels = async (
-  src: string
+  src: string,
+  timeoutMs = 8000,
+  maxPixels?: number
 ): Promise<{ pixels: Uint8ClampedArray; width: number; height: number } | null> => {
   if (typeof window === 'undefined') {
     return null;
   }
   return new Promise((resolve) => {
+    let settled = false;
+    const cleanup = (img: HTMLImageElement, timer: number | undefined) => {
+      if (timer) window.clearTimeout(timer);
+      img.onload = null;
+      img.onerror = null;
+    };
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
+      if (settled) return;
+      settled = true;
+      cleanup(img, timeoutId);
+      let targetWidth = Math.max(1, img.naturalWidth || img.width);
+      let targetHeight = Math.max(1, img.naturalHeight || img.height);
+      if (maxPixels && targetWidth * targetHeight > maxPixels) {
+        // Downscale huge inputs to keep stud preview generation responsive
+        const scale = Math.sqrt(maxPixels / (targetWidth * targetHeight));
+        targetWidth = Math.max(1, Math.round(targetWidth * scale));
+        targetHeight = Math.max(1, Math.round(targetHeight * scale));
+      }
       const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, img.width);
-      canvas.height = Math.max(1, img.height);
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
       const ctx = canvas.getContext('2d');
       if (!ctx) {
         resolve(null);
         return;
       }
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-      resolve({ pixels: new Uint8ClampedArray(data), width: canvas.width, height: canvas.height });
+      ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+      const data = ctx.getImageData(0, 0, targetWidth, targetHeight).data;
+      resolve({ pixels: new Uint8ClampedArray(data), width: targetWidth, height: targetHeight });
     };
-    img.onerror = () => resolve(null);
+    img.onerror = () => {
+      if (settled) return;
+      settled = true;
+      cleanup(img, timeoutId);
+      resolve(null);
+    };
+    const timeoutId = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      cleanup(img, undefined);
+      resolve(null);
+    }, timeoutMs);
     img.src = src;
   });
 };
@@ -641,7 +699,7 @@ const isAlreadyStudPalette = (pixels: Uint8ClampedArray) => {
 };
 
 const buildStudPreviewFromStep2 = async (src: string): Promise<string | null> => {
-  const loaded = await loadImagePixels(src);
+  const loaded = await loadImagePixels(src, 8000, MAX_STUD_PREVIEW_PIXELS);
   if (!loaded) {
     return null;
   }
@@ -670,16 +728,39 @@ const updateStudPreviewFromStep2 = async (src: string | null) => {
     return;
   }
   studPreviewLoading.value = true;
-  const preview = await buildStudPreviewFromStep2(src);
-  if (currentTask !== studPreviewTaskId) {
-    return;
-  }
-  studPreviewLoading.value = false;
-  if (preview) {
-    studPreview.value = preview;
-  } else {
-    studPreview.value = null;
-    studPreviewError.value = 'ไม่สามารถแปลงภาพ Step 2 เป็นพรีวิวตัวต่อได้';
+  studPreview.value = null;
+  // ปล่อย event loop ให้อัพเดต UI ก่อนเริ่มงานแปลงพรีวิวที่หนัก
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const withTimeout = Promise.race([
+    buildStudPreviewFromStep2(src),
+    new Promise<null>((_, reject) =>
+      setTimeout(() => reject(new Error('โหลดพรีวิวนานเกินไป')), STUD_PREVIEW_TIMEOUT_MS)
+    )
+  ]);
+  try {
+    const preview = await withTimeout;
+    if (currentTask !== studPreviewTaskId) {
+      studPreviewLoading.value = false;
+      return;
+    }
+    if (preview) {
+      studPreview.value = preview;
+    } else {
+      studPreview.value = null;
+      studPreviewError.value = 'ไม่สามารถแปลงภาพ Step 2 เป็นพรีวิวตัวต่อได้';
+    }
+  } catch (error: any) {
+    if (currentTask !== studPreviewTaskId) {
+      studPreviewLoading.value = false;
+      return;
+    }
+    // fallback แสดงภาพดิบ (จะได้ไม่ค้างโหลด) และแจ้งเตือน
+    studPreview.value = src;
+    studPreviewError.value = error?.message ?? 'โหลดพรีวิวไม่สำเร็จ';
+  } finally {
+    if (currentTask === studPreviewTaskId) {
+      studPreviewLoading.value = false;
+    }
   }
 };
 
@@ -687,9 +768,6 @@ onMounted(() => {
   // หากมี id ให้โหลดจาก API ทันที เพื่อใช้ข้อมูลจริง
   if (hasLinkedOrder.value) {
     finalPreview.value = null; // เคลียร์ค่าเดิมเพื่อรอข้อมูลจากฐาน
-    if (user.value?.id) {
-      loadSelectedOrder();
-    }
   }
 });
 
@@ -943,9 +1021,15 @@ const loadMyOrders = async () => {
 };
 
 const loadSelectedOrder = async () => {
-  if (!user.value?.id || !selectedOrderId.value) {
+  if (!selectedOrderId.value) {
     selectedOrder.value = null;
     selectedOrderError.value = null;
+    return;
+  }
+  if (!user.value?.id) {
+    selectedOrder.value = null;
+    selectedOrderLoading.value = false;
+    selectedOrderError.value = 'กรุณาเข้าสู่ระบบเพื่อดูออเดอร์นี้';
     return;
   }
   selectedOrderLoading.value = true;
@@ -955,8 +1039,10 @@ const loadSelectedOrder = async () => {
     if (!data) {
       selectedOrderError.value = 'ไม่พบออเดอร์จากลิงก์นี้';
       selectedOrder.value = null;
+      linkedProductInfo.value = null;
     } else {
       selectedOrder.value = data;
+      linkedProductInfo.value = mapOrderProductMeta(data);
       if (data.original_image !== undefined) {
         originalImage.value = data.original_image;
       }
@@ -966,10 +1052,17 @@ const loadSelectedOrder = async () => {
       if (data.preview_url !== undefined) {
         step2Preview.value = data.preview_url || null;
       }
+      if (linkedProductInfo.value?.image) {
+        studPreview.value = linkedProductInfo.value.image;
+      }
+      if (linkedProductInfo.value?.resolution?.width && linkedProductInfo.value?.resolution?.height) {
+        previewResolution.value = linkedProductInfo.value.resolution;
+      }
     }
   } catch (error: any) {
     selectedOrderError.value = error?.message ?? 'ไม่สามารถโหลดออเดอร์ที่ลิงก์มาได้';
     selectedOrder.value = null;
+    linkedProductInfo.value = null;
   } finally {
     selectedOrderLoading.value = false;
   }
@@ -986,7 +1079,10 @@ watch(
     } else {
       myOrders.value = [];
       selectedOrder.value = null;
+      selectedOrderLoading.value = false;
+      selectedOrderError.value = hasLinkedOrder.value ? 'กรุณาเข้าสู่ระบบเพื่อดูออเดอร์นี้' : null;
       addresses.value = [];
+      linkedProductInfo.value = null;
     }
   },
   { immediate: true }
@@ -999,7 +1095,10 @@ watch(
       loadSelectedOrder();
     } else {
       selectedOrder.value = null;
-      selectedOrderError.value = null;
+      selectedOrderLoading.value = false;
+      selectedOrderError.value =
+        selectedOrderId.value && !user.value?.id ? 'กรุณาเข้าสู่ระบบเพื่อดูออเดอร์นี้' : null;
+      linkedProductInfo.value = null;
     }
   }
 );
@@ -1033,6 +1132,52 @@ const mapProductRow = (row: any) => {
     image: meta.image ?? meta.preview ?? meta.thumbnail ?? '/placeholder.png',
     studs,
     size: typeof size === 'string' ? size : resolution.width && resolution.height ? `${resolution.width}x${resolution.height}` : '',
+    resolution,
+    difficulty: meta.difficulty ?? 'Beginner',
+    tag: meta.tag ?? meta.type ?? 'พร้อมสร้าง'
+  };
+};
+
+const mapOrderProductMeta = (order: Record<string, any> | null | undefined) => {
+  if (!order) return null;
+  const meta = order.metadata ?? {};
+  if (!meta || typeof meta !== 'object') return null;
+  const hasProductHints =
+    meta.product_id != null ||
+    typeof meta.product_slug === 'string' ||
+    typeof meta.product_name === 'string' ||
+    meta.priceKit != null ||
+    meta.price != null ||
+    (typeof order.source === 'string' && order.source.includes('product'));
+  if (!hasProductHints) return null;
+
+  const size = meta.size ?? meta.resolution ?? null;
+  const resolution = parseSizeText(size) ?? { width: 0, height: 0 };
+  const studs =
+    Number(meta.studs ?? meta.totalStuds ?? meta.studCount ?? 0) ||
+    (resolution.width && resolution.height ? resolution.width * resolution.height : 0);
+  const priceRaw =
+    meta.format_price?.amount ??
+    meta.priceKit ??
+    meta.price ??
+    order.total_amount ??
+    null;
+  const price = priceRaw != null && !Number.isNaN(Number(priceRaw)) ? Number(priceRaw) : null;
+  const image = meta.product_image ?? meta.image ?? meta.preview ?? order.preview_url ?? null;
+
+  return {
+    id: (meta.product_id ?? meta.product_slug ?? order.id ?? 'ready-kit') as number | string,
+    slug: typeof meta.product_slug === 'string' ? meta.product_slug : null,
+    name: meta.product_name ?? 'Ready kit',
+    price,
+    image,
+    studs,
+    size:
+      typeof size === 'string'
+        ? size
+        : resolution.width && resolution.height
+          ? `${resolution.width}x${resolution.height}`
+          : '',
     resolution,
     difficulty: meta.difficulty ?? 'Beginner',
     tag: meta.tag ?? meta.type ?? 'พร้อมสร้าง'
@@ -1095,6 +1240,19 @@ watch(
   { immediate: true }
 );
 
+watch(
+  () => activeProductInfo.value,
+  (info) => {
+    if (!info) return;
+    if (info.image) {
+      studPreview.value = info.image;
+    }
+    if (info.resolution?.width && info.resolution?.height) {
+      previewResolution.value = info.resolution;
+    }
+  }
+);
+
 const handleCreateOrder = async () => {
   orderError.value = null;
   if (!user.value) {
@@ -1102,6 +1260,7 @@ const handleCreateOrder = async () => {
     return;
   }
   const productFlow = isProductMode.value;
+  const info = activeProductInfo.value;
   if (!productFlow) {
     if (!step2PreviewSource.value) {
       orderError.value = 'ยังไม่มีรูป Step 2 กรุณากลับไปสร้างก่อน';
@@ -1111,7 +1270,7 @@ const handleCreateOrder = async () => {
       orderError.value = 'ยังไม่มีรูป Step 3 กรุณากลับไปสร้างก่อน';
       return;
     }
-  } else if (!productInfo.value) {
+  } else if (!info) {
     orderError.value = 'ไม่พบข้อมูลสินค้า';
     return;
   }
@@ -1126,7 +1285,34 @@ const handleCreateOrder = async () => {
     const mergedMetadataForLinked = hasLinkedOrder.value
       ? { ...(selectedOrder.value?.metadata ?? {}), ...shippingSnapshot }
       : shippingSnapshot;
-    if (!productFlow && hasLinkedOrder.value && selectedOrderId.value) {
+    const productMetadata = info
+      ? {
+          product_id: (info.id as any) ?? null,
+          product_slug: info.slug ?? null,
+          product_name: info.name ?? null,
+          size: info.size ?? null,
+          studs: info.studs ?? null,
+          difficulty: info.difficulty ?? null,
+          tag: info.tag ?? null,
+          product_image: info.image ?? null
+        }
+      : {};
+
+    if (productFlow && hasLinkedOrder.value && selectedOrderId.value) {
+      data = await updateOrderAssets(
+        selectedOrderId.value,
+        {
+          previewUrl: info?.image ?? step2PreviewSource.value,
+          source: 'checkout:product',
+          cropInteraction: null,
+          originalImage: null,
+          totalAmount: productPrice.value ?? DEFAULT_ORDER_PRICE,
+          metadata: { ...mergedMetadataForLinked, ...productMetadata }
+        },
+        user.value.id
+      );
+      orderSuccess.value = { id: selectedOrderId.value };
+    } else if (!productFlow && hasLinkedOrder.value && selectedOrderId.value) {
       data = await updateOrderAssets(
         selectedOrderId.value,
         {
@@ -1142,20 +1328,14 @@ const handleCreateOrder = async () => {
     } else {
       data = await recordPendingPaymentOrder({
         userId: user.value.id,
-        previewUrl: productFlow ? productInfo.value?.image ?? null : step2PreviewSource.value,
+        previewUrl: productFlow ? info?.image ?? null : step2PreviewSource.value,
         source: productFlow ? 'checkout:product' : 'checkout',
         cropInteraction: productFlow ? null : cropInteractionForOrder.value ?? null,
         originalImage: productFlow ? null : originalImage.value ?? null,
         totalAmount: productFlow ? productPrice.value ?? DEFAULT_ORDER_PRICE : undefined,
         metadata: productFlow
           ? {
-              product_id: productInfo.value?.id ?? null,
-              product_slug: productInfo.value?.slug ?? null,
-              product_name: productInfo.value?.name ?? null,
-              size: productInfo.value?.size ?? null,
-              studs: productInfo.value?.studs ?? null,
-              difficulty: productInfo.value?.difficulty ?? null,
-              tag: productInfo.value?.tag ?? null,
+              ...productMetadata,
               shipping_snapshot: effectiveShipping.value ?? null
             }
           : { ...shippingSnapshot }
