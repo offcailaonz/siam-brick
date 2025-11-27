@@ -3053,7 +3053,7 @@ const buildInstructionPdf = async (isHighQuality: boolean) => {
   );
   setCanvasDpi(titlePageCanvas, dpi);
   const titleImg = titlePageCanvas.toDataURL('image/png', 1.0);
-  const orientation = titlePageCanvas.width <= titlePageCanvas.height ? 'p' : 'l';
+  const orientation = targetResolution.width >= targetResolution.height ? 'l' : 'p';
 
   const createPdfInstance = () =>
     new jsPDF({
@@ -3133,8 +3133,8 @@ const buildInstructionPdf = async (isHighQuality: boolean) => {
     );
     setCanvasDpi(instructionCanvas, dpi);
     currentPageNumber += 1;
-    // const isPreviewPage = currentPageNumber <= previewClearPageLimit;
-    const isPreviewPage = currentPageNumber <= PREVIEW_CLEAR_PAGE_COUNT;
+    const isPreviewPage = currentPageNumber <= previewClearPageLimit;
+    // const isPreviewPage = currentPageNumber <= PREVIEW_CLEAR_PAGE_COUNT;
     const instructionImg = isPreviewPage
       ? instructionCanvas.toDataURL('image/png', 1.0)
       : blurCanvasForPreview(instructionCanvas);
