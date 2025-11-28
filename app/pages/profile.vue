@@ -277,9 +277,9 @@
                       <div class="mt-1 flex flex-wrap items-center gap-2">
                         <span
                           class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold"
-                          :class="statusBadge(order.status).color"
+                          :class="statusBadge(order).color"
                         >
-                          {{ statusBadge(order.status).text }}
+                          {{ statusBadge(order).text }}
                         </span>
                         <span
                           v-if="isReadyKitOrder(order)"
@@ -301,7 +301,7 @@
                         >{{ formatCurrency(order.total_amount) }}</span
                       >
                       <div
-                        v-if="isPending(order.status)"
+                        v-if="isPending(order)"
                         class="mt-3 flex flex-wrap items-center gap-2"
                       >
                         <template v-if="paymentLink(order)">
@@ -336,6 +336,28 @@
                             </NuxtLink>
                           </div>
                         </template>
+                      </div>
+                      <div
+                        v-else-if="isPaid(order)"
+                        class="mt-3 flex flex-wrap items-start gap-2 text-sm"
+                      >
+                        <NuxtLink
+                          :to="`/checkout?id=${order.id}`"
+                          class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                        >
+                          ดูรายละเอียด
+                        </NuxtLink>
+                        <button
+                          type="button"
+                          class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                          :disabled="isPdfLoading(order.id) || !findInstructionPdf(order)"
+                          @click="downloadOrderPdfFor(order)"
+                        >
+                          <span v-if="isPdfLoading(order.id)">กำลังดาวน์โหลด…</span>
+                          <span v-else-if="!findInstructionPdf(order)">ไม่มีไฟล์คู่มือ</span>
+                          <span v-else>ดาวน์โหลด PDF</span>
+                        </button>
+                        <p v-if="orderPdfError" class="w-full text-[11px] text-rose-600">{{ orderPdfError }}</p>
                       </div>
                     </div>
                   </div>
@@ -423,7 +445,8 @@ const myOrdersTotal = ref(0);
 const myOrdersPage = ref(1);
 const myOrdersPageSize = 5;
 const myOrdersTotalPages = computed(() => Math.max(1, Math.ceil(myOrdersTotal.value / myOrdersPageSize)));
-
+const orderPdfLoading = ref<Record<string, boolean>>({});
+const orderPdfError = ref<string | null>(null);
 const addresses = ref<Array<Record<string, any>>>([]);
 const addressesLoading = ref(false);
 const addressesError = ref<string | null>(null);
@@ -468,13 +491,15 @@ const formatDateTime = (value: string | null | undefined) => {
   }
 };
 
-const statusBadge = (status: string | null | undefined) => {
-  if (!status) return { text: 'รอชำระเงิน', color: 'bg-amber-50 text-amber-700 border-amber-200' };
-  const s = String(status).toLowerCase();
-  if (s.includes('paid') || s.includes('สำเร็จ')) return { text: status, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
-  if (s.includes('ship')) return { text: status, color: 'bg-blue-50 text-blue-700 border-blue-200' };
-  if (s.includes('cancel')) return { text: status, color: 'bg-slate-100 text-slate-600 border-slate-200' };
-  return { text: status, color: 'bg-amber-50 text-amber-700 border-amber-200' };
+const statusBadge = (statusOrOrder: string | null | undefined | Record<string, any>) => {
+  const raw = resolveStatusString(statusOrOrder);
+  if (!raw) return { text: 'รอชำระเงิน', color: 'bg-amber-50 text-amber-700 border-amber-200' };
+  if (isPending(statusOrOrder)) return { text: raw, color: 'bg-amber-50 text-amber-700 border-amber-200' };
+  if (isPaid(statusOrOrder)) return { text: raw, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+  const s = raw.toLowerCase();
+  if (s.includes('ship')) return { text: raw, color: 'bg-blue-50 text-blue-700 border-blue-200' };
+  if (s.includes('cancel')) return { text: raw, color: 'bg-slate-100 text-slate-600 border-slate-200' };
+  return { text: raw, color: 'bg-amber-50 text-amber-700 border-amber-200' };
 };
 
 const formatCurrency = (value: number | string | null | undefined) => {
@@ -502,16 +527,82 @@ const orderPreview = (order: Record<string, any>) => {
     order?.preview,
     order?.metadata?.image,
     order?.metadata?.product_image,
-    order?.metadata?.product_preview
+    order?.metadata?.product_preview,
+    order?.original_image
   ];
   const found = candidates.find((p) => typeof p === 'string' && p.trim());
   return found ? String(found).trim() : null;
 };
 
-const isPending = (status: string | null | undefined) => {
-  if (!status) return true;
-  const s = String(status).toLowerCase();
-  return s.includes('pending') || s.includes('รอชำระ') || s.includes('unpaid');
+const orderStudPreview = (order: Record<string, any>) => {
+  const meta = order?.metadata ?? {};
+  const candidates = [
+    meta.stud_preview,
+    meta.step3_preview,
+    meta.instruction_preview,
+    meta.product_image,
+    order?.preview_url,
+    order?.preview
+  ];
+  const found = candidates.find((p) => typeof p === 'string' && p.trim());
+  return found ? String(found).trim() : orderPreview(order);
+};
+
+const resolveStatusString = (input: any) => {
+  if (!input) return '';
+  if (typeof input === 'object') {
+    const candidate =
+      input.payment_status ??
+      input.status ??
+      input.status_text ??
+      input.state ??
+      '';
+    return String(candidate);
+  }
+  return String(input);
+};
+
+const normalizeStatus = (status: string | null | undefined | Record<string, any>) =>
+  resolveStatusString(status).toLowerCase().trim();
+const pendingTokens = [
+  'unpaid',
+  'pending',
+  'รอ',
+  'รอชำระ',
+  'ยังไม่',
+  'wait',
+  'waiting',
+  'await',
+  'awaiting',
+  'payment_pending',
+  'waiting_payment',
+  'wait_payment',
+  'รอตรวจสอบ',
+  'รอจ่าย'
+];
+const paidTokens = [
+  'paid',
+  'ชำระแล้ว',
+  'ชำระเงินแล้ว',
+  'success',
+  'successful',
+  'สำเร็จ',
+  'complete',
+  'completed',
+  'payment_succeeded',
+  'paid_success'
+];
+
+const isPending = (status: string | null | undefined | Record<string, any>) => {
+  const s = normalizeStatus(status);
+  if (!s) return true;
+  return pendingTokens.some((token) => s.includes(token));
+};
+
+const isPaid = (status: string | null | undefined | Record<string, any>) => {
+  const s = normalizeStatus(status);
+  if (!s || isPending(s)) return false;
+  return paidTokens.some((token) => s.includes(token));
 };
 
 const paymentLink = (order: Record<string, any>) => {
@@ -521,6 +612,54 @@ const paymentLink = (order: Record<string, any>) => {
   if (!trimmed) return null;
   const looksLikeUrl = /^https?:\/\//i.test(trimmed);
   return looksLikeUrl ? trimmed : null;
+};
+
+const shippingSnapshot = (order: Record<string, any>) => {
+  if (!order) return null;
+  const meta = order.metadata;
+  if (meta && typeof meta === 'object' && meta.shipping_snapshot) {
+    const snap = meta.shipping_snapshot;
+    if (snap && typeof snap === 'object') return snap;
+  }
+  return null;
+};
+
+const findInstructionPdf = (order: Record<string, any> | null | undefined) => {
+  const meta = order?.metadata ?? {};
+  const link =
+    meta.instruction_pdf ||
+    meta.instruction_pdf_url ||
+    meta.instructionPdf ||
+    meta.pdf_url ||
+    meta.guide_pdf ||
+    meta.guide_url ||
+    null;
+  if (typeof link === 'string' && link.trim()) return link.trim();
+  return null;
+};
+
+const isPdfLoading = (orderId: string | number | null | undefined) => {
+  if (orderId == null) return false;
+  return Boolean(orderPdfLoading.value[String(orderId)]);
+};
+
+const downloadOrderPdfFor = async (order: Record<string, any> | null | undefined) => {
+  if (!order?.id) return;
+  const key = String(order.id);
+  orderPdfLoading.value[key] = true;
+  orderPdfError.value = null;
+  try {
+    const url = findInstructionPdf(order);
+    if (!url) {
+      throw new Error('ไม่มีไฟล์คู่มือจาก Step 3 ในออเดอร์นี้');
+    }
+    window.open(url, '_blank', 'noopener');
+  } catch (error: any) {
+    orderPdfError.value = error?.message ?? 'ดาวน์โหลด PDF ไม่สำเร็จ';
+  } finally {
+    orderPdfLoading.value[key] = false;
+    orderPdfLoading.value = { ...orderPdfLoading.value };
+  }
 };
 
 const resetPasswordForm = (clearMessages = true) => {

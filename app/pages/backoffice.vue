@@ -208,7 +208,14 @@ const orders = ref<Array<Record<string, any>>>([]);
 const ordersLoading = ref(false);
 const ordersError = ref<string | null>(null);
 const activeMenu = ref<'orders' | 'products' | 'formats' | 'users'>('orders');
-const statusOptions = ['รอชำระเงิน', 'ชำระแล้ว', 'กำลังตรวจสอบ', 'กำลังจัดส่ง', 'สำเร็จ', 'ยกเลิก'];
+const statusOptions = [
+  'รอชำระเงิน',
+  'ชำระเงินแล้ว',
+  'กำลังตรวจสอบ',
+  'กำลังจัดส่ง',
+  'สำเร็จ',
+  'ยกเลิก'
+];
 const statusDrafts = ref<Record<string, string>>({});
 const isUpdatingStatus = ref<Record<string, boolean>>({});
 const statusUpdateErrors = ref<Record<string, string | null>>({});
@@ -363,8 +370,21 @@ const formatDate = (value: string | null | undefined) => {
   }
 };
 
+const normalizeStatusValue = (value: string | null | undefined) => {
+  const raw = (value ?? '').toString().trim();
+  if (!raw) return 'รอชำระเงิน';
+  const lower = raw.toLowerCase();
+  if (!lower.includes('unpaid') && (lower.includes('ชำระ') || lower.includes('paid') || lower.includes('success'))) {
+    return 'ชำระเงินแล้ว';
+  }
+  if (lower.includes('ship')) return 'กำลังจัดส่ง';
+  if (lower.includes('ตรวจ')) return 'กำลังตรวจสอบ';
+  if (lower.includes('cancel') || lower.includes('ยกเลิก')) return 'ยกเลิก';
+  return raw;
+};
+
 const statusDraftValue = (orderId: string | number) => {
-  return statusDrafts.value[String(orderId)] ?? 'รอชำระเงิน';
+  return normalizeStatusValue(statusDrafts.value[String(orderId)]) ?? 'รอชำระเงิน';
 };
 
 const updateStatusDraft = (orderId: string | number, nextValue: string) => {
@@ -376,7 +396,7 @@ const syncStatusDrafts = () => {
   const next: Record<string, string> = {};
   orders.value.forEach((order) => {
     if (!order?.id) return;
-    next[String(order.id)] = order.status ?? 'รอชำระเงิน';
+    next[String(order.id)] = normalizeStatusValue(order.status);
   });
   statusDrafts.value = next;
 };
@@ -387,10 +407,11 @@ const handleStatusChange = async (orderId: string | number, newStatus: string) =
   isUpdatingStatus.value[key] = true;
   statusUpdateErrors.value[key] = null;
   try {
+    const normalizedStatus = normalizeStatusValue(newStatus);
     const updated =
-      newStatus === 'ยกเลิก'
+      normalizedStatus === 'ยกเลิก'
         ? await cancelOrder(orderId, 'ยกเลิกโดยแอดมิน')
-        : await updateOrderStatus(orderId, newStatus);
+        : await updateOrderStatus(orderId, normalizedStatus);
     if (updated) {
       orders.value = orders.value.map((order) => {
         if (order.id === updated.id) {
@@ -398,7 +419,7 @@ const handleStatusChange = async (orderId: string | number, newStatus: string) =
         }
         return order;
       });
-      statusDrafts.value[key] = updated.status ?? newStatus;
+      statusDrafts.value[key] = normalizeStatusValue(updated.status ?? normalizedStatus);
     }
   } catch (error: any) {
     statusUpdateErrors.value[key] = error?.message ?? 'ไม่สามารถอัปเดตสถานะได้';

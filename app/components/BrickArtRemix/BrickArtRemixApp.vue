@@ -2927,6 +2927,16 @@ const goToCheckout = async () => {
   const latestFormatMeta =
     formatPriceMeta.value ??
     (formatPrice.value != null ? buildFormatPriceMeta(Number(formatPrice.value)) : null);
+  const step3Meta = {
+    stud_preview: finalStep3Preview.value ?? null,
+    step3_preview: finalStep3Preview.value ?? null,
+    instruction_preview: finalStep3Preview.value ?? null,
+    step3_resolution: { width: targetResolution.width, height: targetResolution.height },
+    step3_studs: step3StudTotal.value,
+    step3_stud_usage: step3StudUsage.value,
+    pixel_type: selectedPixelType.value,
+    high_quality: isHighQualityColorMode.value
+  };
   isCreatingCheckoutOrder.value = true;
   try {
     let orderId = props.editingOrderId ?? null;
@@ -2939,7 +2949,7 @@ const goToCheckout = async () => {
           cropInteraction: cropInteractionForOrder.value ?? null,
           originalImage: originalImageForOrder.value ?? uploadedImage.value ?? null,
           totalAmount: latestFormatMeta?.amount ?? undefined,
-          metadata: latestFormatMeta ? { format_price: latestFormatMeta } : undefined
+          metadata: latestFormatMeta ? { format_price: latestFormatMeta, ...step3Meta } : { ...step3Meta }
         },
         user.value.id
       );
@@ -2951,7 +2961,7 @@ const goToCheckout = async () => {
         cropInteraction: cropInteractionForOrder.value ?? null,
         originalImage: originalImageForOrder.value ?? uploadedImage.value ?? null,
         totalAmount: latestFormatMeta?.amount ?? undefined,
-        metadata: latestFormatMeta ? { format_price: latestFormatMeta } : undefined
+        metadata: latestFormatMeta ? { format_price: latestFormatMeta, ...step3Meta } : { ...step3Meta }
       });
       orderId = data?.id ?? null;
     }

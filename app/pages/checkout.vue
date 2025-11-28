@@ -34,13 +34,34 @@
             <button
               type="button"
               class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
-              :disabled="isCreatingOrder"
+              :disabled="payButtonDisabled"
               @click="handleCreateOrder"
             >
-              <span v-if="isCreatingOrder">กำลังสร้างออเดอร์…</span>
-              <span v-else>ชำระเงิน</span>
+              <span>{{ payButtonText }}</span>
             </button>
+            <p
+              v-if="showShippingWarning"
+              class="text-[11px] text-rose-600"
+            >
+              กรุณาเลือกหรือเพิ่มที่อยู่ให้ครบก่อนชำระเงิน
+            </p>
           </div>
+        </div>
+
+        <div
+          v-if="isPaymentCompleted"
+          class="mx-5 mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 flex items-center justify-between gap-3"
+        >
+          <div class="flex items-center gap-2">
+            <span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+            <div>
+              <p class="font-semibold text-emerald-900">ชำระเงินเรียบร้อยแล้ว</p>
+              <p class="text-xs text-emerald-700">ตรวจสอบรายละเอียดออเดอร์ด้านล่างได้เลย</p>
+            </div>
+          </div>
+          <span class="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold text-emerald-800">
+            Paid
+          </span>
         </div>
 
         <div class="grid gap-6 px-5 py-6 lg:grid-cols-[1.6fr,1fr]">
@@ -341,6 +362,31 @@
         @update:model-value="(v) => Object.assign(addressForm, v)"
       />
     </BaseModal>
+    <BaseModal
+      :open="showPaymentSuccessModal"
+      title="ชำระเงินสำเร็จ"
+      @close="showPaymentSuccessModal = false"
+    >
+      <div class="mt-2 space-y-3 text-sm text-slate-700">
+        <p>ได้รับการชำระเงินเรียบร้อยแล้ว ทีมงานจะดำเนินการจัดเตรียมสินค้าให้ทันที</p>
+        <div class="flex flex-wrap gap-2">
+          <NuxtLink
+            to="/profile"
+            class="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-[13px] font-semibold text-slate-700 hover:bg-slate-50"
+            @click="showPaymentSuccessModal = false"
+          >
+            ดูออเดอร์ของฉัน
+          </NuxtLink>
+          <NuxtLink
+            :to="brickLink"
+            class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-[13px] font-semibold text-white shadow hover:bg-emerald-500"
+            @click="showPaymentSuccessModal = false"
+          >
+            ไปหน้าหลัก
+          </NuxtLink>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>
 
@@ -372,6 +418,7 @@ const finalPreview = useState<string | null>('brick-final-step3-preview', () => 
 const originalImage = useState<string | null>('brick-original-image', () => null);
 const cropInteractionForOrder = useState<Record<string, any> | null>('brick-crop-interaction', () => null);
 const isCreatingOrder = ref(false);
+const isRedirectingToStripe = ref(false);
 const orderError = ref<string | null>(null);
 const orderSuccess = ref<{ id: string | number } | null>(null);
 const myOrders = ref<Array<Record<string, any>>>([]);
@@ -382,6 +429,7 @@ const selectedOrderLoading = ref(false);
 const selectedOrderError = ref<string | null>(null);
 const addresses = ref<Array<Record<string, any>>>([]);
 const addressesLoading = ref(false);
+const addressesInitialized = ref(false);
 const addressesError = ref<string | null>(null);
 const addressFormError = ref<string | null>(null);
 const addressSaving = ref(false);
@@ -390,6 +438,7 @@ const addressDefaulting = ref<Record<number, boolean>>({});
 const addressSavedMessage = ref<string | null>(null);
 const selectedAddressId = ref<number | null>(null);
 const showAddressModal = ref(false);
+const showPaymentSuccessModal = ref(false);
 const productInfo = ref<{
   id: number | string;
   slug: string | null;
@@ -537,6 +586,21 @@ const effectiveShipping = computed(() => {
     };
   }
   return null;
+});
+
+const isShippingFilled = computed(() => {
+  const s = effectiveShipping.value;
+  if (!s) return false;
+  const required = [
+    s.recipient_name,
+    s.phone,
+    s.address_line,
+    s.province,
+    s.district,
+    s.subdistrict,
+    s.postcode
+  ];
+  return required.every((val) => typeof val === 'string' && val.trim().length > 0);
 });
 
 const loadImagePixels = async (
@@ -821,19 +885,73 @@ const formatCurrency = (value: number | string | null | undefined) => {
   }).format(num);
 };
 
-const statusBadge = (status: string | null | undefined) => {
-  if (!status) return { text: 'รอชำระเงิน', color: 'bg-amber-50 text-amber-700 border-amber-200' };
-  const s = String(status).toLowerCase();
-  if (s.includes('paid') || s.includes('สำเร็จ')) return { text: status, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
-  if (s.includes('ship')) return { text: status, color: 'bg-blue-50 text-blue-700 border-blue-200' };
-  if (s.includes('cancel')) return { text: status, color: 'bg-slate-100 text-slate-600 border-slate-200' };
-  return { text: status, color: 'bg-amber-50 text-amber-700 border-amber-200' };
+const resolveStatusString = (input: any) => {
+  if (!input) return '';
+  if (typeof input === 'object') {
+    const candidate =
+      input.payment_status ??
+      input.status ??
+      input.status_text ??
+      input.state ??
+      '';
+    return String(candidate);
+  }
+  return String(input);
 };
 
-const isPending = (status: string | null | undefined) => {
-  if (!status) return true;
-  const s = String(status).toLowerCase();
-  return s.includes('pending') || s.includes('รอชำระ') || s.includes('unpaid');
+const normalizeStatus = (status: string | null | undefined | Record<string, any>) =>
+  resolveStatusString(status).toLowerCase().trim();
+
+const pendingTokens = [
+  'unpaid',
+  'pending',
+  'รอ',
+  'รอชำระ',
+  'ยังไม่',
+  'wait',
+  'waiting',
+  'await',
+  'awaiting',
+  'payment_pending',
+  'waiting_payment',
+  'wait_payment',
+  'รอตรวจสอบ',
+  'รอจ่าย'
+];
+const paidTokens = [
+  'paid',
+  'ชำระแล้ว',
+  'ชำระเงินแล้ว',
+  'success',
+  'successful',
+  'สำเร็จ',
+  'complete',
+  'completed',
+  'payment_succeeded',
+  'paid_success'
+];
+
+const isPending = (status: string | null | undefined | Record<string, any>) => {
+  const s = normalizeStatus(status);
+  if (!s) return true;
+  return pendingTokens.some((token) => s.includes(token));
+};
+
+const isPaidStatus = (status: string | null | undefined | Record<string, any>) => {
+  const s = normalizeStatus(status);
+  if (!s || isPending(s)) return false;
+  return paidTokens.some((token) => s.includes(token));
+};
+
+const statusBadge = (statusOrOrder: string | null | undefined | Record<string, any>) => {
+  const raw = resolveStatusString(statusOrOrder);
+  if (!raw) return { text: 'รอชำระเงิน', color: 'bg-amber-50 text-amber-700 border-amber-200' };
+  if (isPending(statusOrOrder)) return { text: raw, color: 'bg-amber-50 text-amber-700 border-amber-200' };
+  if (isPaidStatus(statusOrOrder)) return { text: raw, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+  const s = raw.toLowerCase();
+  if (s.includes('ship')) return { text: raw, color: 'bg-blue-50 text-blue-700 border-blue-200' };
+  if (s.includes('cancel')) return { text: raw, color: 'bg-slate-100 text-slate-600 border-slate-200' };
+  return { text: raw, color: 'bg-amber-50 text-amber-700 border-amber-200' };
 };
 
 const paymentLink = (order: Record<string, any>) => {
@@ -891,6 +1009,7 @@ const loadAddresses = async () => {
     addresses.value = [];
   } finally {
     addressesLoading.value = false;
+    addressesInitialized.value = true;
   }
 };
 
@@ -963,7 +1082,19 @@ const summaryOrder = computed(() => latestOrder.value);
 const summaryOrderId = computed(() => summaryOrder.value?.id ?? currentOrderId.value ?? null);
 const summaryCreatedAt = computed(() => summaryOrder.value?.created_at ?? null);
 const summaryUpdatedAt = computed(() => summaryOrder.value?.updated_at ?? summaryOrder.value?.created_at ?? null);
-const summaryStatusBadge = computed(() => statusBadge(summaryOrder.value?.status));
+const summaryStatusBadge = computed(() => statusBadge(summaryOrder.value));
+const successFromQuery = computed(
+  () => route.query.success === '1' || route.query.success === 'true'
+);
+const isPaymentCompleted = computed(() => {
+  const currentId = summaryOrderId.value ?? currentOrderId.value;
+  const fromStatus =
+    summaryOrder.value?.id != null &&
+    currentId != null &&
+    String(summaryOrder.value.id) === String(currentId) &&
+    isPaidStatus(summaryOrder.value);
+  return Boolean(fromStatus || successFromQuery.value);
+});
 const isSummaryLoading = computed(() => {
   if (hasProductQuery.value) return productLoading.value;
   if (hasLinkedOrder.value) return selectedOrderLoading.value;
@@ -1067,6 +1198,16 @@ const loadSelectedOrder = async () => {
     selectedOrderLoading.value = false;
   }
 };
+
+watch(
+  () => successFromQuery.value,
+  (fromStripe) => {
+    if (fromStripe) {
+      showPaymentSuccessModal.value = true;
+    }
+  },
+  { immediate: true }
+);
 
 watch(
   () => user.value?.id,
@@ -1253,7 +1394,66 @@ watch(
   }
 );
 
+const startStripeCheckout = async (orderId: string | number) => {
+  if (!orderId) {
+    orderError.value = 'ไม่พบเลขออเดอร์เพื่อไปหน้าจ่าย';
+    return;
+  }
+  isRedirectingToStripe.value = true;
+  try {
+    const response = await $fetch<{ url?: string | null; sessionId?: string | null }>('/api/checkout-session', {
+      method: 'POST',
+      body: { orderId }
+    });
+    const redirectUrl = response?.url;
+    if (!redirectUrl) {
+      throw new Error('ไม่พบลิงก์จ่ายเงินจาก Stripe');
+    }
+    window.location.href = redirectUrl;
+  } catch (error: any) {
+    orderError.value =
+      error?.data?.statusMessage || error?.message || 'ไม่สามารถสร้างลิงก์ชำระเงินได้';
+  } finally {
+    isRedirectingToStripe.value = false;
+  }
+};
+
+const payButtonDisabled = computed(
+  () => isCreatingOrder.value || isRedirectingToStripe.value || !isShippingFilled.value || isPaymentCompleted.value
+);
+
+const payButtonText = computed(() => {
+  if (isPaymentCompleted.value) return 'ชำระเงินสำเร็จแล้ว';
+  if (isRedirectingToStripe.value) return 'กำลังไปหน้า Stripe…';
+  if (isCreatingOrder.value) return 'กำลังสร้างออเดอร์…';
+  if (selectedOrderLoading.value || myOrdersLoading.value) return 'Loading...';
+  return 'ชำระเงิน';
+});
+const showShippingWarning = computed(
+  () => addressesInitialized.value && !addressesLoading.value && !isShippingFilled.value && !isPaymentCompleted.value
+);
+
+const buildStep3Meta = () => {
+  const res = previewResolution.value;
+  const studs = res?.width && res?.height ? res.width * res.height : kitBreakdown.value?.studs ?? null;
+  const preview = checkoutPreview.value || finalPreview.value || studPreview.value || step2PreviewSource.value || null;
+  const stud = studPreview.value || finalPreview.value || checkoutPreview.value || null;
+  return {
+    stud_preview: stud ?? null,
+    step3_preview: preview ?? null,
+    instruction_preview: stud ?? preview ?? null,
+    step3_resolution: res?.width && res?.height ? res : null,
+    step3_studs: studs ?? null,
+    pixel_type: DEFAULT_PIXEL_TYPE,
+    step3_preview_source: isProductMode.value ? 'product' : 'custom'
+  };
+};
+
 const handleCreateOrder = async () => {
+  if (isPaymentCompleted.value) {
+    orderError.value = 'ออเดอร์นี้ชำระเงินแล้ว';
+    return;
+  }
   orderError.value = null;
   if (!user.value) {
     requireAuth(() => handleCreateOrder());
@@ -1274,17 +1474,19 @@ const handleCreateOrder = async () => {
     orderError.value = 'ไม่พบข้อมูลสินค้า';
     return;
   }
-  if (!effectiveShipping.value) {
-    orderError.value = 'กรุณาเลือกหรือเพิ่มที่อยู่จัดส่ง';
+  if (!effectiveShipping.value || !isShippingFilled.value) {
+    orderError.value = 'กรุณาเลือกหรือเพิ่มที่อยู่จัดส่งให้ครบถ้วน';
     return;
   }
   isCreatingOrder.value = true;
   try {
     let data: any = null;
+    let createdOrderId: string | number | null = null;
     const shippingSnapshot = effectiveShipping.value ? { shipping_snapshot: effectiveShipping.value } : {};
     const mergedMetadataForLinked = hasLinkedOrder.value
       ? { ...(selectedOrder.value?.metadata ?? {}), ...shippingSnapshot }
       : shippingSnapshot;
+    const step3Meta = buildStep3Meta();
     const productMetadata = info
       ? {
           product_id: (info.id as any) ?? null,
@@ -1307,10 +1509,11 @@ const handleCreateOrder = async () => {
           cropInteraction: null,
           originalImage: null,
           totalAmount: productPrice.value ?? DEFAULT_ORDER_PRICE,
-          metadata: { ...mergedMetadataForLinked, ...productMetadata }
+          metadata: { ...mergedMetadataForLinked, ...productMetadata, ...step3Meta }
         },
         user.value.id
       );
+      createdOrderId = selectedOrderId.value;
       orderSuccess.value = { id: selectedOrderId.value };
     } else if (!productFlow && hasLinkedOrder.value && selectedOrderId.value) {
       data = await updateOrderAssets(
@@ -1320,10 +1523,11 @@ const handleCreateOrder = async () => {
           source: 'checkout:linked',
           cropInteraction: cropInteractionForOrder.value ?? null,
           originalImage: originalImage.value ?? null,
-          metadata: mergedMetadataForLinked
+          metadata: { ...mergedMetadataForLinked, ...step3Meta }
         },
         user.value.id
       );
+      createdOrderId = selectedOrderId.value;
       orderSuccess.value = { id: selectedOrderId.value };
     } else {
       data = await recordPendingPaymentOrder({
@@ -1336,13 +1540,20 @@ const handleCreateOrder = async () => {
         metadata: productFlow
           ? {
               ...productMetadata,
-              shipping_snapshot: effectiveShipping.value ?? null
+              shipping_snapshot: effectiveShipping.value ?? null,
+              ...step3Meta
             }
-          : { ...shippingSnapshot }
+          : { ...shippingSnapshot, ...step3Meta }
       });
-      orderSuccess.value = { id: data?.id ?? 'new' };
+      createdOrderId = data?.id ?? null;
+      orderSuccess.value = createdOrderId ? { id: createdOrderId } : null;
     }
     await loadMyOrders();
+    if (createdOrderId != null) {
+      await startStripeCheckout(createdOrderId);
+    } else {
+      orderError.value = 'สร้างออเดอร์สำเร็จ แต่ไม่พบเลขออเดอร์เพื่อจ่ายเงิน';
+    }
   } catch (error: any) {
     orderError.value = error?.message ?? 'ไม่สามารถสร้างออเดอร์ได้';
     console.error('create order error', error);
