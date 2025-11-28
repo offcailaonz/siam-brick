@@ -101,6 +101,19 @@
               <p v-else class="mt-2 text-xs text-slate-500">
                 สินค้าจาก Ready Kit แก้ไขภาพไม่ได้ เลือกที่อยู่และดำเนินการชำระเงินได้เลย
               </p>
+              <div class="mt-3">
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                  :disabled="!remixReady"
+                  @click="handleDownloadSample"
+                >
+                  <span>ดาวน์โหลดตัวอย่าง (Step 3)</span>
+                </button>
+                <p v-if="!remixReady" class="mt-1 text-[11px] text-slate-500">
+                  รอโหลดข้อมูล Step 3 ให้พร้อมก่อน
+                </p>
+              </div>
             </div>
             <div
               v-else-if="isPreviewLoading"
@@ -387,12 +400,28 @@
         </div>
       </div>
     </BaseModal>
+    <ClientOnly>
+      <div class="hidden" aria-hidden="true">
+        <BrickArtRemixApp
+          ref="remixAppRef"
+          :key="currentOrderId || 'remix-helper'"
+          :show-step4="false"
+          :enable-persistence="false"
+          :enable-price-fetch="false"
+          :initial-step2-preview="step2PreviewSource"
+          :initial-step3-preview="selectedOrderStep3Preview || checkoutPreview"
+          :initial-step3-base="selectedOrderStep3Base || selectedOrderStep3Preview || checkoutPreview"
+          :editing-order-id="currentOrderId"
+        />
+      </div>
+    </ClientOnly>
   </div>
 </template>
 
 <script setup lang="ts">
 import { alignPixelsToStudMap, drawStudImageOnCanvas, replaceSparseColors, rgbToHex } from '~/lib/brickArtRemix/algo';
 import { ALL_BRICKLINK_SOLID_COLORS, PIXEL_TYPE_OPTIONS } from '~/lib/brickArtRemix/bricklinkColors';
+import BrickArtRemixApp from '~/components/BrickArtRemix/BrickArtRemixApp.vue';
 import AddressForm from '~/components/address/AddressForm.vue';
 import ReceiveInfo from '~/components/checkout/ReceiveInfo.vue';
 import BaseModal from '~/components/ui/BaseModal.vue';
@@ -419,6 +448,7 @@ const originalImage = useState<string | null>('brick-original-image', () => null
 const cropInteractionForOrder = useState<Record<string, any> | null>('brick-crop-interaction', () => null);
 const isCreatingOrder = ref(false);
 const isRedirectingToStripe = ref(false);
+const initialLoadPending = ref(true);
 const orderError = ref<string | null>(null);
 const orderSuccess = ref<{ id: string | number } | null>(null);
 const myOrders = ref<Array<Record<string, any>>>([]);
@@ -439,6 +469,7 @@ const addressSavedMessage = ref<string | null>(null);
 const selectedAddressId = ref<number | null>(null);
 const showAddressModal = ref(false);
 const showPaymentSuccessModal = ref(false);
+const remixAppRef = ref<InstanceType<typeof BrickArtRemixApp> | null>(null);
 const productInfo = ref<{
   id: number | string;
   slug: string | null;
@@ -533,6 +564,27 @@ const productQuery = computed(() => (typeof route.query.product === 'string' ? r
 const hasProductQuery = computed(() => Boolean(productQuery.value));
 const activeProductInfo = computed(() => (hasProductQuery.value ? productInfo.value : linkedProductInfo.value));
 const isProductMode = computed(() => hasProductQuery.value || Boolean(linkedProductInfo.value));
+const selectedOrderStep3Base = computed(() => {
+  const o = selectedOrder.value ?? null;
+  const meta = o?.metadata ?? {};
+  const candidates = [meta.step3_base, meta.preview_base, o?.preview_base, o?.step3_base];
+  const found = candidates.find((item) => typeof item === 'string' && item.trim());
+  return found ? String(found).trim() : null;
+});
+const selectedOrderStep3Preview = computed(() => {
+  const o = selectedOrder.value ?? null;
+  const meta = o?.metadata ?? {};
+  const candidates = [
+    meta.step3_preview,
+    meta.instruction_preview,
+    meta.stud_preview,
+    meta.product_image,
+    o?.preview_url,
+    o?.preview
+  ];
+  const found = candidates.find((item) => typeof item === 'string' && item.trim());
+  return found ? String(found).trim() : null;
+});
 const previewMeta = computed(() =>
   isProductMode.value
     ? {
@@ -546,6 +598,7 @@ const previewMeta = computed(() =>
         badge: 'พร้อมสั่ง'
       }
 );
+const remixReady = computed(() => remixAppRef.value?.step3Ready?.value ?? false);
 const productPrice = computed(() => {
   const info = activeProductInfo.value;
   if (!isProductMode.value || !info) return null;
@@ -963,6 +1016,10 @@ const paymentLink = (order: Record<string, any>) => {
   return looksLikeUrl ? trimmed : null;
 };
 
+const handleDownloadSample = () => {
+  remixAppRef.value?.handleGenerateInstructions?.();
+};
+
 const resetAddressForm = () => {
   addressForm.label = '';
   addressForm.recipient_name = '';
@@ -1148,6 +1205,9 @@ const loadMyOrders = async () => {
     myOrdersError.value = error?.message ?? 'ไม่สามารถโหลดออเดอร์ของคุณได้';
   } finally {
     myOrdersLoading.value = false;
+    if (initialLoadPending.value) {
+      initialLoadPending.value = false;
+    }
   }
 };
 
@@ -1196,6 +1256,9 @@ const loadSelectedOrder = async () => {
     linkedProductInfo.value = null;
   } finally {
     selectedOrderLoading.value = false;
+    if (initialLoadPending.value) {
+      initialLoadPending.value = false;
+    }
   }
 };
 
@@ -1224,6 +1287,7 @@ watch(
       selectedOrderError.value = hasLinkedOrder.value ? 'กรุณาเข้าสู่ระบบเพื่อดูออเดอร์นี้' : null;
       addresses.value = [];
       linkedProductInfo.value = null;
+      initialLoadPending.value = false;
     }
   },
   { immediate: true }
@@ -1419,14 +1483,19 @@ const startStripeCheckout = async (orderId: string | number) => {
 };
 
 const payButtonDisabled = computed(
-  () => isCreatingOrder.value || isRedirectingToStripe.value || !isShippingFilled.value || isPaymentCompleted.value
+  () =>
+    initialLoadPending.value ||
+    isCreatingOrder.value ||
+    isRedirectingToStripe.value ||
+    !isShippingFilled.value ||
+    isPaymentCompleted.value
 );
 
 const payButtonText = computed(() => {
+  if (initialLoadPending.value || selectedOrderLoading.value || myOrdersLoading.value) return 'Loading...';
   if (isPaymentCompleted.value) return 'ชำระเงินสำเร็จแล้ว';
   if (isRedirectingToStripe.value) return 'กำลังไปหน้า Stripe…';
   if (isCreatingOrder.value) return 'กำลังสร้างออเดอร์…';
-  if (selectedOrderLoading.value || myOrdersLoading.value) return 'Loading...';
   return 'ชำระเงิน';
 });
 const showShippingWarning = computed(

@@ -1566,6 +1566,15 @@ const clampResolutionValue = (value: number) => {
   return Math.min(Math.max(rounded || RESOLUTION_MIN, RESOLUTION_MIN), RESOLUTION_MAX);
 };
 
+const clampCropRectToBounds = () => {
+  const width = Math.min(Math.max(cropRect.width, MIN_CROP_FRACTION), 1);
+  const height = Math.min(Math.max(cropRect.height, MIN_CROP_FRACTION), 1);
+  cropRect.width = width;
+  cropRect.height = height;
+  cropRect.left = clamp(cropRect.left, 0, 1 - width);
+  cropRect.top = clamp(cropRect.top, 0, 1 - height);
+};
+
 const markApiPreviewDirty = () => {
   if (props.editingOrderId && showApiStep3Preview.value) {
     showApiStep3Preview.value = false;
@@ -1791,6 +1800,7 @@ const syncCropRectToAspect = () => {
   cropRect.height = Math.max(height, MIN_CROP_FRACTION);
   cropRect.left = clamp(centerX - cropRect.width / 2, 0, 1 - cropRect.width);
   cropRect.top = clamp(centerY - cropRect.height / 2, 0, 1 - cropRect.height);
+  clampCropRectToBounds();
 };
 
 const measurePreviewRect = () => {
@@ -1891,6 +1901,7 @@ const handleCropPointerMove = (event: PointerEvent) => {
     cropRect.height = height;
     cropRect.top = clamp(centerY - height / 2, 0, 1 - height);
   }
+  clampCropRectToBounds();
   // อย่าประมวลผลระหว่างลาก เพื่อลดอาการค้าง
 };
 
@@ -2977,13 +2988,6 @@ const goToCheckout = async () => {
   }
 };
 
-defineExpose({
-  goToCheckout,
-  step3Ready,
-  isStep2Processing,
-  isCreatingCheckoutOrder
-});
-
 const handleGenerateInstructions = async () => {
   if (isGeneratingPdf.value) {
     return;
@@ -3010,6 +3014,14 @@ const handleGenerateInstructions = async () => {
     isGeneratingPdf.value = false;
   }
 };
+
+defineExpose({
+  goToCheckout,
+  step3Ready,
+  isStep2Processing,
+  isCreatingCheckoutOrder,
+  handleGenerateInstructions
+});
 
 const buildInstructionPdf = async (isHighQuality: boolean) => {
   if (!step3Canvas.value || !step3UpscaledCanvas.value) {
@@ -3321,16 +3333,18 @@ watch(
   max-height: 100%;
   width: auto;
   height: auto;
+  object-fit: contain;
   display: block;
-  margin: 0 auto;
   border-radius: 0.5rem;
 }
 
 .preview-media-container {
   position: relative;
-  display: inline-block;
-  max-width: 100%;
-  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
 }
 
