@@ -1,7 +1,5 @@
 <template>
-  <section
-    class="rounded-xl border border-indigo-100 bg-white px-4 py-4 shadow-sm space-y-4"
-  >
+  <section class="rounded-xl border border-indigo-100 bg-white px-4 py-4 shadow-sm space-y-4">
     <div class="flex items-center justify-between gap-2">
       <div>
         <p class="text-sm font-semibold text-slate-900">สินค้า</p>
@@ -25,78 +23,66 @@
         </button>
       </div>
     </div>
-    <p v-if="error" class="mt-2 text-xs text-rose-600">
-      โหลดสินค้าไม่สำเร็จ: {{ error }}
-    </p>
-
-    <div class="space-y-2 max-h-[420px] overflow-auto pr-1" v-auto-animate>
-      <div v-if="loading" class="text-sm text-slate-500 px-1">กำลังโหลด...</div>
-      <div
-        v-else-if="products.length === 0"
-        class="text-sm text-slate-500 px-1"
-      >
-        ยังไม่มีสินค้า
-      </div>
-      <div
-        v-else
-        v-for="product in products"
-        :key="product.id"
-        class="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2"
-      >
-        <div class="flex items-center justify-between gap-2">
-          <div class="flex items-center gap-3">
-            <div
-              v-if="productImage(product)"
-              class="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white"
-            >
-              <img
-                :src="productImage(product)"
-                alt="preview"
-                class="h-full w-full object-contain"
-              />
-            </div>
-            <div>
-              <p class="text-sm font-semibold text-slate-900">
-                {{ product.name }}
-              </p>
-              <p class="text-xs text-slate-500">
-                {{ product.metadata.difficulty }}
-              </p>
-            </div>
-          </div>
-          <span
-            class="badge"
-            :class="product.active === false ? 'badge-grey' : 'badge-green'"
+    <DataTable
+      :columns="columns"
+      :rows="productRows"
+      :loading="loading"
+      :error="error"
+      :page="page ?? 1"
+      :page-size="pageSize ?? (productRows.length || 20)"
+      :total="total ?? productRows.length"
+      :sort="currentSort"
+      row-key="id"
+      @change-page="$emit('change-page', $event)"
+      @change-sort="$emit('change-sort', $event)"
+    >
+      <template #cell-preview="{ row }">
+        <div class="flex items-center gap-3">
+          <div
+            v-if="row.preview"
+            class="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white"
           >
-            {{ product.active === false ? 'ปิด' : 'ขายอยู่' }}
-          </span>
-        </div>
-        <div class="mt-2 flex items-center gap-2 justify-between">
-          <div>
-            <p class="text-xs text-slate-500 mt-1">
-              ราคา
-              {{ product.price != null ? formatCurrency(product.price) : '—' }}
-            </p>
+            <img :src="row.preview" alt="preview" class="h-full w-full object-contain" />
           </div>
-          <div>
-            <button
-              type="button"
-              class="me-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-              @click="editProduct(product)"
-            >
-              แก้ไข
-            </button>
-            <button
-              type="button"
-              class="rounded-full border border-rose-200 bg-white px-3 py-1 text-[11px] font-semibold text-rose-700 shadow-sm hover:bg-rose-50"
-              @click="$emit('delete', product.id)"
-            >
-              ลบ
-            </button>
+          <div class="flex flex-col">
+            <span class="text-sm font-semibold text-slate-900">{{ row.name }}</span>
+            <span class="text-[11px] text-slate-500">{{ row.difficulty || '-' }}</span>
           </div>
         </div>
-      </div>
-    </div>
+      </template>
+      <template #cell-size="{ row }">
+        <span class="text-slate-700">{{ row.size || '-' }}</span>
+      </template>
+      <template #cell-studs="{ row }">
+        <span class="text-slate-700">{{ row.studs ?? 0 }}</span>
+      </template>
+      <template #cell-price="{ row }">
+        <span class="text-slate-700">{{ row.price != null ? formatCurrency(row.price) : '—' }}</span>
+      </template>
+      <template #cell-status="{ row }">
+        <span class="badge" :class="row.active === false ? 'badge-grey' : 'badge-green'">
+          {{ row.active === false ? 'ปิด' : 'ขายอยู่' }}
+        </span>
+      </template>
+      <template #cell-actions="{ row }">
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            class="me-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+            @click="editProduct(row.raw)"
+          >
+            แก้ไข
+          </button>
+          <button
+            type="button"
+            class="rounded-full border border-rose-200 bg-white px-3 py-1 text-[11px] font-semibold text-rose-700 shadow-sm hover:bg-rose-50"
+            @click="$emit('delete', row.id)"
+          >
+            ลบ
+          </button>
+        </div>
+      </template>
+    </DataTable>
 
     <BaseModal
       :open="showModal"
@@ -223,9 +209,10 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import BaseModal from '~/components/ui/BaseModal.vue';
 import ProductGeneratorModal from '~/components/backoffice/ProductGeneratorModal.vue';
+import DataTable from '~/components/backoffice/DataTable.vue';
 
 const props = defineProps<{
   products: Array<Record<string, any>>;
@@ -234,13 +221,44 @@ const props = defineProps<{
   formatCurrency: (v: number | string | null | undefined) => string;
   saving?: boolean;
   saveError?: string | null;
+  page?: number;
+  pageSize?: number;
+  total?: number;
+  sort?: { field: string; direction: 'asc' | 'desc' };
 }>();
 
 const emit = defineEmits<{
   (e: 'refresh'): void;
   (e: 'save', payload: any): void;
   (e: 'delete', id: number | string): void;
+  (e: 'change-page', page: number): void;
+  (e: 'change-sort', payload: { field: string; direction: 'asc' | 'desc' }): void;
 }>();
+
+const columns = [
+  { key: 'preview', label: 'สินค้า', sortable: false },
+  { key: 'size', label: 'ขนาด', sortable: false },
+  { key: 'studs', label: 'Studs', sortable: false },
+  { key: 'price', label: 'ราคา', sortable: false },
+  { key: 'status', label: 'สถานะ', sortable: false },
+  { key: 'actions', label: 'จัดการ', sortable: false }
+];
+
+const currentSort = computed(() => props.sort ?? { field: 'created_at', direction: 'desc' });
+
+const productRows = computed(() =>
+  (props.products ?? []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    difficulty: p.metadata?.difficulty,
+    size: p.metadata?.size ?? '',
+    studs: p.metadata?.studs ?? 0,
+    price: p.price != null ? Number(p.price) : p.metadata?.priceKit ?? null,
+    preview: productImage(p),
+    active: p.active,
+    raw: p
+  }))
+);
 
 const form = reactive({
   id: null as number | string | null,

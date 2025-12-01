@@ -126,10 +126,19 @@
                   :status-update-errors="statusUpdateErrors"
                   :format-currency="formatCurrency"
                   :format-date="formatDate"
+                  :page="ordersPage"
+                  :total-pages="ordersTotalPages"
+                  :page-size="ordersPageSize"
+                  :total="ordersTotal"
+                  :sort="ordersSort"
+                  :status-filter="ordersStatusFilter"
                   @refresh="loadOrders"
                   @update-draft="updateStatusDraft"
                   @save-status="handleStatusChange"
                   @view-details="openOrderDetails"
+                  @change-page="goOrdersPage"
+                  @change-sort="changeOrdersSort"
+                  @change-status-filter="changeOrdersStatusFilter"
                 />
 
                 <ProductsSection
@@ -295,6 +304,13 @@ const supabase = useSupabaseClient();
 const { updateOrderStatus, cancelOrder } = useOrders();
 
 const orders = ref<Array<Record<string, any>>>([]);
+const ordersPage = ref(1);
+const ordersPageSize = 20;
+const ordersSort = ref<{ field: string; direction: 'asc' | 'desc' }>({ field: 'created_at', direction: 'desc' });
+const ordersTotal = ref(0);
+const ordersTotalPages = computed(() => Math.max(1, Math.ceil(ordersTotal.value / ordersPageSize)));
+const ordersSkip = computed(() => (ordersPage.value - 1) * ordersPageSize);
+const ordersStatusFilter = ref<string | null>(null);
 const orderDetailOpen = ref(false);
 const orderDetail = ref<Record<string, any> | null>(null);
 const ordersLoading = ref(false);
@@ -614,21 +630,56 @@ const closeOrderDetails = () => {
   orderDetail.value = null;
 };
 
+const goOrdersPage = (page: number) => {
+  const target = Math.min(Math.max(1, page), ordersTotalPages.value);
+  if (target === ordersPage.value) return;
+  ordersPage.value = target;
+  loadOrders();
+};
+
+const changeOrdersSort = (payload: { field: string; direction: 'asc' | 'desc'; reset?: boolean }) => {
+  const fieldMap: Record<string, string> = {
+    preview: 'created_at',
+    customer: 'customer_email',
+    total: 'total_amount',
+    total_amount: 'total_amount'
+  };
+  const nextField = fieldMap[payload.field] ?? payload.field;
+  ordersSort.value = payload.reset ? { field: 'created_at', direction: 'desc' } : { field: nextField, direction: payload.direction };
+  loadOrders();
+};
+
+const changeOrdersStatusFilter = (status: string | null) => {
+  ordersStatusFilter.value = status || null;
+  ordersPage.value = 1;
+  loadOrders();
+};
+
 const loadOrders = async () => {
   ordersLoading.value = true;
   ordersError.value = null;
   try {
-    const { data, error } = await supabase
-      .from('orders_with_email')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(20);
-    if (error) throw error;
-    orders.value = data ?? [];
+    const result = await $fetch<{ items: any[]; total: number; page: number; pageSize: number }>('/api/admin/orders', {
+      params: {
+        skip: ordersSkip.value,
+        take: ordersPageSize,
+        sort: `${ordersSort.value.field}:${ordersSort.value.direction}`,
+        status: ordersStatusFilter.value ?? undefined
+      }
+    });
+    orders.value = result.items ?? [];
+    ordersTotal.value = result.total ?? orders.value.length;
+    const maxPage = Math.max(1, Math.ceil(ordersTotal.value / ordersPageSize));
+    if (ordersPage.value > maxPage) {
+      ordersPage.value = maxPage;
+      await loadOrders();
+      return;
+    }
     syncStatusDrafts();
   } catch (error: any) {
     ordersError.value = error?.message ?? 'เกิดข้อผิดพลาด';
     orders.value = [];
+    ordersTotal.value = 0;
     statusDrafts.value = {};
   } finally {
     ordersLoading.value = false;
@@ -979,6 +1030,7 @@ const handleDeleteProduct = async (id: number | string) => {
 };
 
 const loadAll = async () => {
+  ordersPage.value = 1;
   await Promise.allSettled([loadOrders(), loadProducts(), loadUserRoles(), loadFormatPrices(), loadPartPrices(), loadExtraCosts()]);
 };
 
