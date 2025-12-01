@@ -44,16 +44,17 @@
             <th class="px-2 py-2">สถานะ</th>
             <th class="px-2 py-2">ยอด</th>
             <th class="px-2 py-2">อัปเดต</th>
+            <th class="px-2 py-2">รายละเอียด</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td colspan="5" class="px-2 py-3 text-center text-slate-500">
+            <td colspan="6" class="px-2 py-3 text-center text-slate-500">
               กำลังโหลด...
             </td>
           </tr>
           <tr v-else-if="orders.length === 0">
-            <td colspan="5" class="px-2 py-3 text-center text-slate-500">
+            <td colspan="6" class="px-2 py-3 text-center text-slate-500">
               ยังไม่มีออเดอร์
             </td>
           </tr>
@@ -131,6 +132,15 @@
             <td class="px-2 py-2 text-slate-500 text-xs">
               {{ formatDate(order.updated_at || order.created_at) }}
             </td>
+            <td class="px-2 py-2 text-slate-700">
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                @click="$emit('view-details', order)"
+              >
+                ดูรายละเอียด
+              </button>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -155,6 +165,7 @@ defineEmits<{
   (e: 'refresh'): void;
   (e: 'update-draft', orderId: string | number, value: string): void;
   (e: 'save-status', orderId: string | number, value: string): void;
+  (e: 'view-details', order: Record<string, any>): void;
 }>();
 
 const orderPreview = (order: Record<string, any>) => {

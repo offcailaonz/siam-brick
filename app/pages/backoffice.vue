@@ -129,6 +129,7 @@
                   @refresh="loadOrders"
                   @update-draft="updateStatusDraft"
                   @save-status="handleStatusChange"
+                  @view-details="openOrderDetails"
                 />
 
                 <ProductsSection
@@ -185,16 +186,105 @@
         </div>
       </section>
     </main>
+    <BaseModal
+      :open="orderDetailOpen"
+      :title="orderDetail ? `รายละเอียดออเดอร์ #${orderDetail.id}` : 'รายละเอียดออเดอร์'"
+      max-width-class="max-w-5xl"
+      @close="closeOrderDetails"
+    >
+      <div v-if="orderDetail" class="space-y-4">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+          <div class="h-36 w-36 flex-shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+            <img
+              v-if="orderPreview(orderDetail)"
+              :src="orderPreview(orderDetail)"
+              alt="preview"
+              class="h-full w-full object-contain"
+            />
+            <div v-else class="flex h-full w-full items-center justify-center text-xs text-slate-500">
+              ไม่มีตัวอย่าง
+            </div>
+          </div>
+          <div class="flex flex-1 flex-col gap-2 text-sm text-slate-700">
+            <p><span class="text-slate-500">ลูกค้า:</span> {{ orderDetail.customer_email || orderDetail.user_id || '-' }}</p>
+            <p>
+              <span class="text-slate-500">ยอด:</span>
+              {{ formatCurrency(orderDetail.total_amount) }}
+            </p>
+            <p class="text-slate-500">
+              Stud รวม {{ orderStudTotal }} ชิ้น | สี {{ orderStudUsage.length }} สี
+            </p>
+          </div>
+        </div>
+        <div v-if="orderStudUsage.length" class="rounded-xl border border-slate-200 bg-white">
+          <div class="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div
+              v-for="usage in orderStudUsage"
+              :key="usage.hex"
+              class="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+            >
+              <div class="flex items-center gap-2">
+                <span
+                  class="h-5 w-5 rounded-full border border-slate-200"
+                  :style="{ backgroundColor: usage.hex || '#e5e7eb' }"
+                  aria-hidden="true"
+                ></span>
+                <div class="flex flex-col leading-tight">
+                  <span class="text-xs text-slate-500">{{ usage.name }}</span>
+                  <span class="text-[11px] text-slate-400 break-all">{{ usage.hex }}</span>
+                </div>
+              </div>
+              <div class="flex flex-col items-end leading-tight">
+                <span class="text-xs text-slate-500">ID</span>
+                <span class="font-semibold text-slate-800">{{ usage.bricklinkId ?? '—' }}</span>
+                <span class="text-xs text-slate-500">× {{ usage.count }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p v-else class="text-sm text-slate-500">ไม่มีข้อมูลสี stud สำหรับออเดอร์นี้</p>
+        <div v-if="orderFormatDetails" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <p class="text-sm font-semibold text-slate-800">
+            รายละเอียดจากรูปแบบ ({{ orderFormatDetails.width }}x{{ orderFormatDetails.height }})
+          </p>
+          <div class="mt-2 grid gap-2 sm:grid-cols-3">
+            <div class="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm text-slate-700">
+              <span>ฐาน 32x32</span>
+              <span class="font-semibold">× {{ orderFormatDetails.base32 }}</span>
+            </div>
+            <div class="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm text-slate-700">
+              <span>ฐาน 16x16</span>
+              <span class="font-semibold">× {{ orderFormatDetails.base16 }}</span>
+            </div>
+            <div class="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm text-slate-700">
+              <span>รูแขวน</span>
+              <span class="font-semibold">× {{ orderFormatDetails.hanger }}</span>
+            </div>
+            <div class="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm text-slate-700">
+              <span>มุม</span>
+              <span class="font-semibold">× {{ orderFormatDetails.corners }}</span>
+            </div>
+            <div class="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm text-slate-700">
+              <span>ขอบ</span>
+              <span class="font-semibold">× {{ orderFormatDetails.edges }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p v-else class="text-sm text-slate-500">ไม่พบข้อมูลออเดอร์</p>
+    </BaseModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useOrders } from '~/composables/useOrders';
 import OrdersSection from '~/components/backoffice/OrdersSection.vue';
 import ProductsSection from '~/components/backoffice/ProductsSection.vue';
 import UserRolesSection from '~/components/backoffice/UserRolesSection.vue';
 import FormatPricesSection from '~/components/backoffice/FormatPricesSection.vue';
+import BaseModal from '~/components/ui/BaseModal.vue';
+import { COLOR_NAME_TO_ID, HEX_TO_COLOR_NAME } from '~/lib/brickArtRemix/bricklinkColors';
 
 definePageMeta({
   middleware: ['admin-only']
@@ -205,6 +295,8 @@ const supabase = useSupabaseClient();
 const { updateOrderStatus, cancelOrder } = useOrders();
 
 const orders = ref<Array<Record<string, any>>>([]);
+const orderDetailOpen = ref(false);
+const orderDetail = ref<Record<string, any> | null>(null);
 const ordersLoading = ref(false);
 const ordersError = ref<string | null>(null);
 const activeMenu = ref<'orders' | 'products' | 'formats' | 'users'>('orders');
@@ -372,6 +464,88 @@ const formatDate = (value: string | null | undefined) => {
   }
 };
 
+const normalizeHex = (value: any) => {
+  if (!value) return '';
+  const str = String(value).trim();
+  if (!str) return '';
+  const withHash = str.startsWith('#') ? str : `#${str}`;
+  return withHash.toLowerCase();
+};
+
+const orderPreview = (order: Record<string, any>) => {
+  const meta = order?.metadata ?? {};
+  const candidates = [
+    meta.step3_preview,
+    meta.stud_preview,
+    order?.preview_url,
+    order?.preview,
+    meta.image,
+    meta.product_image,
+    meta.product_preview
+  ];
+  const found = candidates.find((p) => typeof p === 'string' && p.trim());
+  return found ? String(found).trim() : null;
+};
+
+const orderStudUsage = computed(() => {
+  const meta = orderDetail.value?.metadata ?? {};
+  const usage = meta.step3_stud_usage ?? meta.stud_usage ?? meta.step3_meta?.stud_usage;
+  if (!Array.isArray(usage)) return [];
+  return usage
+    .map((item: any) => {
+      const count = Number(item?.count ?? item?.amount ?? 0) || 0;
+      const rawHex = item?.hex ?? item?.color ?? '';
+      const hex = normalizeHex(rawHex);
+      const resolvedName = item?.name ?? HEX_TO_COLOR_NAME[hex] ?? HEX_TO_COLOR_NAME[rawHex];
+      const bricklinkId = resolvedName ? COLOR_NAME_TO_ID[resolvedName] ?? null : null;
+      return {
+        hex: hex || rawHex || '',
+        name: resolvedName ?? rawHex ?? 'ไม่ทราบสี',
+        bricklinkId,
+        count
+      };
+    })
+    .filter((item) => item.hex || item.count > 0)
+    .sort((a, b) => b.count - a.count);
+});
+
+const orderStudTotal = computed(() => orderStudUsage.value.reduce((sum, item) => sum + (Number(item.count) || 0), 0));
+
+const getFrameAndBase = (width: number, height: number) => {
+  const hasSize = width > 0 && height > 0;
+  const corners = hasSize ? 4 : 0;
+  const clips = hasSize ? 2 : 0;
+  const sideShort = hasSize ? ((width - 16) / 16) * 2 : 0;
+  const sideLong = hasSize ? ((height - 16) / 16) * 2 : 0;
+  const canUse32 = hasSize && width % 32 === 0 && height % 32 === 0;
+  const base32 = canUse32 ? (width / 32) * (height / 32) : 0;
+  const base16 = !canUse32 && hasSize ? (width / 16) * (height / 16) : 0;
+  return { corners, clips, sideShort, sideLong, base32, base16 };
+};
+
+const orderFormatDetails = computed(() => {
+  const meta = orderDetail.value?.metadata ?? {};
+  const formatMeta = meta.format_price ?? {};
+  const resolution =
+    parseSizeText(formatMeta) ??
+    parseSizeText({ width: formatMeta.width, height: formatMeta.height }) ??
+    parseSizeText(meta.step3_resolution) ??
+    parseSizeText(meta.resolution) ??
+    parseSizeText(meta.size);
+  if (!resolution) return null;
+  const { width, height } = resolution;
+  const frame = getFrameAndBase(width, height);
+  return {
+    width,
+    height,
+    base16: frame.base16,
+    base32: frame.base32,
+    hanger: frame.clips,
+    corners: frame.corners,
+    edges: frame.sideShort + frame.sideLong
+  };
+});
+
 const normalizeStatusValue = (value: string | null | undefined) => {
   const raw = (value ?? '').toString().trim();
   if (!raw) return 'รอชำระเงิน';
@@ -428,6 +602,16 @@ const handleStatusChange = async (orderId: string | number, newStatus: string) =
   } finally {
     isUpdatingStatus.value[key] = false;
   }
+};
+
+const openOrderDetails = (order: Record<string, any>) => {
+  orderDetail.value = order;
+  orderDetailOpen.value = true;
+};
+
+const closeOrderDetails = () => {
+  orderDetailOpen.value = false;
+  orderDetail.value = null;
 };
 
 const loadOrders = async () => {

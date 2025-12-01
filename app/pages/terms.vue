@@ -34,6 +34,7 @@
   </div>
 </template>
 <style lang="scss">
+@use "sass:math";
 @mixin brick-bg($color, $hue: 0deg) {
   $brick-peg-size: 15px;
   $brick-wall-thickness: 6px;
@@ -51,17 +52,17 @@
 
     background-color: $color;
     background-image:
-      radial-gradient($color $brick-peg-size/2, transparent $brick-peg-size/2+1px),
-      radial-gradient(rgba(#fff, .4) $brick-peg-size/2, transparent $brick-peg-size/2+1px),
-      radial-gradient(rgba(#000, .18) $brick-peg-size/2, transparent $brick-peg-size/2+$brick-wall-thickness/2),
-      radial-gradient(rgba(#000, .18) $brick-peg-size/2, transparent $brick-peg-size/2+$brick-wall-thickness/2);
+      radial-gradient($color math.div($brick-peg-size, 2), transparent calc(#{$brick-peg-size}/2 + 1px)),
+      radial-gradient(rgba(#fff, .4) math.div($brick-peg-size, 2), transparent calc(#{$brick-peg-size}/2 + 1px)),
+      radial-gradient(rgba(#000, .18) math.div($brick-peg-size, 2), transparent calc(#{$brick-peg-size}/2 + math.div($brick-wall-thickness, 2))),
+      radial-gradient(rgba(#000, .18) math.div($brick-peg-size, 2), transparent calc(#{$brick-peg-size}/2 + math.div($brick-wall-thickness, 2)));
 
     background-size: $brick-square $brick-square;
     background-position:
       0px 0px,
       -0.5px -0.5px,
       0px 0px,
-      $brick-wall-thickness/2 $brick-wall-thickness/2;
+      math.div($brick-wall-thickness, 2) math.div($brick-wall-thickness, 2);
 
     background-repeat: repeat;
 
