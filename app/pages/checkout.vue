@@ -23,11 +23,14 @@
               ได้ไฟล์/ชุดตัวต่อเร็วขึ้น
             </p>
           </div>
-          <div class="flex flex-wrap gap-3 py-4">
+          <div class="flex flex-wrap gap-3 py-4" v-if="!isPaymentCompleted">
             <NuxtLink
-              v-if="!isProductMode"
+              v-if="!isProductMode && !isPaymentCompleted"
               :to="brickLink"
               class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+              :aria-disabled="isPaymentCompleted"
+              tabindex="0"
+              @click.prevent="isPaymentCompleted ? null : $router.push(brickLink)"
             >
               กลับไปแก้ภาพ
             </NuxtLink>
@@ -39,10 +42,7 @@
             >
               <span>{{ payButtonText }}</span>
             </button>
-            <p
-              v-if="showShippingWarning"
-              class="text-[11px] text-rose-600"
-            >
+            <p v-if="showShippingWarning" class="text-[11px] text-rose-600">
               กรุณาเลือกหรือเพิ่มที่อยู่ให้ครบก่อนชำระเงิน
             </p>
           </div>
@@ -55,13 +55,29 @@
           <div class="flex items-center gap-2">
             <span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
             <div>
-              <p class="font-semibold text-emerald-900">ชำระเงินเรียบร้อยแล้ว</p>
-              <p class="text-xs text-emerald-700">ตรวจสอบรายละเอียดออเดอร์ด้านล่างได้เลย</p>
+              <p class="font-semibold text-emerald-900">
+                ชำระเงินเรียบร้อยแล้ว
+              </p>
+              <p class="text-xs text-emerald-700">
+                ตรวจสอบรายละเอียดออเดอร์ด้านล่างได้เลย
+              </p>
             </div>
           </div>
-          <span class="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold text-emerald-800">
-            Paid
-          </span>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-1 text-[12px] font-semibold text-emerald-800 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              :disabled="!instructionPdfUrl"
+              @click="handleDownloadInstructionPdf"
+            >
+              <span>ดาวน์โหลด PDF</span>
+            </button>
+            <span
+              class="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold text-emerald-800"
+            >
+              Paid
+            </span>
+          </div>
         </div>
 
         <div class="grid gap-6 px-5 py-6 lg:grid-cols-[1.6fr,1fr]">
@@ -95,25 +111,6 @@
                   class="w-full max-h-[420px] object-contain bg-white"
                 />
               </div>
-              <p v-if="!isProductMode" class="mt-2 text-xs text-slate-500">
-                ถ้าอยากแก้อีกครั้ง กดกลับไป Step 3 ก่อน แล้วค่อยกลับมาชำระเงิน
-              </p>
-              <p v-else class="mt-2 text-xs text-slate-500">
-                สินค้าจาก Ready Kit แก้ไขภาพไม่ได้ เลือกที่อยู่และดำเนินการชำระเงินได้เลย
-              </p>
-              <div class="mt-3">
-                <button
-                  type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
-                  :disabled="!remixReady"
-                  @click="handleDownloadSample"
-                >
-                  <span>ดาวน์โหลดตัวอย่าง (Step 3)</span>
-                </button>
-                <p v-if="!remixReady" class="mt-1 text-[11px] text-slate-500">
-                  รอโหลดข้อมูล Step 3 ให้พร้อมก่อน
-                </p>
-              </div>
             </div>
             <div
               v-else-if="isPreviewLoading"
@@ -130,8 +127,12 @@
                     {{ isProductMode ? 'กำลังโหลดข้อมูลสินค้า...' : 'ดึงรูปจากออเดอร์ที่ลิงก์มา...' }}
                   </p>
                   <div class="mt-2 space-y-2">
-                    <div class="h-4 w-28 rounded-full bg-slate-100 animate-pulse" />
-                    <div class="h-3 w-44 rounded-full bg-slate-100 animate-pulse" />
+                    <div
+                      class="h-4 w-28 rounded-full bg-slate-100 animate-pulse"
+                    />
+                    <div
+                      class="h-3 w-44 rounded-full bg-slate-100 animate-pulse"
+                    />
                   </div>
                 </div>
                 <span
@@ -172,14 +173,18 @@
               <template v-if="isSummaryLoading">
                 <div class="flex items-center justify-between gap-3">
                   <div class="h-4 w-24 rounded bg-slate-100 animate-pulse" />
-                  <div class="h-6 w-16 rounded-full bg-slate-100 animate-pulse" />
+                  <div
+                    class="h-6 w-16 rounded-full bg-slate-100 animate-pulse"
+                  />
                 </div>
                 <div class="mt-3 space-y-2">
                   <div class="h-3 w-full rounded bg-slate-100 animate-pulse" />
                   <div class="h-3 w-5/6 rounded bg-slate-100 animate-pulse" />
                   <div class="h-3 w-2/3 rounded bg-slate-100 animate-pulse" />
                 </div>
-                <div class="mt-4 h-12 rounded-lg bg-slate-100 animate-pulse"></div>
+                <div
+                  class="mt-4 h-12 rounded-lg bg-slate-100 animate-pulse"
+                ></div>
               </template>
               <template v-else>
                 <div class="flex items-center justify-between gap-3">
@@ -228,7 +233,8 @@
                     v-if="isProductMode && activeProductInfo"
                     class="mt-1 text-xs text-slate-500"
                   >
-                    {{ activeProductInfo.name }} · {{ activeProductInfo.size || 'ขนาดไม่ระบุ' }} ·
+                    {{ activeProductInfo.name }} ·
+                    {{ activeProductInfo.size || 'ขนาดไม่ระบุ' }} ·
                     {{ activeProductInfo.studs || 0 }} studs
                   </p>
                 </div>
@@ -237,32 +243,32 @@
             <section
               class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
             >
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <p class="text-sm font-semibold text-slate-900">
-                  เลือกที่อยู่จัดส่ง
-                </p>
-                <p class="text-xs text-slate-500">
-                  ที่อยู่จากโปรไฟล์จะถูกดึงมาให้
-                </p>
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="text-sm font-semibold text-slate-900">
+                    เลือกที่อยู่จัดส่ง
+                  </p>
+                  <p class="text-xs text-slate-500">
+                    ที่อยู่จากโปรไฟล์จะถูกดึงมาให้
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                  :disabled="addressesLoading || !user"
+                  @click="addressesLoading ? null : loadAddresses()"
+                >
+                  รีเฟรช
+                </button>
+                <button
+                  type="button"
+                  class="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                  :disabled="addressSaving || !user"
+                  @click="openAddressModal"
+                >
+                  เพิ่มที่อยู่ใหม่
+                </button>
               </div>
-              <button
-                type="button"
-                class="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-                :disabled="addressesLoading || !user"
-                @click="addressesLoading ? null : loadAddresses()"
-              >
-                รีเฟรช
-              </button>
-              <button
-                type="button"
-                class="rounded-full border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-                :disabled="addressSaving || !user"
-                @click="openAddressModal"
-              >
-                เพิ่มที่อยู่ใหม่
-              </button>
-            </div>
               <p v-if="addressesError" class="text-xs text-rose-600 mt-2">
                 {{ addressesError }}
               </p>
@@ -361,7 +367,11 @@
         />
       </section>
     </main>
-    <BaseModal :open="showAddressModal" title="เพิ่มที่อยู่ใหม่" @close="closeAddressModal">
+    <BaseModal
+      :open="showAddressModal"
+      title="เพิ่มที่อยู่ใหม่"
+      @close="closeAddressModal"
+    >
       <AddressForm
         class="mt-2"
         :model-value="addressForm"
@@ -374,31 +384,6 @@
         @reset="resetAddressForm"
         @update:model-value="(v) => Object.assign(addressForm, v)"
       />
-    </BaseModal>
-    <BaseModal
-      :open="showPaymentSuccessModal"
-      title="ชำระเงินสำเร็จ"
-      @close="showPaymentSuccessModal = false"
-    >
-      <div class="mt-2 space-y-3 text-sm text-slate-700">
-        <p>ได้รับการชำระเงินเรียบร้อยแล้ว ทีมงานจะดำเนินการจัดเตรียมสินค้าให้ทันที</p>
-        <div class="flex flex-wrap gap-2">
-          <NuxtLink
-            to="/profile"
-            class="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-[13px] font-semibold text-slate-700 hover:bg-slate-50"
-            @click="showPaymentSuccessModal = false"
-          >
-            ดูออเดอร์ของฉัน
-          </NuxtLink>
-          <NuxtLink
-            :to="brickLink"
-            class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-[13px] font-semibold text-white shadow hover:bg-emerald-500"
-            @click="showPaymentSuccessModal = false"
-          >
-            ไปหน้าหลัก
-          </NuxtLink>
-        </div>
-      </div>
     </BaseModal>
     <ClientOnly>
       <div class="hidden" aria-hidden="true">
@@ -468,7 +453,6 @@ const addressDefaulting = ref<Record<number, boolean>>({});
 const addressSavedMessage = ref<string | null>(null);
 const selectedAddressId = ref<number | null>(null);
 const showAddressModal = ref(false);
-const showPaymentSuccessModal = ref(false);
 const remixAppRef = ref<InstanceType<typeof BrickArtRemixApp> | null>(null);
 const productInfo = ref<{
   id: number | string;
@@ -481,6 +465,7 @@ const productInfo = ref<{
   resolution: { width: number; height: number };
   difficulty: string;
   tag: string;
+  instructionPdf?: Record<string, any> | null;
 } | null>(null);
 const linkedProductInfo = ref<{
   id: number | string;
@@ -493,6 +478,7 @@ const linkedProductInfo = ref<{
   resolution: { width: number; height: number };
   difficulty: string;
   tag: string;
+  instructionPdf?: Record<string, any> | null;
 } | null>(null);
 const productLoading = ref(false);
 const productError = ref<string | null>(null);
@@ -537,7 +523,13 @@ const checkoutPreview = computed(() => {
   }
   return studPreview.value ?? (hasLinkedOrder.value ? null : finalPreview.value) ?? null;
 });
-const latestOrder = computed(() => (hasLinkedOrder.value ? selectedOrder.value : myOrders.value?.[0] ?? null));
+const latestOrder = computed(() => {
+  // สำหรับ ready kit (product mode) ไม่ควร fallback ไปออเดอร์ล่าสุดของผู้ใช้ เพื่อป้องกันแสดงสถานะ Paid ผิดออเดอร์
+  if (hasProductQuery.value) {
+    return hasLinkedOrder.value ? selectedOrder.value : null;
+  }
+  return hasLinkedOrder.value ? selectedOrder.value : myOrders.value?.[0] ?? null;
+});
 const isPreviewLoading = computed(() => {
   if (hasProductQuery.value) {
     return productLoading.value;
@@ -547,7 +539,14 @@ const isPreviewLoading = computed(() => {
     studPreviewLoading.value
   );
 });
-const currentOrderId = computed(() => selectedOrderId.value ?? orderSuccess.value?.id ?? latestOrder.value?.id ?? null);
+const currentOrderId = computed(() => {
+  const fromLinkedOrSuccess = selectedOrderId.value ?? orderSuccess.value?.id ?? null;
+  if (hasProductQuery.value) {
+    // ใน product mode ไม่ใช้ latestOrder (ออเดอร์เก่าของผู้ใช้) เป็น current id
+    return fromLinkedOrSuccess;
+  }
+  return fromLinkedOrSuccess ?? latestOrder.value?.id ?? null;
+});
 const brickLink = computed(() => (currentOrderId.value ? `/brick?id=${currentOrderId.value}` : '/brick'));
 const selectedOrderShipping = computed(() => {
   const shipping = (selectedOrder.value as any)?.order_shipping;
@@ -1173,6 +1172,18 @@ const summaryPrice = computed(() => {
 
 const previewResolution = ref({ width: 0, height: 0 });
 
+const instructionPdfMeta = computed(() => summaryOrder.value?.metadata?.instruction_pdf ?? null);
+const instructionPdfUrl = computed(() => {
+  const meta = instructionPdfMeta.value;
+  if (!meta) return null;
+  return meta.signedUrl ?? meta.publicUrl ?? null;
+});
+const handleDownloadInstructionPdf = () => {
+  const url = instructionPdfUrl.value;
+  if (!url) return;
+  window.open(url, '_blank');
+};
+
 const getFrameAndBase = (width: number, height: number) => {
   const hasSize = width > 0 && height > 0;
 
@@ -1263,16 +1274,6 @@ const loadSelectedOrder = async () => {
 };
 
 watch(
-  () => successFromQuery.value,
-  (fromStripe) => {
-    if (fromStripe) {
-      showPaymentSuccessModal.value = true;
-    }
-  },
-  { immediate: true }
-);
-
-watch(
   () => user.value?.id,
   (next) => {
     if (next) {
@@ -1329,6 +1330,7 @@ const mapProductRow = (row: any) => {
   const resolution = parseSizeText(size) ?? { width: 0, height: 0 };
   const studs = Number(meta.studs ?? meta.totalStuds ?? meta.studCount ?? 0) || 0;
   const price = meta.priceKit ?? row?.price ?? meta.price ?? null;
+  const instructionPdf = meta.instruction_pdf ?? null;
   return {
     id: row?.id,
     slug: row?.slug ?? null,
@@ -1339,7 +1341,8 @@ const mapProductRow = (row: any) => {
     size: typeof size === 'string' ? size : resolution.width && resolution.height ? `${resolution.width}x${resolution.height}` : '',
     resolution,
     difficulty: meta.difficulty ?? 'Beginner',
-    tag: meta.tag ?? meta.type ?? 'พร้อมสร้าง'
+    tag: meta.tag ?? meta.type ?? 'พร้อมสร้าง',
+    instructionPdf
   };
 };
 
@@ -1369,6 +1372,7 @@ const mapOrderProductMeta = (order: Record<string, any> | null | undefined) => {
     null;
   const price = priceRaw != null && !Number.isNaN(Number(priceRaw)) ? Number(priceRaw) : null;
   const image = meta.product_image ?? meta.image ?? meta.preview ?? order.preview_url ?? null;
+  const instructionPdf = meta.instruction_pdf ?? null;
 
   return {
     id: (meta.product_id ?? meta.product_slug ?? order.id ?? 'ready-kit') as number | string,
@@ -1385,7 +1389,8 @@ const mapOrderProductMeta = (order: Record<string, any> | null | undefined) => {
           : '',
     resolution,
     difficulty: meta.difficulty ?? 'Beginner',
-    tag: meta.tag ?? meta.type ?? 'พร้อมสร้าง'
+    tag: meta.tag ?? meta.type ?? 'พร้อมสร้าง',
+    instructionPdf
   };
 };
 
@@ -1494,7 +1499,7 @@ const payButtonDisabled = computed(
 const payButtonText = computed(() => {
   if (initialLoadPending.value || selectedOrderLoading.value || myOrdersLoading.value) return 'Loading...';
   if (isPaymentCompleted.value) return 'ชำระเงินสำเร็จแล้ว';
-  if (isRedirectingToStripe.value) return 'กำลังไปหน้า Stripe…';
+  if (isRedirectingToStripe.value) return 'กำลังไปหน้าจ่ายเงิืน…';
   if (isCreatingOrder.value) return 'กำลังสร้างออเดอร์…';
   return 'ชำระเงิน';
 });
@@ -1565,7 +1570,8 @@ const handleCreateOrder = async () => {
           studs: info.studs ?? null,
           difficulty: info.difficulty ?? null,
           tag: info.tag ?? null,
-          product_image: info.image ?? null
+          product_image: info.image ?? null,
+          ...(info.instructionPdf ? { instruction_pdf: info.instructionPdf } : {})
         }
       : {};
 

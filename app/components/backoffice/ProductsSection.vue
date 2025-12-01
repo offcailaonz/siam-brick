@@ -253,7 +253,8 @@ const form = reactive({
   size: '',
   image: '',
   active: true,
-  formatPriceMeta: null as any
+  formatPriceMeta: null as any,
+  instructionPdf: null as any
 });
 
 const saveSuccess = ref('');
@@ -272,6 +273,7 @@ const resetForm = () => {
   form.image = '';
   form.active = true;
   form.formatPriceMeta = null;
+  form.instructionPdf = null;
   saveSuccess.value = '';
 };
 
@@ -287,6 +289,7 @@ const editProduct = (p: any) => {
   form.image = p.metadata?.image ?? '';
   form.active = p.active !== false;
   form.formatPriceMeta = p.metadata?.format_price ?? null;
+  form.instructionPdf = null;
   saveSuccess.value = '';
   showModal.value = true;
 };
@@ -338,6 +341,7 @@ const handleGeneratedProduct = (payload: any) => {
     form.priceKit = Number(priceAmount);
   }
   form.formatPriceMeta = payload.formatPriceMeta ?? form.formatPriceMeta;
+  form.instructionPdf = payload.instructionPdf ?? null;
   showGeneratorModal.value = false;
   showModal.value = true;
 };

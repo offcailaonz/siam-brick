@@ -211,7 +211,7 @@ const activeMenu = ref<'orders' | 'products' | 'formats' | 'users'>('orders');
 const statusOptions = [
   'รอชำระเงิน',
   'ชำระเงินแล้ว',
-  'กำลังตรวจสอบ',
+  // 'กำลังตรวจสอบ',
   'กำลังจัดส่ง',
   'สำเร็จ',
   'ยกเลิก'
@@ -235,6 +235,8 @@ const formatAdding = ref(false);
 const extraCosts = ref<Array<{ id?: number; name: string; amount: number | null }>>([]);
 const extraCostsLoading = ref(false);
 const extraCostsSaving = ref(false);
+const PRODUCT_PDF_BUCKET = 'order-instructions';
+const PRODUCT_PDF_PREFIX = 'pdf-product';
 const defaultPartPrices = [
   { key: 'plate-16', name: 'ฐาน 16x16', price: 0 },
   { key: 'plate-32', name: 'ฐาน 32x32', price: 0 },
@@ -378,7 +380,7 @@ const normalizeStatusValue = (value: string | null | undefined) => {
     return 'ชำระเงินแล้ว';
   }
   if (lower.includes('ship')) return 'กำลังจัดส่ง';
-  if (lower.includes('ตรวจ')) return 'กำลังตรวจสอบ';
+  // if (lower.includes('ตรวจ')) return 'กำลังตรวจสอบ';
   if (lower.includes('cancel') || lower.includes('ยกเลิก')) return 'ยกเลิก';
   return raw;
 };
@@ -639,11 +641,43 @@ const handleDeleteUser = async (userId: string) => {
   }
 };
 
+const uploadProductPdf = async (productId: string | number, pdf: { blob: Blob; fileName: string }) => {
+  const productIdStr = String(productId);
+  const filePath = `${PRODUCT_PDF_PREFIX}/Siam-Brick-Product-${productIdStr}.pdf`;
+  const { error } = await supabase.storage.from(PRODUCT_PDF_BUCKET).upload(filePath, pdf.blob, {
+    contentType: 'application/pdf',
+    upsert: true
+  });
+  if (error) throw error;
+  const { data: publicUrlData } = supabase.storage.from(PRODUCT_PDF_BUCKET).getPublicUrl(filePath);
+  let signedUrl: string | null = null;
+  try {
+    const { data: signedData, error: signedError } = await supabase.storage
+      .from(PRODUCT_PDF_BUCKET)
+      .createSignedUrl(filePath, 60 * 60 * 24 * 30);
+    if (!signedError) {
+      signedUrl = signedData?.signedUrl ?? null;
+    }
+  } catch {
+    signedUrl = null;
+  }
+  return {
+    bucket: PRODUCT_PDF_BUCKET,
+    path: filePath,
+    publicUrl: publicUrlData?.publicUrl ?? null,
+    signedUrl
+  };
+};
+
 const handleSaveProduct = async (payload: any) => {
   productSaving.value = true;
   productSaveError.value = null;
   try {
     const isEditing = payload.id != null && payload.id !== '';
+    const instructionPdf = payload.instructionPdf ?? null;
+    const currentProduct = isEditing
+      ? products.value.find((p) => String(p.id) === String(payload.id))
+      : null;
     const normalizeSlug = (value: string | null | undefined) =>
       (value || '')
         .toString()
@@ -678,17 +712,27 @@ const handleSaveProduct = async (payload: any) => {
 
     const slug = await findAvailableSlug(baseSlug, isEditing ? payload.id : null);
 
+    const baseMetadata = currentProduct?.metadata ?? {};
     const metadata = {
-      tag: payload.tag || null,
-      studs: payload.studs ?? null,
-      difficulty: payload.difficulty || null,
-      size: payload.size || null,
-      image: payload.image || null,
-      priceKit: payload.priceKit ?? null,
-      format_price: payload.formatPriceMeta ?? null
+      ...baseMetadata,
+      tag: payload.tag ?? baseMetadata.tag ?? null,
+      studs: payload.studs ?? baseMetadata.studs ?? null,
+      difficulty: payload.difficulty ?? baseMetadata.difficulty ?? null,
+      size: payload.size ?? baseMetadata.size ?? null,
+      image: payload.image ?? baseMetadata.image ?? null,
+      priceKit: payload.priceKit ?? baseMetadata.priceKit ?? null,
+      format_price: payload.formatPriceMeta ?? baseMetadata.format_price ?? null
     };
 
     if (isEditing) {
+      let pdfMeta = baseMetadata?.instruction_pdf ?? null;
+      if (instructionPdf) {
+        pdfMeta = await uploadProductPdf(payload.id, instructionPdf);
+      }
+      const metadataWithPdf = {
+        ...metadata,
+        ...(pdfMeta ? { instruction_pdf: pdfMeta } : {})
+      };
       const { error } = await supabase
         .from('products')
         .update({
@@ -696,19 +740,33 @@ const handleSaveProduct = async (payload: any) => {
           slug,
           price: payload.priceKit ?? 0,
           active: payload.active !== false,
-          metadata
+          metadata: metadataWithPdf
         })
         .eq('id', payload.id);
       if (error) throw error;
     } else {
-      const { error } = await supabase.from('products').insert({
-        name: payload.name,
-        slug,
-        price: payload.priceKit ?? 0,
-        active: payload.active !== false,
-        metadata
-      });
+      const { data, error } = await supabase
+        .from('products')
+        .insert({
+          name: payload.name,
+          slug,
+          price: payload.priceKit ?? 0,
+          active: payload.active !== false,
+          metadata
+        })
+        .select()
+        .single();
       if (error) throw error;
+      const productId = data?.id;
+      if (instructionPdf && productId != null) {
+        const pdfMeta = await uploadProductPdf(productId, instructionPdf);
+        const metadataWithPdf = { ...metadata, instruction_pdf: pdfMeta };
+        const { error: updateError } = await supabase
+          .from('products')
+          .update({ metadata: metadataWithPdf })
+          .eq('id', productId);
+        if (updateError) throw updateError;
+      }
     }
 
     await loadProducts();

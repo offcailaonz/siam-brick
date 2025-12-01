@@ -1173,6 +1173,7 @@ const RESOLUTION_STEP = 32;
 const SCALING_FACTOR = 30;
 const SPARSE_COLOR_THRESHOLD = 10;
 const PDF_FILENAME_BASE = 'Siam-Brick-Instructions';
+const PDF_STORAGE_BUCKET = 'order-instructions';
 const PREVIEW_CLEAR_PAGE_COUNT = 2; // page 1-2 clear; rest blurred
 const APP_WATERMARK = {
   ...DEFAULT_WATERMARK,
@@ -1639,7 +1640,7 @@ const handleHsvInput = (key: keyof typeof hsvControls, event: Event) => {
   }
 };
 
-const emitGenerated = () => {
+const emitGenerated = async () => {
   if (!step3Ready.value) return;
   const preview =
     step3UpscaledCanvas.value?.toDataURL('image/png') ||
@@ -1648,13 +1649,25 @@ const emitGenerated = () => {
     null;
   const studs = step3StudTotal.value;
   const priceAmount = formatPrice.value != null ? Number(formatPrice.value) : null;
+  let instructionPdf: InstructionPdfResult | null = null;
+  try {
+    instructionPdf = await buildInstructionPdf(useHighQualityPdf.value, {
+      download: false,
+      returnBlob: true,
+      quiet: true,
+      noPreviewBlur: true
+    });
+  } catch (err) {
+    console.warn('Generate product PDF failed', err);
+  }
   emit('generated', {
     preview,
     studs,
     studUsage: step3StudUsage.value,
     resolution: { width: targetResolution.width, height: targetResolution.height },
     formatPrice: priceAmount,
-    formatPriceMeta: formatPriceMeta.value ?? (priceAmount != null ? buildFormatPriceMeta(priceAmount) : null)
+    formatPriceMeta: formatPriceMeta.value ?? (priceAmount != null ? buildFormatPriceMeta(priceAmount) : null),
+    instructionPdf
   });
 };
 
@@ -2938,6 +2951,94 @@ const goToCheckout = async () => {
   const latestFormatMeta =
     formatPriceMeta.value ??
     (formatPrice.value != null ? buildFormatPriceMeta(Number(formatPrice.value)) : null);
+
+  if (typeof window === 'undefined') {
+    checkoutOrderError.value = 'ต้องเปิดหน้านี้ผ่านเบราว์เซอร์เพื่อสร้างออเดอร์';
+    return;
+  }
+
+  try {
+    const { instructionPdf, step3Meta } = await buildOrderPdfPayload();
+    const mergeMetadata = (pdfMeta?: Record<string, any> | null) =>
+      latestFormatMeta
+        ? { format_price: latestFormatMeta, ...step3Meta, ...(pdfMeta ? { instruction_pdf: pdfMeta } : {}) }
+        : { ...step3Meta, ...(pdfMeta ? { instruction_pdf: pdfMeta } : {}) };
+
+    let orderId = props.editingOrderId ?? null;
+    if (orderId) {
+      let pdfMeta: Record<string, any> | null = null;
+      try {
+        pdfMeta = await uploadInstructionPdf(orderId, instructionPdf);
+      } catch (uploadErr: any) {
+        checkoutOrderError.value = uploadErr?.message ?? 'ไม่สามารถอัปโหลดไฟล์ PDF สำหรับออเดอร์ได้';
+        return;
+      }
+      await updateOrderAssets(
+        orderId,
+        {
+          previewUrl: step2PreviewForOrder.value,
+          source: 'brick:edit',
+          cropInteraction: cropInteractionForOrder.value ?? null,
+          originalImage: originalImageForOrder.value ?? uploadedImage.value ?? null,
+          totalAmount: latestFormatMeta?.amount ?? undefined,
+          metadata: mergeMetadata(pdfMeta)
+        },
+        user.value.id
+      );
+    } else {
+      const initialMetadata = mergeMetadata();
+      const data = await recordPendingPaymentOrder({
+        userId: user.value.id,
+        previewUrl: step2PreviewForOrder.value,
+        source: 'checkout',
+        cropInteraction: cropInteractionForOrder.value ?? null,
+        originalImage: originalImageForOrder.value ?? uploadedImage.value ?? null,
+        totalAmount: latestFormatMeta?.amount ?? undefined,
+        metadata: initialMetadata
+      });
+      orderId = data?.id ?? null;
+      if (orderId) {
+        try {
+          const pdfMeta = await uploadInstructionPdf(orderId, instructionPdf);
+          await updateOrderAssets(
+            orderId,
+            {
+              metadata: mergeMetadata(pdfMeta)
+            },
+            user.value.id
+          );
+        } catch (uploadErr: any) {
+          checkoutOrderError.value = uploadErr?.message ?? 'ไม่สามารถอัปโหลดไฟล์ PDF สำหรับออเดอร์ได้';
+          return;
+        }
+      }
+    }
+    if (orderId) {
+      router.push(`/checkout?id=${orderId}`);
+    } else {
+      router.push('/checkout');
+    }
+  } catch (error: any) {
+    checkoutOrderError.value = error?.message ?? 'ไม่สามารถสร้างออเดอร์ได้';
+  } finally {
+    isGeneratingPdf.value = false;
+    isCreatingCheckoutOrder.value = false;
+  }
+};
+
+const buildOrderPdfPayload = async () => {
+  if (!step3Ready.value || !finalStep3Preview.value) {
+    throw new Error('ยังไม่มี Step 3 สำหรับสร้าง PDF');
+  }
+  const instructionPdf = await buildInstructionPdf(useHighQualityPdf.value, {
+    download: false,
+    returnBlob: true,
+    quiet: true,
+    noPreviewBlur: true
+  });
+  if (!instructionPdf) {
+    throw new Error('ไม่สามารถสร้างไฟล์ PDF ได้');
+  }
   const step3Meta = {
     stud_preview: finalStep3Preview.value ?? null,
     step3_preview: finalStep3Preview.value ?? null,
@@ -2948,44 +3049,28 @@ const goToCheckout = async () => {
     pixel_type: selectedPixelType.value,
     high_quality: isHighQualityColorMode.value
   };
-  isCreatingCheckoutOrder.value = true;
-  try {
-    let orderId = props.editingOrderId ?? null;
-    if (orderId) {
-      await updateOrderAssets(
-        orderId,
-        {
-          previewUrl: step2PreviewForOrder.value,
-          source: 'brick:edit',
-          cropInteraction: cropInteractionForOrder.value ?? null,
-          originalImage: originalImageForOrder.value ?? uploadedImage.value ?? null,
-          totalAmount: latestFormatMeta?.amount ?? undefined,
-          metadata: latestFormatMeta ? { format_price: latestFormatMeta, ...step3Meta } : { ...step3Meta }
-        },
-        user.value.id
-      );
-    } else {
-      const data = await recordPendingPaymentOrder({
-        userId: user.value.id,
-        previewUrl: step2PreviewForOrder.value,
-        source: 'checkout',
-        cropInteraction: cropInteractionForOrder.value ?? null,
-        originalImage: originalImageForOrder.value ?? uploadedImage.value ?? null,
-        totalAmount: latestFormatMeta?.amount ?? undefined,
-        metadata: latestFormatMeta ? { format_price: latestFormatMeta, ...step3Meta } : { ...step3Meta }
-      });
-      orderId = data?.id ?? null;
-    }
-    if (orderId) {
-      router.push(`/checkout?id=${orderId}`);
-    } else {
-      router.push('/checkout');
-    }
-  } catch (error: any) {
-    checkoutOrderError.value = error?.message ?? 'ไม่สามารถสร้างออเดอร์ได้';
-  } finally {
-    isCreatingCheckoutOrder.value = false;
+  return { instructionPdf, step3Meta };
+};
+
+const generateInstructionPdfForOrder = async (orderId: string | number) => {
+  if (!orderId) {
+    throw new Error('ต้องมีเลขออเดอร์เพื่อสร้าง PDF');
   }
+  const { instructionPdf, step3Meta } = await buildOrderPdfPayload();
+  const pdfMeta = await uploadInstructionPdf(orderId, instructionPdf);
+  return { pdfMeta, step3Meta };
+};
+
+type InstructionPdfOptions = {
+  download?: boolean;
+  quiet?: boolean;
+  returnBlob?: boolean;
+  noPreviewBlur?: boolean;
+};
+
+type InstructionPdfResult = {
+  blob: Blob;
+  fileName: string;
 };
 
 const handleGenerateInstructions = async () => {
@@ -3017,13 +3102,17 @@ const handleGenerateInstructions = async () => {
 
 defineExpose({
   goToCheckout,
+  generateInstructionPdfForOrder,
   step3Ready,
   isStep2Processing,
   isCreatingCheckoutOrder,
   handleGenerateInstructions
 });
 
-const buildInstructionPdf = async (isHighQuality: boolean) => {
+const buildInstructionPdf = async (
+  isHighQuality: boolean,
+  options?: InstructionPdfOptions
+): Promise<InstructionPdfResult | null> => {
   if (!step3Canvas.value || !step3UpscaledCanvas.value) {
     throw new Error('ไม่พบข้อมูลจาก Step 3');
   }
@@ -3058,6 +3147,7 @@ const buildInstructionPdf = async (isHighQuality: boolean) => {
     totalPages <= PREVIEW_CLEAR_PAGE_COUNT ? Math.max(1, totalPages - 1) : PREVIEW_CLEAR_PAGE_COUNT;
 
   const updateProgress = (completedPages: number, label: string) => {
+    if (options?.quiet) return;
     pdfProgress.value = Math.min(1, completedPages / totalPages);
     pdfProgressLabel.value = label;
   };
@@ -3155,7 +3245,7 @@ const buildInstructionPdf = async (isHighQuality: boolean) => {
     );
     setCanvasDpi(instructionCanvas, dpi);
     currentPageNumber += 1;
-    const isPreviewPage = currentPageNumber <= previewClearPageLimit;
+    const isPreviewPage = options?.noPreviewBlur ? true : currentPageNumber <= previewClearPageLimit;
     // const isPreviewPage = currentPageNumber <= PREVIEW_CLEAR_PAGE_COUNT;
     const instructionImg = isPreviewPage
       ? instructionCanvas.toDataURL('image/png', 1.0)
@@ -3165,8 +3255,86 @@ const buildInstructionPdf = async (isHighQuality: boolean) => {
   }
 
   addWatermark(pdf, isHighQuality, APP_WATERMARK);
-  pdf.save(`${PDF_FILENAME_BASE}.pdf`);
+  const fileName = `${PDF_FILENAME_BASE}.pdf`;
+  const shouldDownload = options?.download ?? true;
+  const pdfBlob = pdf.output('blob') as Blob;
+  if (shouldDownload) {
+    pdf.save(fileName);
+  }
   updateProgress(totalPages, 'สร้างไฟล์สำเร็จ');
+  if (options?.returnBlob) {
+    return { blob: pdfBlob, fileName };
+  }
+  return null;
+};
+
+const uploadInstructionPdf = async (orderId: string | number, pdf: InstructionPdfResult) => {
+  const orderIdStr = String(orderId);
+  const version = Date.now();
+  const storageFileName = `Siam-Brick-${orderIdStr}-${version}.pdf`;
+  const filePath = `pdf/${storageFileName}`;
+
+  // remove old files with the same orderId prefix to avoid stale versions
+  try {
+    const { data: existing } = await supabase.storage.from(PDF_STORAGE_BUCKET).list('pdf', {
+      limit: 1000
+    });
+    const prefix = `Siam-Brick-${orderIdStr}-`;
+    const toDelete =
+      existing
+        ?.filter((item) => item.name?.startsWith(prefix))
+        .map((item) => `pdf/${item.name}`) ?? [];
+    if (toDelete.length) {
+      await supabase.storage.from(PDF_STORAGE_BUCKET).remove(toDelete);
+    }
+  } catch (cleanupErr) {
+    console.warn('cleanup old instruction pdf failed', cleanupErr);
+  }
+
+  const { error } = await supabase.storage.from(PDF_STORAGE_BUCKET).upload(filePath, pdf.blob, {
+    contentType: 'application/pdf',
+    upsert: true,
+    cacheControl: '1'
+  });
+  if (error) {
+    throw error;
+  }
+
+  // best-effort cleanup: remove older PDFs for this order to avoid storage bloat
+  try {
+    const { data: existing } = await supabase.storage.from(PDF_STORAGE_BUCKET).list(`pdf/${orderIdStr}`, {
+      limit: 1000
+    });
+    const toDelete =
+      existing
+        ?.map((item) => `pdf/${orderIdStr}/${item.name}`)
+        .filter((path) => path !== filePath) ?? [];
+    if (toDelete.length) {
+      await supabase.storage.from(PDF_STORAGE_BUCKET).remove(toDelete);
+    }
+  } catch (cleanupErr) {
+    console.warn('cleanup old instruction pdf failed', cleanupErr);
+  }
+
+  const { data: publicUrlData } = supabase.storage.from(PDF_STORAGE_BUCKET).getPublicUrl(filePath);
+  let signedUrl: string | null = null;
+  try {
+    const { data: signedData, error: signedError } = await supabase.storage
+      .from(PDF_STORAGE_BUCKET)
+      .createSignedUrl(filePath, 60 * 60 * 24 * 30);
+    if (!signedError) {
+      signedUrl = signedData?.signedUrl ?? null;
+    }
+  } catch {
+    signedUrl = null;
+  }
+  return {
+    bucket: PDF_STORAGE_BUCKET,
+    path: filePath,
+    version,
+    publicUrl: publicUrlData?.publicUrl ?? null,
+    signedUrl
+  };
 };
 
 watch(

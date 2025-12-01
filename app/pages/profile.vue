@@ -347,17 +347,6 @@
                         >
                           ดูรายละเอียด
                         </NuxtLink>
-                        <button
-                          type="button"
-                          class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
-                          :disabled="isPdfLoading(order.id) || !findInstructionPdf(order)"
-                          @click="downloadOrderPdfFor(order)"
-                        >
-                          <span v-if="isPdfLoading(order.id)">กำลังดาวน์โหลด…</span>
-                          <span v-else-if="!findInstructionPdf(order)">ไม่มีไฟล์คู่มือ</span>
-                          <span v-else>ดาวน์โหลด PDF</span>
-                        </button>
-                        <p v-if="orderPdfError" class="w-full text-[11px] text-rose-600">{{ orderPdfError }}</p>
                       </div>
                     </div>
                   </div>
@@ -641,25 +630,6 @@ const findInstructionPdf = (order: Record<string, any> | null | undefined) => {
 const isPdfLoading = (orderId: string | number | null | undefined) => {
   if (orderId == null) return false;
   return Boolean(orderPdfLoading.value[String(orderId)]);
-};
-
-const downloadOrderPdfFor = async (order: Record<string, any> | null | undefined) => {
-  if (!order?.id) return;
-  const key = String(order.id);
-  orderPdfLoading.value[key] = true;
-  orderPdfError.value = null;
-  try {
-    const url = findInstructionPdf(order);
-    if (!url) {
-      throw new Error('ไม่มีไฟล์คู่มือจาก Step 3 ในออเดอร์นี้');
-    }
-    window.open(url, '_blank', 'noopener');
-  } catch (error: any) {
-    orderPdfError.value = error?.message ?? 'ดาวน์โหลด PDF ไม่สำเร็จ';
-  } finally {
-    orderPdfLoading.value[key] = false;
-    orderPdfLoading.value = { ...orderPdfLoading.value };
-  }
 };
 
 const resetPasswordForm = (clearMessages = true) => {

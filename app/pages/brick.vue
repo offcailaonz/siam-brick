@@ -35,18 +35,19 @@
             <span v-if="savingEdits">กำลังบันทึก...</span>
             <span v-else>บันทึกการแก้ไข</span>
           </button>
-          <button
+          <!-- <button
             type="button"
             class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
             :disabled="savingEdits"
             @click="goToCheckout"
           >
             กลับไป Checkout
-          </button>
+          </button> -->
         </div>
       </div>
 
       <BrickArtRemixApp
+        ref="remixAppRef"
         :enable-persistence="true"
         :enable-price-fetch="true"
         :initial-crop-interaction="initialCropInteraction"
@@ -82,6 +83,7 @@ type FormatPriceMeta = {
 };
 
 import BaseModal from '~/components/ui/BaseModal.vue';
+import BrickArtRemixApp from '~/components/BrickArtRemix/BrickArtRemixApp.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -91,6 +93,7 @@ const { fetchOrderById, updateOrderAssets } = useOrders();
 const orderId = computed(() => (route.query.id ? String(route.query.id) : null));
 const orderLoading = ref(false);
 const orderError = ref<string | null>(null);
+const orderStatus = ref<string | null>(null);
 const initialImageSrc = ref<string | null>(null);
 const initialCropInteraction = ref<any | null>(null);
 const initialStep2Preview = ref<string | null>(null);
@@ -103,6 +106,7 @@ const lastLoadedKey = ref<string | null>(null);
 const orderMetadata = ref<Record<string, any> | null>(null);
 const previewModalOpen = ref(false);
 const previewModalSrc = ref<string | null>(null);
+const remixAppRef = ref<InstanceType<typeof BrickArtRemixApp> | null>(null);
 
 const step2PreviewForOrder = useState<string | null>('brick-step2-preview', () => null);
 const finalPreview = useState<string | null>('brick-final-step3-preview', () => null);
@@ -112,6 +116,21 @@ const formatPrice = useState<number | null>('brick-format-price', () => null);
 const formatPriceMeta = useState<FormatPriceMeta | null>('brick-format-price-meta', () => null);
 
 const checkoutLink = computed(() => (orderId.value ? `/checkout?id=${orderId.value}` : '/checkout'));
+const isPaidOrder = computed(() => {
+  const status = orderStatus.value?.toLowerCase() ?? '';
+  if (!status) return false;
+  const paidTokens = ['paid', 'paid_success', 'complete', 'completed', 'สำเร็จ', 'payment_succeeded'];
+  return paidTokens.some((token) => status.includes(token));
+});
+watch(
+  () => isPaidOrder.value,
+  (paid) => {
+    if (paid) {
+      router.replace('/');
+    }
+  }
+);
+
 const handlePreviewModal = (payload: { src: string | null }) => {
   previewModalSrc.value = payload?.src ?? null;
   previewModalOpen.value = Boolean(payload?.src);
@@ -139,7 +158,10 @@ const normalizeFormatPriceMeta = (meta: any): FormatPriceMeta | null => {
     size
   };
 };
-const mergeOrderMetadata = (normalizedAmount: number | null): Record<string, any> | undefined => {
+const mergeOrderMetadata = (
+  normalizedAmount: number | null,
+  extras?: { instructionPdf?: Record<string, any> | null; step3Meta?: Record<string, any> | null }
+): Record<string, any> | undefined => {
   const baseMetadata = orderMetadata.value ?? {};
   const sourceMeta = formatPriceMeta.value ?? (normalizedAmount != null ? { amount: normalizedAmount } : null);
   const amount = normalizedAmount ?? (sourceMeta?.amount != null ? Number(sourceMeta.amount) : null);
@@ -162,13 +184,16 @@ const mergeOrderMetadata = (normalizedAmount: number | null): Record<string, any
         }
       : null;
 
-  if (!formatPricePayload && !orderMetadata.value) {
+  const hasExtras = Boolean(extras?.step3Meta) || Boolean(extras?.instructionPdf);
+  if (!formatPricePayload && !orderMetadata.value && !hasExtras) {
     return undefined;
   }
 
   const merged = {
     ...baseMetadata,
-    ...(formatPricePayload ? { format_price: formatPricePayload } : {})
+    ...(formatPricePayload ? { format_price: formatPricePayload } : {}),
+    ...(extras?.step3Meta ?? {}),
+    ...(extras?.instructionPdf ? { instruction_pdf: extras.instructionPdf } : {})
   };
 
   return Object.keys(merged).length > 0 ? merged : undefined;
@@ -197,6 +222,11 @@ const loadOrderForEdit = async (force = false) => {
     const data = await fetchOrderById(orderId.value, user.value.id);
     if (!data) {
       orderError.value = 'ไม่พบออเดอร์ที่ต้องการแก้ไข';
+      return;
+    }
+    orderStatus.value = data.status ?? null;
+    if (isPaidOrder.value) {
+      router.replace('/');
       return;
     }
     initialImageSrc.value = data.original_image || null;
@@ -252,7 +282,23 @@ const handleSaveEdits = async (): Promise<boolean> => {
   }
   const normalizedAmount = formatPrice.value != null ? Number(formatPrice.value) : null;
   const priceAmount = normalizedAmount != null && !Number.isNaN(normalizedAmount) ? normalizedAmount : null;
-  const mergedMetadata = mergeOrderMetadata(priceAmount);
+  let instructionPdfMeta: Record<string, any> | null = null;
+  let step3Meta: Record<string, any> | null = null;
+  try {
+    if (!remixAppRef.value?.generateInstructionPdfForOrder) {
+      throw new Error('ไม่สามารถสร้างไฟล์ PDF ได้ (component ไม่พร้อม)');
+    }
+    const pdfResult = await remixAppRef.value.generateInstructionPdfForOrder(orderId.value);
+    instructionPdfMeta = pdfResult?.pdfMeta ?? null;
+    step3Meta = pdfResult?.step3Meta ?? null;
+  } catch (error: any) {
+    saveMessage.value = error?.message ?? 'ไม่สามารถสร้างหรืออัปโหลด PDF ได้';
+    return false;
+  }
+  const mergedMetadata = mergeOrderMetadata(priceAmount, {
+    instructionPdf: instructionPdfMeta,
+    step3Meta
+  });
   savingEdits.value = true;
   try {
     await updateOrderAssets(
