@@ -1,3 +1,5 @@
+import { fetchJson } from '../../services/http';
+
 type Province = { id: number; name_th: string; name_en?: string };
 type District = { id: number; name_th: string; name_en?: string; province_id: number };
 type SubDistrict = { id: number; name_th: string; name_en?: string; zip_code: number | string; district_id: number };
@@ -29,12 +31,6 @@ export const useThaiAddressSearch = () => {
     loading.value = true;
     error.value = null;
     try {
-      const fetchJson = async <T>(url: string): Promise<T> => {
-        const res = await fetch(url, { headers: { Accept: 'application/json' }, cache: 'force-cache' });
-        if (!res.ok) throw new Error(`โหลดข้อมูลจาก ${url} ไม่สำเร็จ (status ${res.status})`);
-        return res.json();
-      };
-
       const [pData, dData, sData] = await Promise.all([
         fetchJson<Province[]>(PROVINCE_LATEST_URL),
         fetchJson<District[]>(DISTRICT_LATEST_URL),

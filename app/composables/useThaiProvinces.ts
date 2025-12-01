@@ -1,4 +1,5 @@
 import { computed } from 'vue';
+import { fetchJson } from '../../services/http';
 
 export type ThaiProvince = {
   id: number;
@@ -18,9 +19,7 @@ export const useThaiProvinces = () => {
     provincesLoading.value = true;
     provincesError.value = null;
     try {
-      const response = await fetch(PROVINCE_URL);
-      if (!response.ok) throw new Error('โหลดข้อมูลจังหวัดไม่สำเร็จ');
-      const data = await response.json();
+      const data = await fetchJson<ThaiProvince[]>(PROVINCE_URL);
       provinces.value = Array.isArray(data) ? data : [];
     } catch (error: any) {
       provincesError.value = error?.message ?? 'ไม่สามารถโหลดข้อมูลจังหวัดได้';
