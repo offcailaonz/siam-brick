@@ -1165,6 +1165,8 @@ const step3QuantizationError = ref<number | null>(null);
 const step3StudUsage = ref<Array<{ hex: string; name?: string; count: number }>>([]);
 const step2PixelData = ref<Uint8ClampedArray | null>(null);
 const isHighQualityColorMode = ref(false);
+const lastUploadedInstructionPreview = ref<string | null>(null);
+const lastUploadedPdfMeta = ref<Record<string, any> | null>(null);
 
 const SERIALIZE_EDGE_LENGTH = 512;
 const RESOLUTION_MIN = 32;
@@ -2958,7 +2960,7 @@ const goToCheckout = async () => {
   }
 
   try {
-    const { instructionPdf, step3Meta } = await buildOrderPdfPayload();
+    let step3Meta = buildStep3Meta();
     const mergeMetadata = (pdfMeta?: Record<string, any> | null) =>
       latestFormatMeta
         ? { format_price: latestFormatMeta, ...step3Meta, ...(pdfMeta ? { instruction_pdf: pdfMeta } : {}) }
@@ -2968,7 +2970,9 @@ const goToCheckout = async () => {
     if (orderId) {
       let pdfMeta: Record<string, any> | null = null;
       try {
-        pdfMeta = await uploadInstructionPdf(orderId, instructionPdf);
+        const pdfResult = await generateInstructionPdfForOrder(orderId);
+        pdfMeta = pdfResult?.pdfMeta ?? null;
+        step3Meta = pdfResult?.step3Meta ?? step3Meta;
       } catch (uploadErr: any) {
         checkoutOrderError.value = uploadErr?.message ?? 'ไม่สามารถอัปโหลดไฟล์ PDF สำหรับออเดอร์ได้';
         return;
@@ -2986,6 +2990,8 @@ const goToCheckout = async () => {
         user.value.id
       );
     } else {
+      const initialPayload = await buildOrderPdfPayload();
+      step3Meta = initialPayload.step3Meta;
       const initialMetadata = mergeMetadata();
       const data = await recordPendingPaymentOrder({
         userId: user.value.id,
@@ -2999,7 +3005,7 @@ const goToCheckout = async () => {
       orderId = data?.id ?? null;
       if (orderId) {
         try {
-          const pdfMeta = await uploadInstructionPdf(orderId, instructionPdf);
+          const pdfMeta = await uploadInstructionPdf(orderId, initialPayload.instructionPdf);
           await updateOrderAssets(
             orderId,
             {
@@ -3039,25 +3045,33 @@ const buildOrderPdfPayload = async () => {
   if (!instructionPdf) {
     throw new Error('ไม่สามารถสร้างไฟล์ PDF ได้');
   }
-  const step3Meta = {
-    stud_preview: finalStep3Preview.value ?? null,
-    step3_preview: finalStep3Preview.value ?? null,
-    instruction_preview: finalStep3Preview.value ?? null,
-    step3_resolution: { width: targetResolution.width, height: targetResolution.height },
-    step3_studs: step3StudTotal.value,
-    step3_stud_usage: step3StudUsage.value,
-    pixel_type: selectedPixelType.value,
-    high_quality: isHighQualityColorMode.value
-  };
+  const step3Meta = buildStep3Meta();
   return { instructionPdf, step3Meta };
 };
 
-const generateInstructionPdfForOrder = async (orderId: string | number) => {
+const buildStep3Meta = () => ({
+  stud_preview: finalStep3Preview.value ?? null,
+  step3_preview: finalStep3Preview.value ?? null,
+  instruction_preview: finalStep3Preview.value ?? null,
+  step3_resolution: { width: targetResolution.width, height: targetResolution.height },
+  step3_studs: step3StudTotal.value,
+  step3_stud_usage: step3StudUsage.value,
+  pixel_type: selectedPixelType.value,
+  high_quality: isHighQualityColorMode.value
+});
+
+const generateInstructionPdfForOrder = async (orderId: string | number, forceUpload = false) => {
   if (!orderId) {
     throw new Error('ต้องมีเลขออเดอร์เพื่อสร้าง PDF');
   }
+  const currentPreview = finalStep3Preview.value ?? null;
+  if (!forceUpload && currentPreview && lastUploadedInstructionPreview.value === currentPreview && lastUploadedPdfMeta.value) {
+    return { pdfMeta: lastUploadedPdfMeta.value, step3Meta: buildStep3Meta() };
+  }
   const { instructionPdf, step3Meta } = await buildOrderPdfPayload();
   const pdfMeta = await uploadInstructionPdf(orderId, instructionPdf);
+  lastUploadedInstructionPreview.value = currentPreview;
+  lastUploadedPdfMeta.value = pdfMeta ?? null;
   return { pdfMeta, step3Meta };
 };
 
@@ -3355,6 +3369,15 @@ watch(
 watch(uploadedImage, () => {
   queuePersistSessionState();
 });
+
+watch(
+  () => props.editingOrderId,
+  () => {
+    // reset cached pdf meta when switching order
+    lastUploadedInstructionPreview.value = null;
+    lastUploadedPdfMeta.value = null;
+  }
+);
 
 watch(
   () => hsvControls.value,

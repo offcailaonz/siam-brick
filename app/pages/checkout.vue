@@ -25,7 +25,7 @@
           </div>
           <div class="flex flex-wrap gap-3 py-4" v-if="!isPaymentCompleted">
             <NuxtLink
-              v-if="!isProductMode && !isPaymentCompleted"
+              v-if="!isProductMode && !isPaymentCompleted && !isSummaryLoading"
               :to="brickLink"
               class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
               :aria-disabled="isPaymentCompleted"
@@ -1139,9 +1139,6 @@ const summaryOrderId = computed(() => summaryOrder.value?.id ?? currentOrderId.v
 const summaryCreatedAt = computed(() => summaryOrder.value?.created_at ?? null);
 const summaryUpdatedAt = computed(() => summaryOrder.value?.updated_at ?? summaryOrder.value?.created_at ?? null);
 const summaryStatusBadge = computed(() => statusBadge(summaryOrder.value));
-const successFromQuery = computed(
-  () => route.query.success === '1' || route.query.success === 'true'
-);
 const isPaymentCompleted = computed(() => {
   const currentId = summaryOrderId.value ?? currentOrderId.value;
   const fromStatus =
@@ -1149,7 +1146,7 @@ const isPaymentCompleted = computed(() => {
     currentId != null &&
     String(summaryOrder.value.id) === String(currentId) &&
     isPaidStatus(summaryOrder.value);
-  return Boolean(fromStatus || successFromQuery.value);
+  return Boolean(fromStatus);
 });
 const isSummaryLoading = computed(() => {
   if (hasProductQuery.value) return productLoading.value;
@@ -1499,7 +1496,7 @@ const payButtonDisabled = computed(
 const payButtonText = computed(() => {
   if (initialLoadPending.value || selectedOrderLoading.value || myOrdersLoading.value) return 'Loading...';
   if (isPaymentCompleted.value) return 'ชำระเงินสำเร็จแล้ว';
-  if (isRedirectingToStripe.value) return 'กำลังไปหน้าจ่ายเงิืน…';
+  if (isRedirectingToStripe.value) return 'กำลังไปหน้าจ่ายเงิน…';
   if (isCreatingOrder.value) return 'กำลังสร้างออเดอร์…';
   return 'ชำระเงิน';
 });
