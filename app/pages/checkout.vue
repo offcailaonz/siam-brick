@@ -1339,7 +1339,8 @@ const mapProductRow = (row: any) => {
     resolution,
     difficulty: meta.difficulty ?? 'Beginner',
     tag: meta.tag ?? meta.type ?? 'พร้อมสร้าง',
-    instructionPdf
+    instructionPdf,
+    studUsage: Array.isArray(meta.stud_usage) ? meta.stud_usage : []
   };
 };
 
@@ -1370,6 +1371,7 @@ const mapOrderProductMeta = (order: Record<string, any> | null | undefined) => {
   const price = priceRaw != null && !Number.isNaN(Number(priceRaw)) ? Number(priceRaw) : null;
   const image = meta.product_image ?? meta.image ?? meta.preview ?? order.preview_url ?? null;
   const instructionPdf = meta.instruction_pdf ?? null;
+  const studUsage = Array.isArray(meta.stud_usage) ? meta.stud_usage : [];
 
   return {
     id: (meta.product_id ?? meta.product_slug ?? order.id ?? 'ready-kit') as number | string,
@@ -1387,7 +1389,8 @@ const mapOrderProductMeta = (order: Record<string, any> | null | undefined) => {
     resolution,
     difficulty: meta.difficulty ?? 'Beginner',
     tag: meta.tag ?? meta.type ?? 'พร้อมสร้าง',
-    instructionPdf
+    instructionPdf,
+    studUsage
   };
 };
 
@@ -1505,6 +1508,7 @@ const showShippingWarning = computed(
 );
 
 const buildStep3Meta = () => {
+  const info = activeProductInfo.value;
   const res = previewResolution.value;
   const studs = res?.width && res?.height ? res.width * res.height : kitBreakdown.value?.studs ?? null;
   const preview = checkoutPreview.value || finalPreview.value || studPreview.value || step2PreviewSource.value || null;
@@ -1515,6 +1519,7 @@ const buildStep3Meta = () => {
     instruction_preview: stud ?? preview ?? null,
     step3_resolution: res?.width && res?.height ? res : null,
     step3_studs: studs ?? null,
+    ...(info?.studUsage?.length ? { step3_stud_usage: info.studUsage } : {}),
     pixel_type: DEFAULT_PIXEL_TYPE,
     step3_preview_source: isProductMode.value ? 'product' : 'custom'
   };
@@ -1568,7 +1573,8 @@ const handleCreateOrder = async () => {
           difficulty: info.difficulty ?? null,
           tag: info.tag ?? null,
           product_image: info.image ?? null,
-          ...(info.instructionPdf ? { instruction_pdf: info.instructionPdf } : {})
+          ...(info.instructionPdf ? { instruction_pdf: info.instructionPdf } : {}),
+          ...(info.studUsage?.length ? { stud_usage: info.studUsage } : {})
         }
       : {};
 

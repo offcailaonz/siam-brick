@@ -254,7 +254,8 @@ const form = reactive({
   image: '',
   active: true,
   formatPriceMeta: null as any,
-  instructionPdf: null as any
+  instructionPdf: null as any,
+  studUsage: [] as Array<{ hex: string; name?: string; count: number }>
 });
 
 const saveSuccess = ref('');
@@ -274,6 +275,7 @@ const resetForm = () => {
   form.active = true;
   form.formatPriceMeta = null;
   form.instructionPdf = null;
+  form.studUsage = [];
   saveSuccess.value = '';
 };
 
@@ -290,6 +292,7 @@ const editProduct = (p: any) => {
   form.active = p.active !== false;
   form.formatPriceMeta = p.metadata?.format_price ?? null;
   form.instructionPdf = null;
+  form.studUsage = Array.isArray(p.metadata?.stud_usage) ? p.metadata.stud_usage : [];
   saveSuccess.value = '';
   showModal.value = true;
 };
@@ -336,6 +339,7 @@ const handleGeneratedProduct = (payload: any) => {
   form.tag = form.tag || 'พร้อมสร้าง';
   form.difficulty = form.difficulty || 'Intermediate';
   form.size = `${payload.resolution?.width ?? ''}x${payload.resolution?.height ?? ''}`.trim();
+  form.studUsage = Array.isArray(payload.studUsage) ? payload.studUsage : form.studUsage;
   const priceAmount = payload.formatPrice ?? payload.formatPriceMeta?.amount ?? null;
   if (priceAmount != null && !Number.isNaN(Number(priceAmount))) {
     form.priceKit = Number(priceAmount);

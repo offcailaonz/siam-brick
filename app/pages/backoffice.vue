@@ -897,6 +897,7 @@ const handleSaveProduct = async (payload: any) => {
     const slug = await findAvailableSlug(baseSlug, isEditing ? payload.id : null);
 
     const baseMetadata = currentProduct?.metadata ?? {};
+    const nextStudUsage = Array.isArray(payload.studUsage) ? payload.studUsage : baseMetadata.stud_usage ?? null;
     const metadata = {
       ...baseMetadata,
       tag: payload.tag ?? baseMetadata.tag ?? null,
@@ -905,7 +906,8 @@ const handleSaveProduct = async (payload: any) => {
       size: payload.size ?? baseMetadata.size ?? null,
       image: payload.image ?? baseMetadata.image ?? null,
       priceKit: payload.priceKit ?? baseMetadata.priceKit ?? null,
-      format_price: payload.formatPriceMeta ?? baseMetadata.format_price ?? null
+      format_price: payload.formatPriceMeta ?? baseMetadata.format_price ?? null,
+      ...(nextStudUsage ? { stud_usage: nextStudUsage } : {})
     };
 
     if (isEditing) {
