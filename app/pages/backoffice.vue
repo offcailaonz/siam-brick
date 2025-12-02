@@ -262,10 +262,6 @@
           </p>
           <div class="mt-2 grid gap-2 sm:grid-cols-3">
             <div class="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm text-slate-700">
-              <span>ฐาน 32x32</span>
-              <span class="font-semibold">× {{ orderFormatDetails.base32 }}</span>
-            </div>
-            <div class="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm text-slate-700">
               <span>ฐาน 16x16</span>
               <span class="font-semibold">× {{ orderFormatDetails.base16 }}</span>
             </div>
@@ -354,7 +350,6 @@ const PRODUCT_PDF_BUCKET = 'order-instructions';
 const PRODUCT_PDF_PREFIX = 'pdf-product';
 const defaultPartPrices = [
   { key: 'plate-16', name: 'ฐาน 16x16', price: 0 },
-  { key: 'plate-32', name: 'ฐาน 32x32', price: 0 },
   { key: 'frame-edge', name: 'ชิ้นส่วนกรอบ (ขอบ)', price: 0 },
   { key: 'frame-corner', name: 'ชิ้นส่วนกรอบ (มุม)', price: 0 },
   { key: 'hanger', name: 'รูแขวน', price: 0 },
@@ -639,9 +634,9 @@ const getFrameAndBase = (width: number, height: number) => {
   const clips = hasSize ? 2 : 0;
   const sideShort = hasSize ? ((width - 16) / 16) * 2 : 0;
   const sideLong = hasSize ? ((height - 16) / 16) * 2 : 0;
-  const canUse32 = hasSize && width % 32 === 0 && height % 32 === 0;
-  const base32 = canUse32 ? (width / 32) * (height / 32) : 0;
-  const base16 = !canUse32 && hasSize ? (width / 16) * (height / 16) : 0;
+  // ใช้ฐาน 16x16 เป็นดีฟอลต์ (ไม่แยก 32x32 แล้ว)
+  const base32 = 0;
+  const base16 = hasSize ? (width / 16) * (height / 16) : 0;
   return { corners, clips, sideShort, sideLong, base32, base16 };
 };
 

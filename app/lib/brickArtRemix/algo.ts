@@ -1491,9 +1491,12 @@ export function generateInstructionPage(
   canvas,
   plateNumber,
   pixelType,
-  variablePixelPieceDimensions
+  variablePixelPieceDimensions,
+  options?: { showLegend?: boolean }
 ) {
   const ctx = canvas.getContext("2d");
+
+  const showLegend = options?.showLegend === true;
 
   const pictureWidth = plateWidth * scalingFactor;
   const pictureHeight = ((pixelArray.length / 4) * scalingFactor) / plateWidth;
@@ -1503,45 +1506,18 @@ export function generateInstructionPage(
 
   const studMap = getUsedPixelsStudMap(pixelArray);
 
-  const legendHexList = availableStudHexList.filter(
-    (hex) => (studMap[hex] ?? 0) > 0
-  );
+  const legendHexList = showLegend
+    ? availableStudHexList.filter((hex) => (studMap[hex] ?? 0) > 0)
+    : [];
 
-  canvas.height = Math.max(
-    pictureHeight * 1.5,
-    pictureHeight * 0.4 + availableStudHexList.length * radius * 2.5
-  );
-  canvas.width = pictureWidth * 2;
+  const padding = scalingFactor * 0.6;
+  const legendHeight = showLegend
+    ? Math.min(pictureHeight * 0.8, pictureHeight * 0.4 + legendHexList.length * radius * 2.5)
+    : 0;
+  canvas.height = pictureHeight * 1.05 + legendHeight + padding * 2;
+  canvas.width = showLegend ? pictureWidth * 2 : pictureWidth + padding * 2;
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-  ctx.rect(
-    pictureWidth * 0.75,
-    pictureHeight * 0.2,
-    pictureWidth,
-    pictureHeight
-  );
-  ctx.stroke();
-  ctx.fillStyle = "#000000";
-  ctx.fillRect(
-    pictureWidth * 0.75,
-    pictureHeight * 0.2,
-    pictureWidth,
-    pictureHeight
-  );
-
-  ctx.lineWidth = 5;
-  ctx.strokeStyle = "#000000";
-  ctx.font = `${scalingFactor}px Arial`;
-  ctx.beginPath();
-  ctx.fillText(
-    `Section ${plateNumber}`,
-    pictureWidth * 0.75,
-    pictureHeight * 0.2 - scalingFactor
-  );
-  ctx.stroke();
 
   ctx.lineWidth = 1;
 
@@ -1552,6 +1528,9 @@ export function generateInstructionPage(
   });
 
   ctx.font = `${scalingFactor / 2}px Arial`;
+
+  const originX = showLegend ? pictureWidth * 0.75 : (canvas.width - pictureWidth) / 2;
+  const originY = padding + pictureHeight * 0.1;
 
   for (let i = 0; i < plateWidth; i++) {
     for (let j = 0; j < plateWidth; j++) {
@@ -1567,8 +1546,8 @@ export function generateInstructionPage(
         studToLabel[pixelHex] ??
         getStudLabel(pixelHex, i * plateWidth + j + 1);
       ctx.beginPath();
-      const x = pictureWidth * 0.75 + (j * 2 + 1) * radius;
-      const y = pictureHeight * 0.2 + ((i % plateWidth) * 2 + 1) * radius;
+      const x = originX + (j * 2 + 1) * radius;
+      const y = originY + ((i % plateWidth) * 2 + 1) * radius;
       drawPixel(
         ctx,
         x - radius,
@@ -1590,8 +1569,8 @@ export function generateInstructionPage(
   if (variablePixelPieceDimensions != null) {
     for (let i = 0; i < plateWidth; i++) {
       for (let j = 0; j < plateWidth; j++) {
-        const x = pictureWidth * 0.75 + (j * 2 + 1) * radius;
-        const y = pictureHeight * 0.2 + ((i % plateWidth) * 2 + 1) * radius;
+        const x = originX + (j * 2 + 1) * radius;
+        const y = originY + ((i % plateWidth) * 2 + 1) * radius;
         const piece = variablePixelPieceDimensions[i][j];
         if (piece != null) {
           ctx.strokeStyle = "#888888";
@@ -1617,15 +1596,25 @@ export function generateInstructionPage(
     }
   }
 
-  drawStudCountForContext(
-    studMap,
-    legendHexList,
-    scalingFactor,
-    ctx,
-    pictureWidth * 0.25,
-    pictureHeight * 0.2 - radius,
-    pixelType
-  );
+  if (showLegend && legendHexList.length) {
+    drawStudCountForContext(
+      studMap,
+      legendHexList,
+      scalingFactor,
+      ctx,
+      padding,
+      padding,
+      pixelType
+    );
+  }
+
+  // label section number near top-left of the plate area
+  ctx.fillStyle = "#0f172a";
+  ctx.font = `${scalingFactor * 0.9}px Arial`;
+  ctx.textBaseline = "top";
+  ctx.textAlign = "left";
+  const labelMargin = scalingFactor * 0.4;
+  ctx.fillText(`Section ${plateNumber}`, originX, Math.max(4, originY - scalingFactor - labelMargin));
 }
 
 export function getDepthSubPixelMatrix(

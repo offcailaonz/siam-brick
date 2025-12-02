@@ -182,6 +182,9 @@
               >
             </label>
           </div>
+          <!-- <p class="text-[11px] text-slate-500 mt-1">
+            เลื่อนทีละ 32 px (ต้องหารด้วย 16 ลงตัวตอนสร้าง PDF)
+          </p> -->
         </article>
 
         <article
@@ -3185,7 +3188,7 @@ const buildInstructionPdf = async (
     targetResolution.width % DEFAULT_PLATE_WIDTH !== 0 ||
     targetResolution.height % DEFAULT_PLATE_WIDTH !== 0
   ) {
-    throw new Error('ขนาดภาพต้องหารด้วย 32 (ขนาดฐานแผ่น) ลงตัว');
+    throw new Error(`ขนาดภาพต้องหารด้วย ${DEFAULT_PLATE_WIDTH} (ขนาดฐานแผ่น) ลงตัว`);
   }
   const { jsPDF } = await import('jspdf');
   const pixelArray = getPixelArrayFromCanvas(step3Canvas.value);
@@ -3215,7 +3218,9 @@ const buildInstructionPdf = async (
   const totalPlates =
     (targetResolution.width * targetResolution.height) /
     (DEFAULT_PLATE_WIDTH * DEFAULT_PLATE_WIDTH);
-  const totalPages = totalPlates + 1;
+  const instructionsPerPage = 4;
+  const instructionPages = Math.max(1, Math.ceil(totalPlates / instructionsPerPage));
+  const totalPages = instructionPages + 1;
   const previewClearPageLimit =
     totalPages <= PREVIEW_CLEAR_PAGE_COUNT ? Math.max(1, totalPages - 1) : PREVIEW_CLEAR_PAGE_COUNT;
 
@@ -3248,19 +3253,24 @@ const buildInstructionPdf = async (
     });
 
   let pdf = createPdfInstance();
-  const addImageToPdf = (canvasData: string, canvasWidth: number, canvasHeight: number) => {
+  const addImageToPdf = (
+    canvasData: string,
+    canvasWidth: number,
+    canvasHeight: number,
+    opts?: { x?: number; y?: number; maxWidth?: number; maxHeight?: number }
+  ) => {
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const maxWidth = Math.max(pageWidth - PDF_MARGIN_MM * 2, 10);
-    const maxHeight = Math.max(pageHeight - PDF_MARGIN_MM * 2, 10);
+    const maxWidth = Math.max((opts?.maxWidth ?? pageWidth - PDF_MARGIN_MM * 2), 10);
+    const maxHeight = Math.max((opts?.maxHeight ?? pageHeight - PDF_MARGIN_MM * 2), 10);
     let drawWidth = maxWidth;
     let drawHeight = (canvasHeight / canvasWidth) * drawWidth;
     if (drawHeight > maxHeight) {
       drawHeight = maxHeight;
       drawWidth = (canvasWidth / canvasHeight) * drawHeight;
     }
-    const offsetX = (pageWidth - drawWidth) / 2;
-    const offsetY = (pageHeight - drawHeight) / 2;
+    const offsetX = opts?.x ?? (pageWidth - drawWidth) / 2;
+    const offsetY = opts?.y ?? (pageHeight - drawHeight) / 2;
     pdf.addImage(canvasData, imageType, offsetX, offsetY, drawWidth, drawHeight);
   };
 
@@ -3302,7 +3312,11 @@ const buildInstructionPdf = async (
 
   for (let i = 0; i < totalPlates; i++) {
     await sleep(40);
-    pdf.addPage();
+    const sectionIndexOnPage = i % instructionsPerPage;
+    if (sectionIndexOnPage === 0) {
+      pdf.addPage();
+      currentPageNumber += 1;
+    }
 
     const instructionCanvas = document.createElement('canvas');
     const subPixels = getSubPixelArray(pixelArray, i, targetResolution.width, DEFAULT_PLATE_WIDTH);
@@ -3314,17 +3328,33 @@ const buildInstructionPdf = async (
       instructionCanvas,
       i + 1,
       selectedPixelType.value,
-      null
+      null,
+      { showLegend: false }
     );
     setCanvasDpi(instructionCanvas, dpi);
-    currentPageNumber += 1;
     const isPreviewPage = options?.noPreviewBlur ? true : currentPageNumber <= previewClearPageLimit;
-    // const isPreviewPage = currentPageNumber <= PREVIEW_CLEAR_PAGE_COUNT;
     const instructionImg = isPreviewPage
       ? instructionCanvas.toDataURL(imageMime, imageQuality)
       : blurCanvasForPreview(instructionCanvas);
-    addImageToPdf(instructionImg, instructionCanvas.width, instructionCanvas.height);
-    updateProgress(i + 2, `กำลังวาดแผ่นที่ ${i + 1}/${totalPlates}${isPreviewPage ? '' : ' (ตัวอย่างเบลอ)'}`);
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const cellWidth = (pageWidth - PDF_MARGIN_MM * 2) / 2;
+    const cellHeight = (pageHeight - PDF_MARGIN_MM * 2) / 2;
+    const cellRow = Math.floor(sectionIndexOnPage / 2);
+    const cellCol = sectionIndexOnPage % 2;
+    const offsetX = PDF_MARGIN_MM + cellCol * cellWidth;
+    const offsetY = PDF_MARGIN_MM + cellRow * cellHeight;
+
+    addImageToPdf(instructionImg, instructionCanvas.width, instructionCanvas.height, {
+      x: offsetX,
+      y: offsetY,
+      maxWidth: cellWidth,
+      maxHeight: cellHeight
+    });
+
+    const progressPageIndex = Math.floor(i / instructionsPerPage) + 2;
+    updateProgress(progressPageIndex, `กำลังวาดแผ่นที่ ${i + 1}/${totalPlates}${isPreviewPage ? '' : ' (ตัวอย่างเบลอ)'}`);
   }
 
   addWatermark(pdf, isHighQuality, APP_WATERMARK);

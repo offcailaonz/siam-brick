@@ -212,12 +212,11 @@
 
     <div class="overflow-hidden rounded-lg border border-slate-200 w-full">
       <div
-        class="grid grid-cols-[90px,90px,90px,90px,90px,90px,90px,110px,110px,110px,110px,100px,110px] md:grid-cols-[1fr,1fr,0.8fr,0.8fr,0.8fr,0.8fr,0.8fr,1fr,1fr,1fr,0.9fr,0.9fr,1fr] items-center bg-slate-50 px-3 py-2 text-[12px] font-semibold text-slate-600 uppercase tracking-wide"
+        class="grid grid-cols-[90px,90px,90px,90px,90px,90px,110px,110px,110px,110px,100px,110px] md:grid-cols-[1fr,1fr,0.8fr,0.8fr,0.8fr,0.8fr,1fr,1fr,1fr,0.9fr,0.9fr,1fr] items-center bg-slate-50 px-3 py-2 text-[12px] font-semibold text-slate-600 uppercase tracking-wide"
       >
         <span class="text-center">ด้าน A</span>
         <span class="text-center">ด้าน B</span>
         <span class="text-right">ฐาน 16x16</span>
-        <span class="text-right">ฐาน 32x32</span>
         <span class="text-right">รูแขวน</span>
         <span class="text-right">มุม</span>
         <span class="text-right">ขอบ</span>
@@ -232,7 +231,7 @@
         <div
           v-for="n in 5"
           :key="n"
-          class="grid grid-cols-[90px,90px,90px,90px,90px,90px,90px,110px,110px,110px,110px,100px,110px] md:grid-cols-[1fr,1fr,0.8fr,0.8fr,0.8fr,0.8fr,0.8fr,1fr,1fr,1fr,0.9fr,0.9fr,1fr] items-center px-3 py-3"
+          class="grid grid-cols-[90px,90px,90px,90px,90px,90px,110px,110px,110px,110px,100px,110px] md:grid-cols-[1fr,1fr,0.8fr,0.8fr,0.8fr,1fr,1fr,1fr,0.9fr,0.9fr,1fr,1fr] items-center px-3 py-3"
         >
           <div class="flex justify-center">
             <div class="h-5 w-16 rounded bg-slate-100 animate-pulse"></div>
@@ -279,7 +278,7 @@
         <div
           v-for="item in formats"
           :key="itemKey(item)"
-          class="grid grid-cols-[90px,90px,90px,90px,90px,90px,90px,110px,110px,110px,110px,100px,110px] md:grid-cols-[1fr,1fr,0.8fr,0.8fr,0.8fr,0.8fr,0.8fr,1fr,1fr,1fr,0.9fr,0.9fr,1fr] items-center px-3 py-3"
+          class="grid grid-cols-[90px,90px,90px,90px,90px,90px,110px,110px,110px,110px,100px,110px] md:grid-cols-[1fr,1fr,0.8fr,0.8fr,0.8fr,1fr,1fr,1fr,0.9fr,0.9fr,1fr,1fr] items-center px-3 py-3"
         >
           <div class="text-center text-sm font-semibold text-slate-800">
             {{ normalizedSize(item).width ?? '-' }}
@@ -289,9 +288,6 @@
           </div>
           <div class="text-right text-sm text-slate-700">
             {{ stats(item)?.base16 ?? 0 }}
-          </div>
-          <div class="text-right text-sm text-slate-700">
-            {{ stats(item)?.base32 ?? 0 }}
           </div>
           <div class="text-right text-sm text-slate-700">
             {{ stats(item)?.clips ?? 0 }}
@@ -439,10 +435,9 @@ const getFrameAndBase = (width: number, height: number) => {
   const sideShort = hasSize ? ((width - 16) / 16) * 2 : 0;
   const sideLong = hasSize ? ((height - 16) / 16) * 2 : 0;
 
-  const canUse32 = hasSize && width % 32 === 0 && height % 32 === 0;
-
-  const base32 = canUse32 ? (width / 32) * (height / 32) : 0;
-  const base16 = !canUse32 && hasSize ? (width / 16) * (height / 16) : 0;
+  // ใช้ฐาน 16x16 เสมอ (ไม่แยก 32x32 แล้ว)
+  const base32 = 0;
+  const base16 = hasSize ? (width / 16) * (height / 16) : 0;
 
   const studs = width * height;
 
@@ -460,7 +455,7 @@ const formatCost = (item: any) => {
   if (!s) return 0;
   const price = (key: string) => partPriceLookup.value[key] ?? 0;
   const base16Cost = s.base16 * price('plate-16');
-  const base32Cost = s.base32 * price('plate-32');
+  const base32Cost = 0;
   const hangerCost = s.clips * price('hanger');
   const cornerCost = s.corners * price('frame-corner');
   const edgeCost = (s.sideShort + s.sideLong) * price('frame-edge');
