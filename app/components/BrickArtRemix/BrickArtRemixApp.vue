@@ -1176,6 +1176,7 @@ const SCALING_FACTOR = 30;
 const SPARSE_COLOR_THRESHOLD = 10;
 const PDF_FILENAME_BASE = 'Siam-Brick-Instructions';
 const PDF_STORAGE_BUCKET = 'order-instructions';
+const MAX_STORAGE_PDF_BYTES = 45 * 1024 * 1024; // ~45MB guard before hitting storage limits
 const PREVIEW_CLEAR_PAGE_COUNT = 2; // page 1-2 clear; rest blurred
 const APP_WATERMARK = {
   ...DEFAULT_WATERMARK,
@@ -1284,6 +1285,12 @@ const formatCurrency = (value: number | string | null | undefined) => {
     currency: 'THB',
     maximumFractionDigits: 0
   }).format(num);
+};
+const formatBytes = (bytes: number) => {
+  if (!Number.isFinite(bytes)) return '0 B';
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${bytes} B`;
 };
 
 const colorName = (hex: string) => HEX_TO_COLOR_NAME[hex.toLowerCase()] ?? HEX_TO_COLOR_NAME[hex];
@@ -1653,12 +1660,13 @@ const emitGenerated = async () => {
   const priceAmount = formatPrice.value != null ? Number(formatPrice.value) : null;
   let instructionPdf: InstructionPdfResult | null = null;
   try {
-    instructionPdf = await buildInstructionPdf(useHighQualityPdf.value, {
+    const result = await buildUploadReadyPdf(useHighQualityPdf.value, {
       download: false,
       returnBlob: true,
       quiet: true,
       noPreviewBlur: true
     });
+    instructionPdf = result.pdf;
   } catch (err) {
     console.warn('Generate product PDF failed', err);
   }
@@ -3032,19 +3040,60 @@ const goToCheckout = async () => {
   }
 };
 
+const buildUploadReadyPdf = async (
+  preferHighQuality: boolean,
+  options: InstructionPdfOptions & { maxBytes?: number } = {}
+): Promise<{ pdf: InstructionPdfResult; downgraded: boolean }> => {
+  const maxBytes = options.maxBytes ?? MAX_STORAGE_PDF_BYTES;
+  const variants: Array<{ high: boolean; opts: InstructionPdfOptions; downgraded: boolean }> = [
+    { high: preferHighQuality, opts: options, downgraded: false },
+    { high: preferHighQuality, opts: { ...options, imageType: 'JPEG', imageQuality: 0.92 }, downgraded: true },
+    { high: preferHighQuality, opts: { ...options, imageType: 'JPEG', imageQuality: 0.86 }, downgraded: true },
+    { high: false, opts: { ...options, imageType: 'PNG', imageQuality: 1.0 }, downgraded: true },
+    { high: false, opts: { ...options, imageType: 'JPEG', imageQuality: 0.9 }, downgraded: true }
+  ];
+
+  let chosen: InstructionPdfResult | null = null;
+  let downgraded = false;
+  for (const variant of variants) {
+    const pdf = await buildInstructionPdf(variant.high, variant.opts);
+    if (!pdf) continue;
+    if (maxBytes && pdf.blob.size <= maxBytes) {
+      chosen = pdf;
+      downgraded = variant.downgraded;
+      break;
+    }
+    if (!chosen || pdf.blob.size < chosen.blob.size) {
+      chosen = pdf;
+      downgraded = variant.downgraded;
+    }
+  }
+
+  if (!chosen) {
+    throw new Error('ไม่สามารถสร้างไฟล์ PDF ได้');
+  }
+
+  if (maxBytes && chosen.blob.size > maxBytes) {
+    throw new Error(
+      `ไฟล์ PDF มีขนาด ${formatBytes(chosen.blob.size)} เกิน ${formatBytes(
+        maxBytes
+      )} กรุณาปิด High quality PDF หรือลดความละเอียด แล้วลองใหม่`
+    );
+  }
+
+  return { pdf: chosen, downgraded };
+};
+
 const buildOrderPdfPayload = async () => {
   if (!step3Ready.value || !finalStep3Preview.value) {
     throw new Error('ยังไม่มี Step 3 สำหรับสร้าง PDF');
   }
-  const instructionPdf = await buildInstructionPdf(useHighQualityPdf.value, {
+  const { pdf: instructionPdf } = await buildUploadReadyPdf(useHighQualityPdf.value, {
     download: false,
     returnBlob: true,
     quiet: true,
     noPreviewBlur: true
   });
-  if (!instructionPdf) {
-    throw new Error('ไม่สามารถสร้างไฟล์ PDF ได้');
-  }
   const step3Meta = buildStep3Meta();
   return { instructionPdf, step3Meta };
 };
@@ -3080,6 +3129,8 @@ type InstructionPdfOptions = {
   quiet?: boolean;
   returnBlob?: boolean;
   noPreviewBlur?: boolean;
+  imageType?: 'PNG' | 'JPEG';
+  imageQuality?: number;
 };
 
 type InstructionPdfResult = {
@@ -3152,6 +3203,14 @@ const buildInstructionPdf = async (
     throw new Error('ไม่พบสีที่ใช้ในโมเสก');
   }
 
+  const imageType = options?.imageType === 'JPEG' ? 'JPEG' : 'PNG';
+  const imageMime = imageType === 'JPEG' ? 'image/jpeg' : 'image/png';
+  const imageQuality =
+    typeof options?.imageQuality === 'number' && Number.isFinite(options.imageQuality)
+      ? Math.min(1, Math.max(0.1, options.imageQuality))
+      : imageType === 'JPEG'
+        ? 0.82
+        : 1.0;
   const dpi = isHighQuality ? HIGH_DPI : LOW_DPI;
   const totalPlates =
     (targetResolution.width * targetResolution.height) /
@@ -3178,7 +3237,7 @@ const buildInstructionPdf = async (
     selectedPixelType.value
   );
   setCanvasDpi(titlePageCanvas, dpi);
-  const titleImg = titlePageCanvas.toDataURL('image/png', 1.0);
+  const titleImg = titlePageCanvas.toDataURL(imageMime, imageQuality);
   const orientation = targetResolution.width >= targetResolution.height ? 'l' : 'p';
 
   const createPdfInstance = () =>
@@ -3202,7 +3261,7 @@ const buildInstructionPdf = async (
     }
     const offsetX = (pageWidth - drawWidth) / 2;
     const offsetY = (pageHeight - drawHeight) / 2;
-    pdf.addImage(canvasData, 'PNG', offsetX, offsetY, drawWidth, drawHeight);
+    pdf.addImage(canvasData, imageType, offsetX, offsetY, drawWidth, drawHeight);
   };
 
   const blurCanvasForPreview = (source: HTMLCanvasElement) => {
@@ -3214,7 +3273,7 @@ const buildInstructionPdf = async (
     downscaleCanvas.height = Math.max(Math.round(source.height * downscaleFactor), minSize);
     const downCtx = downscaleCanvas.getContext('2d');
     if (!downCtx) {
-      return source.toDataURL('image/png', 1.0);
+      return source.toDataURL(imageMime, imageQuality);
     }
     downCtx.imageSmoothingEnabled = true;
     downCtx.drawImage(source, 0, 0, downscaleCanvas.width, downscaleCanvas.height);
@@ -3224,7 +3283,7 @@ const buildInstructionPdf = async (
     blurCanvas.height = source.height;
     const blurCtx = blurCanvas.getContext('2d');
     if (!blurCtx) {
-      return source.toDataURL('image/png', 1.0);
+      return source.toDataURL(imageMime, imageQuality);
     }
     blurCtx.imageSmoothingEnabled = true;
     blurCtx.filter = 'blur(18px) saturate(0.12) contrast(0.25)';
@@ -3233,7 +3292,7 @@ const buildInstructionPdf = async (
     blurCtx.fillStyle = 'rgba(255,255,255,0.32)';
     blurCtx.fillRect(0, 0, blurCanvas.width, blurCanvas.height);
     setCanvasDpi(blurCanvas, dpi);
-    return blurCanvas.toDataURL('image/png', 1.0);
+    return blurCanvas.toDataURL(imageMime, imageQuality);
   };
 
   addImageToPdf(titleImg, titlePageCanvas.width, titlePageCanvas.height);
@@ -3262,7 +3321,7 @@ const buildInstructionPdf = async (
     const isPreviewPage = options?.noPreviewBlur ? true : currentPageNumber <= previewClearPageLimit;
     // const isPreviewPage = currentPageNumber <= PREVIEW_CLEAR_PAGE_COUNT;
     const instructionImg = isPreviewPage
-      ? instructionCanvas.toDataURL('image/png', 1.0)
+      ? instructionCanvas.toDataURL(imageMime, imageQuality)
       : blurCanvasForPreview(instructionCanvas);
     addImageToPdf(instructionImg, instructionCanvas.width, instructionCanvas.height);
     updateProgress(i + 2, `กำลังวาดแผ่นที่ ${i + 1}/${totalPlates}${isPreviewPage ? '' : ' (ตัวอย่างเบลอ)'}`);
