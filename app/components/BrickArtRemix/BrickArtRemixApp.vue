@@ -1471,6 +1471,8 @@ const cropInteraction = reactive<CropInteractionState>({
     height: 1
   }
 });
+let pendingCropPointer: { x: number; y: number } | null = null;
+let cropRafId: number | null = null;
 const initialCropApplied = ref(false);
 
 const hsvControls = reactive({
@@ -1880,15 +1882,12 @@ const beginCropInteraction = (event: PointerEvent, type: CropInteractionType) =>
   console.log("cropInteraction", cropInteraction);
 };
 
-const handleCropPointerMove = (event: PointerEvent) => {
-  if (!cropInteraction.active || cropInteraction.type == null) {
-    return;
-  }
+const applyCropPointer = (x: number, y: number) => {
   const container = cropPreviewContainer.value;
   if (!container) return;
   const bounds = container.getBoundingClientRect();
-  const pointerX = event.clientX - bounds.left - cropInteraction.offsetX;
-  const pointerY = event.clientY - bounds.top - cropInteraction.offsetY;
+  const pointerX = x - bounds.left - cropInteraction.offsetX;
+  const pointerY = y - bounds.top - cropInteraction.offsetY;
   const clampedX = clamp(pointerX, 0, cropInteraction.containerWidth);
   const clampedY = clamp(pointerY, 0, cropInteraction.containerHeight);
   const deltaX = (clampedX - cropInteraction.startX) / cropInteraction.containerWidth;
@@ -1927,6 +1926,22 @@ const handleCropPointerMove = (event: PointerEvent) => {
     cropRect.top = clamp(centerY - height / 2, 0, 1 - height);
   }
   clampCropRectToBounds();
+};
+
+const handleCropPointerMove = (event: PointerEvent) => {
+  if (!cropInteraction.active || cropInteraction.type == null) {
+    return;
+  }
+  pendingCropPointer = { x: event.clientX, y: event.clientY };
+  if (cropRafId == null) {
+    cropRafId = requestAnimationFrame(() => {
+      cropRafId = null;
+      const next = pendingCropPointer;
+      pendingCropPointer = null;
+      if (!next) return;
+      applyCropPointer(next.x, next.y);
+    });
+  }
   // อย่าประมวลผลระหว่างลาก เพื่อลดอาการค้าง
 };
 
@@ -1936,6 +1951,11 @@ const endCropInteraction = () => {
   }
   cropInteraction.active = false;
   cropInteraction.type = null;
+  pendingCropPointer = null;
+  if (cropRafId != null) {
+    cancelAnimationFrame(cropRafId);
+    cropRafId = null;
+  }
   window.removeEventListener('pointermove', handleCropPointerMove);
   window.removeEventListener('pointerup', endCropInteraction);
   markApiPreviewDirty();
