@@ -1,18 +1,30 @@
 <template>
   <section class="space-y-3">
-    <div class="flex items-center justify-between gap-2">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
       <div>
         <p class="text-sm font-semibold text-slate-900">ออเดอร์ล่าสุด</p>
-        <p class="text-xs text-slate-500">รายการออเดอร์จากฐานข้อมูล</p>
+        <p class="text-xs text-slate-500">
+          รายการออเดอร์จากฐานข้อมูล เลือกเพื่อ export สีแต่ละออเดอร์
+        </p>
       </div>
-      <button
-        type="button"
-        class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
-        :disabled="loading"
-        @click="$emit('refresh')"
-      >
-        รีเฟรช
-      </button>
+      <div class="flex items-center gap-2 flex-wrap">
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
+          :disabled="loading"
+          @click="$emit('refresh')"
+        >
+          รีเฟรช
+        </button>
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
+          :disabled="!selectedIds?.length"
+          @click="$emit('export-selected')"
+        >
+          Export สี ({{ selectedIds?.length || 0 }})
+        </button>
+      </div>
     </div>
 
     <DataTable
@@ -26,9 +38,24 @@
       :sort="sort"
       :show-sort="true"
       row-key="id"
+      :row-class="rowClassForOrder"
       @change-page="$emit('change-page', $event)"
       @change-sort="$emit('change-sort', $event)"
     >
+      <template #head-select>
+        <div class="flex justify-center">
+          <label class="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600">
+            <input
+              type="checkbox"
+              class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              :checked="allPageSelected"
+              :indeterminate="somePageSelected"
+              @change="$emit('toggle-select-page', $event.target.checked)"
+            />
+          </label>
+        </div>
+      </template>
+
       <template #filter-bar>
         <div class="flex flex-wrap items-center gap-2 px-1 pb-2">
           <ColorSelect
@@ -46,7 +73,11 @@
             v-if="orderPreview(row)"
             class="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white"
           >
-            <img :src="orderPreview(row)" alt="preview" class="h-full w-full object-contain" />
+            <img
+              :src="orderPreview(row)"
+              alt="preview"
+              class="h-full w-full object-contain"
+            />
           </div>
           <div class="flex flex-col">
             <span class="font-semibold text-slate-900">#{{ row.id }}</span>
@@ -60,8 +91,22 @@
         </div>
       </template>
 
+      <template #cell-select="{ row }">
+        <div class="flex justify-center">
+          <input
+            type="checkbox"
+            class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            :checked="isSelected(row.id)"
+            @change="$emit('toggle-select', row, $event.target.checked)"
+          />
+        </div>
+      </template>
+
       <template #cell-customer="{ row }">
-        <span class="text-slate-700">{{ row.customer_email || row.user_id || '-' }}</span>
+        <span
+          class="text-slate-700"
+          >{{ row.customer_email || row.user_id || '-' }}</span
+        >
       </template>
 
       <template #cell-status="{ row }">
@@ -84,7 +129,10 @@
               <span v-else>บันทึก</span>
             </button>
           </div>
-          <p v-if="statusUpdateErrors[String(row.id)]" class="text-[11px] text-rose-600">
+          <p
+            v-if="statusUpdateErrors[String(row.id)]"
+            class="text-[11px] text-rose-600"
+          >
             {{ statusUpdateErrors[String(row.id)] }}
           </p>
         </div>
@@ -128,6 +176,7 @@ const props = defineProps<{
   statusUpdateErrors: Record<string, string | null>;
   formatCurrency: (v: number | string | null | undefined) => string;
   formatDate: (v: string | null | undefined) => string;
+  selectedIds?: Array<string | number>;
   page?: number;
   pageSize?: number;
   total?: number;
@@ -143,9 +192,13 @@ defineEmits<{
   (e: 'change-page', page: number): void;
   (e: 'change-sort', payload: { field: string; direction: 'asc' | 'desc' }): void;
   (e: 'change-status-filter', status: string | null): void;
+  (e: 'toggle-select', order: Record<string, any>, checked: boolean): void;
+  (e: 'toggle-select-page', checked: boolean): void;
+  (e: 'export-selected'): void;
 }>();
 
 const columns = [
+  { key: 'select', label: 'เลือก', sortable: false },
   { key: 'preview', label: 'ออเดอร์', sortable: false },
   { key: 'customer', label: 'ลูกค้า', sortable: false },
   { key: 'status', label: 'สถานะ', sortable: false },
@@ -153,6 +206,22 @@ const columns = [
   { key: 'updated_at', label: 'อัปเดต', sortable: true },
   { key: 'actions', label: 'รายละเอียด', sortable: false }
 ];
+
+const selectedSet = computed(() => new Set((props.selectedIds ?? []).map((id) => String(id))));
+const isSelected = (id: string | number | null | undefined) => {
+  if (id == null) return false;
+  return selectedSet.value.has(String(id));
+};
+const allPageSelected = computed(() =>
+  props.orders.length > 0 && props.orders.every((order) => isSelected(order.id))
+);
+
+const rowClassForOrder = (row: Record<string, any>) => {
+  return isSelected(row.id) ? 'bg-blue-50' : '';
+};
+const somePageSelected = computed(
+  () => props.orders.some((order) => isSelected(order.id)) && !allPageSelected.value
+);
 
 const orderPreview = (order: Record<string, any>) => {
   const candidates = [

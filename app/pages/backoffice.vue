@@ -126,6 +126,7 @@
                   :status-update-errors="statusUpdateErrors"
                   :format-currency="formatCurrency"
                   :format-date="formatDate"
+                  :selected-ids="selectedOrderIdList"
                   :page="ordersPage"
                   :total-pages="ordersTotalPages"
                   :page-size="ordersPageSize"
@@ -139,6 +140,9 @@
                   @change-page="goOrdersPage"
                   @change-sort="changeOrdersSort"
                   @change-status-filter="changeOrdersStatusFilter"
+                  @toggle-select="toggleOrderSelection"
+                  @toggle-select-page="toggleOrderSelectionPage"
+                  @export-selected="exportSelectedOrders"
                 />
 
                 <ProductsSection
@@ -226,7 +230,7 @@
           </div>
         </div>
         <div v-if="orderStudUsage.length" class="rounded-xl border border-slate-200 bg-white">
-          <div class="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div class="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3 max-h-80 overflow-y-auto pr-2">
             <div
               v-for="usage in orderStudUsage"
               :key="usage.hex"
@@ -315,6 +319,9 @@ const orderDetailOpen = ref(false);
 const orderDetail = ref<Record<string, any> | null>(null);
 const ordersLoading = ref(false);
 const ordersError = ref<string | null>(null);
+const selectedOrderMap = ref<Record<string, boolean>>({});
+const selectedOrderData = ref<Record<string, any>>({});
+const selectedOrderIdList = computed(() => Object.keys(selectedOrderMap.value).filter((id) => selectedOrderMap.value[id]));
 const activeMenu = ref<'orders' | 'products' | 'formats' | 'users'>('orders');
 const statusOptions = [
   'รอชำระเงิน',
@@ -527,6 +534,105 @@ const orderStudUsage = computed(() => {
 
 const orderStudTotal = computed(() => orderStudUsage.value.reduce((sum, item) => sum + (Number(item.count) || 0), 0));
 
+const orderStudUsageForExport = (order: Record<string, any>) => {
+  const meta = order?.metadata ?? {};
+  const usage = meta.step3_stud_usage ?? meta.stud_usage ?? meta.step3_meta?.stud_usage;
+  if (!Array.isArray(usage)) return [];
+  return usage
+    .map((item: any) => {
+      const count = Number(item?.count ?? item?.amount ?? 0) || 0;
+      const rawHex = item?.hex ?? item?.color ?? '';
+      const hex = normalizeHex(rawHex);
+      const resolvedName = item?.name ?? HEX_TO_COLOR_NAME[hex] ?? HEX_TO_COLOR_NAME[rawHex];
+      const bricklinkId = resolvedName ? COLOR_NAME_TO_ID[resolvedName] ?? null : null;
+      return {
+        hex: hex || rawHex || '',
+        name: resolvedName ?? rawHex ?? 'ไม่ทราบสี',
+        bricklinkId,
+        count
+      };
+    })
+    .filter((item) => (item.hex && item.count > 0) || item.count > 0)
+    .sort((a, b) => b.count - a.count);
+};
+
+const orderSizeLabel = (order: Record<string, any>) => {
+  const meta = order?.metadata ?? {};
+  const formatMeta = meta.format_price ?? {};
+  const resolution =
+    parseSizeText(formatMeta) ??
+    parseSizeText({ width: formatMeta.width, height: formatMeta.height }) ??
+    parseSizeText(meta.step3_resolution) ??
+    parseSizeText(meta.resolution) ??
+    parseSizeText(meta.size);
+  if (!resolution) return '';
+  const w = Number(resolution.width);
+  const h = Number(resolution.height);
+  if (!Number.isFinite(w) || !Number.isFinite(h)) return '';
+  const a = Math.min(w, h);
+  const b = Math.max(w, h);
+  return `${a}x${b}`;
+};
+
+const csvEscape = (value: any) => {
+  const str = value == null ? '' : String(value);
+  if (/[",\n]/.test(str)) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+};
+
+const exportSelectedOrders = () => {
+  const selected = Object.values(selectedOrderData.value ?? {}).filter(Boolean);
+  if (!selected.length) return;
+  if (typeof window === 'undefined') {
+    ordersError.value = 'ต้องเปิดในเบราว์เซอร์เพื่อ export';
+    return;
+  }
+  const aggregates = new Map<
+    string,
+    {
+      colorId: string | number | null;
+      hex: string;
+      count: number;
+    }
+  >();
+
+  selected.forEach((order) => {
+    const usage = orderStudUsageForExport(order);
+    usage.forEach((item) => {
+      const key = item.bricklinkId != null ? String(item.bricklinkId) : item.hex || item.name || '';
+      if (!key) return;
+      const existing = aggregates.get(key) ?? {
+        colorId: item.bricklinkId ?? null,
+        hex: item.hex ?? '',
+        count: 0
+      };
+      existing.count += item.count ?? 0;
+      aggregates.set(key, existing);
+    });
+  });
+
+  const aggregatedRows = Array.from(aggregates.values()).sort((a, b) => b.count - a.count);
+
+  const header = ['no', 'color_id', 'color_hex', 'count'];
+  const rows: Array<Array<string | number>> = aggregatedRows.map((item, index) => [
+    index + 1,
+    item.colorId ?? '',
+    item.hex ?? '',
+    item.count ?? 0
+  ]);
+
+  const csv = [header, ...rows].map((row) => row.map(csvEscape).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `orders-colors-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+};
+
 const getFrameAndBase = (width: number, height: number) => {
   const hasSize = width > 0 && height > 0;
   const corners = hasSize ? 4 : 0;
@@ -655,6 +761,35 @@ const changeOrdersStatusFilter = (status: string | null) => {
   loadOrders();
 };
 
+const upsertSelectedOrder = (order: Record<string, any>, checked: boolean) => {
+  const key = order?.id != null ? String(order.id) : '';
+  if (!key) return;
+  if (checked) {
+    selectedOrderMap.value[key] = true;
+    selectedOrderData.value[key] = order;
+  } else {
+    delete selectedOrderMap.value[key];
+    delete selectedOrderData.value[key];
+  }
+};
+
+const toggleOrderSelection = (order: Record<string, any>, checked: boolean) => {
+  upsertSelectedOrder(order, checked);
+};
+
+const toggleOrderSelectionPage = (checked: boolean) => {
+  orders.value.forEach((order) => upsertSelectedOrder(order, checked));
+};
+
+const refreshSelectedOrderData = (list: Array<Record<string, any>>) => {
+  list.forEach((order) => {
+    const key = order?.id != null ? String(order.id) : '';
+    if (key && selectedOrderMap.value[key]) {
+      selectedOrderData.value[key] = order;
+    }
+  });
+};
+
 const loadOrders = async () => {
   ordersLoading.value = true;
   ordersError.value = null;
@@ -669,6 +804,7 @@ const loadOrders = async () => {
     });
     orders.value = result.items ?? [];
     ordersTotal.value = result.total ?? orders.value.length;
+    refreshSelectedOrderData(orders.value);
     const maxPage = Math.max(1, Math.ceil(ordersTotal.value / ordersPageSize));
     if (ordersPage.value > maxPage) {
       ordersPage.value = maxPage;

@@ -14,11 +14,16 @@
               v-for="col in columns"
               :key="col.key"
               class="px-3 py-2 font-semibold"
-              :class="{ 'cursor-pointer select-none': col.sortable }"
+              :class="{
+                'cursor-pointer select-none': col.sortable,
+                'text-center w-[64px]': col.key === 'select'
+              }"
               @click="col.sortable ? toggleSort(col.key) : undefined"
             >
               <div class="inline-flex items-center gap-1">
-                <span>{{ col.label }}</span>
+                <slot :name="`head-${col.key}`" :col="col">
+                  <span>{{ col.label }}</span>
+                </slot>
                 <svg
                   v-if="col.sortable"
                   xmlns="http://www.w3.org/2000/svg"
@@ -66,9 +71,16 @@
             v-else
             v-for="row in rows"
             :key="String(row[rowKey] ?? JSON.stringify(row))"
-            class="border-t border-slate-100 hover:bg-slate-50"
+            :class="['border-t border-slate-100 hover:bg-slate-50', rowClassValue(row)]"
           >
-            <td v-for="col in columns" :key="col.key" class="px-3 py-2 align-top">
+            <td
+              v-for="col in columns"
+              :key="col.key"
+              class="px-3 py-2 align-top"
+              :class="{
+                'text-center align-middle w-[64px]': col.key === 'select'
+              }"
+            >
               <slot :name="`cell-${col.key}`" :row="row">
                 {{ row[col.key] }}
               </slot>
@@ -126,6 +138,7 @@ const props = defineProps<{
   total: number;
   sort: { field: string; direction: 'asc' | 'desc' };
   rowKey?: string;
+  rowClass?: (row: Record<string, any>) => string | undefined | null;
 }>();
 
 const emit = defineEmits<{
@@ -137,6 +150,7 @@ const rowKey = computed(() => props.rowKey ?? 'id');
 const totalPages = computed(() => Math.max(1, Math.ceil((props.total || 0) / props.pageSize)));
 const startRow = computed(() => (props.page - 1) * props.pageSize + 1);
 const endRow = computed(() => Math.min(props.page * props.pageSize, props.total));
+const rowClassValue = (row: Record<string, any>) => (props.rowClass ? props.rowClass(row) || '' : '');
 
 const changePage = (page: number) => {
   const target = Math.min(Math.max(1, page), totalPages.value);
