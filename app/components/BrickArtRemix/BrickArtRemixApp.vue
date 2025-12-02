@@ -1861,11 +1861,10 @@ const beginCropInteraction = (event: PointerEvent, type: CropInteractionType) =>
   if (!previewRect.width || !previewRect.height) {
     return;
   }
-  const pointerX = event.clientX - bounds.left - previewRect.offsetX;
-  const pointerY = event.clientY - bounds.top - previewRect.offsetY;
-  if (pointerX < 0 || pointerY < 0 || pointerX > previewRect.width || pointerY > previewRect.height) {
-    return;
-  }
+  const rawX = event.clientX - bounds.left - previewRect.offsetX;
+  const rawY = event.clientY - bounds.top - previewRect.offsetY;
+  const pointerX = clamp(rawX, 0, previewRect.width);
+  const pointerY = clamp(rawY, 0, previewRect.height);
   cropInteraction.active = true;
   cropInteraction.type = type;
   cropInteraction.startX = pointerX;
@@ -3605,7 +3604,7 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .preview-media {
