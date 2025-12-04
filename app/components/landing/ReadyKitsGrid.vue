@@ -5,7 +5,7 @@
         ลายพร้อมสร้างที่จัดชุดให้ครบ
       </h2>
     </div>
-    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3" v-auto-animate>
+    <div class="grid gap-6 grid-cols-2 md:grid-cols-2 lg:grid-cols-4" v-auto-animate>
       <template v-if="loading">
         <article
           v-for="n in 6"
@@ -157,7 +157,7 @@ const props = withDefaults(
     loading?: boolean;
   }>(),
   {
-    pageSize: 3,
+    pageSize: 4,
     loading: false
   }
 );
