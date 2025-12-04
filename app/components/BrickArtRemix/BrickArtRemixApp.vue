@@ -899,9 +899,6 @@ const hashUint8Array = (arr: Uint8Array | Uint8ClampedArray | null) => {
   }
   return `a${hash >>> 0}`;
 };
-const logStep3 = (message: string, data?: Record<string, any>) => {
-  console.log('[Step 3 Preview]', message, data ?? '');
-};
 const clearStepImagesForUser = () => {
   return;
 };
@@ -929,11 +926,6 @@ const persistStep2Preview = (preview: string | null) => {
   step2PreviewForOrder.value = preview;
 };
 const persistFinalStep3Preview = (preview: string | null, baseDataUrl?: string | null, baseSourceHash?: string | null) => {
-  logStep3('persistFinalStep3Preview', {
-    hasPreview: Boolean(preview),
-    hasBase: Boolean(baseDataUrl),
-    baseHash: baseSourceHash ?? lastGeneratedStep3SourceHash.value ?? null
-  });
   finalStep3Preview.value = preview;
   lastGeneratedStep3BaseHash.value = baseDataUrl ? hashString(baseDataUrl) : null;
   lastGeneratedStep3SourceHash.value = baseSourceHash ?? null;
@@ -1054,11 +1046,6 @@ const restoreFromStepImages = async (snapshot: StepImageSnapshot): Promise<boole
 };
 let applyingRestoredStep3 = false;
 const applyRestoredStep3BaseIfNeeded = () => {
-  logStep3('applyRestoredStep3BaseIfNeeded: check', {
-    pending: Boolean(pendingRestoredStep3Base.value),
-    restoredStep3Applied: restoredStep3Applied.value,
-    applyingRestoredStep3
-  });
   if (!pendingRestoredStep3Base.value || restoredStep3Applied.value || applyingRestoredStep3) {
     if (suspendStep3Persistence.value) {
       suspendStep3Persistence.value = false;
@@ -1074,11 +1061,6 @@ const applyRestoredStep3BaseIfNeeded = () => {
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => {
-    logStep3('applyRestoredStep3BaseIfNeeded: loaded image', {
-      isApiStudPreview,
-      width: img.width,
-      height: img.height
-    });
     pendingRestoredStep3Base.value = null;
     restoredStep3Applied.value = true;
     applyingRestoredStep3 = false;
@@ -1133,10 +1115,6 @@ const applyRestoredStep3BaseIfNeeded = () => {
     if (!userPaintColorTouched.value && step3StudUsage.value.length > 0) {
       paintColorHex.value = step3StudUsage.value[0].hex;
     }
-    logStep3('applyRestoredStep3BaseIfNeeded: applied', {
-      quantizationError: step3QuantizationError.value,
-      colorCount: step3StudUsage.value.length
-    });
     persistFinalStep3Preview(
       step3UpscaledCanvas.value.toDataURL('image/png', 0.92),
       baseCanvas.toDataURL('image/png', 0.92)
@@ -2130,10 +2108,6 @@ watch(
   () => props.initialStep3Preview,
   (next) => {
     if (!next || props.initialStep2Preview) return;
-    logStep3('initialStep3Preview watcher', {
-      hasInitialBase: Boolean(props.initialStep3Base),
-      editingOrderId: props.editingOrderId
-    });
     finalStep3Preview.value = next;
     initialOrderPreviewApplied.value = true;
     persistFinalStep3Preview(next, props.initialStep3Base ?? undefined);
@@ -2150,10 +2124,6 @@ watch(
   () => props.initialStep3Base,
   (next) => {
     if (!next) return;
-    logStep3('initialStep3Base watcher', {
-      editingOrderId: props.editingOrderId,
-      hasPreview: Boolean(props.initialStep3Preview)
-    });
     pendingRestoredStep3Base.value = next;
     restoredStep3Applied.value = false;
     suspendStep3Persistence.value = true;
@@ -2594,15 +2564,9 @@ const runStep2Pipeline = () => {
 };
 
 const runStep3Pipeline = () => {
-  logStep3('runStep3Pipeline: start', {
-    step2Ready: step2Ready.value,
-    hasOverrides: Boolean(paintOverrides.value?.some((v) => v != null)),
-    highQuality: isHighQualityColorMode.value
-  });
   const sourcePixels = getStep2PixelsWithOverrides();
   if (!step2Ready.value || sourcePixels == null) {
     step3Ready.value = false;
-    logStep3('runStep3Pipeline: aborted (step2 not ready or no source pixels)');
     return;
   }
   const baseStudMap = ALL_BRICKLINK_SOLID_COLORS.reduce((acc, color) => {
@@ -2616,10 +2580,6 @@ const runStep3Pipeline = () => {
     if (!isHighQualityColorMode.value) {
       quantPixels = replaceSparseColors(quantPixels, SPARSE_COLOR_THRESHOLD, ciede2000ColorDistance);
     }
-    logStep3('runStep3Pipeline: quantized', {
-      pixelCount: quantPixels.length,
-      colorCount: Object.keys(getUsedPixelsStudMap(quantPixels)).length
-    });
     const step3BaseCanvas = step3Canvas.value;
     const step3Upscaled = step3UpscaledCanvas.value;
     if (!step3BaseCanvas || !step3Upscaled) {
@@ -2645,13 +2605,6 @@ const runStep3Pipeline = () => {
       (props.editingOrderId && showApiStep3Preview.value && apiStep3Preview.value);
     if (!shouldSkipPersist) {
       persistFinalStep3Preview(step3Upscaled.toDataURL('image/png', 0.92), baseCanvasDataUrl, baseSourceHash);
-    } else {
-      logStep3('runStep3Pipeline: skip persist', {
-        suspendStep3Persistence: suspendStep3Persistence.value,
-        pendingRestoredStep3Base: Boolean(pendingRestoredStep3Base.value),
-        editingOrderId: props.editingOrderId,
-        showApiStep3Preview: showApiStep3Preview.value
-      });
     }
     step3QuantPixels.value = quantPixels;
     if (!step3QuantPixelsBase.value) {
@@ -2672,17 +2625,10 @@ const runStep3Pipeline = () => {
 
     step3Error.value = null;
     step3Ready.value = true;
-    logStep3('runStep3Pipeline: done', {
-      quantizationError: step3QuantizationError.value,
-      colorCount: step3StudUsage.value.length,
-      baseHash: lastGeneratedStep3BaseHash.value,
-      sourceHash: lastGeneratedStep3SourceHash.value
-    });
     applyRestoredStep3BaseIfNeeded();
   } catch (err) {
     step3Ready.value = false;
     step3Error.value = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดใน Step 3';
-    logStep3('runStep3Pipeline: error', { error: step3Error.value });
   }
 };
 
