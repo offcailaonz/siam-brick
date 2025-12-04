@@ -100,14 +100,28 @@
           </button>
         </div>
       </div>
+
       <div class="grid gap-6 lg:grid-cols-3 mt-3 order-3">
         <article
           v-show="showStepCard(1)"
           class=" rounded-xl border border-slate-100 bg-white/80 p-4"
         >
+          <div class="lg:hidden mb-3 flex justify-end">
+            <button
+              type="button"
+              class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow"
+              @click="nextMobileStep"
+            >
+              ขั้นถัดไป
+            </button>
+          </div>
           <div class="text-sm text-slate-600 mb-4">
             <div class="preview-square border border-slate-200 bg-black">
-              <div ref="cropPreviewContainer" class="preview-media-container">
+              <div
+                ref="cropPreviewContainer"
+                class="preview-media-container"
+                :style="{ touchAction: 'none' }"
+              >
                 <canvas ref="step1Canvas" class="preview-media"></canvas>
                 <div
                   v-show="step1Ready"
@@ -135,6 +149,7 @@
               {{ imageDimensions.height }} px
             </p> -->
           </div>
+
           <div class="flex items-center justify-between">
             <div>
               <h3 class="text-lg font-semibold text-slate-900">
@@ -233,6 +248,22 @@
           <p v-if="step2Error" class="text-sm text-rose-600">
             {{ step2Error }}
           </p>
+          <div class="lg:hidden mb-3 flex justify-between">
+            <button
+              type="button"
+              class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow"
+              @click="prevMobileStep"
+            >
+              ขั้นก่อนหน้า
+            </button>
+            <button
+              type="button"
+              class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow"
+              @click="nextMobileStep"
+            >
+              ขั้นถัดไป
+            </button>
+          </div>
 
           <canvas ref="step2Canvas" class="hidden"></canvas>
           <div class="preview-square border border-indigo-200 mb-4">
@@ -486,6 +517,16 @@
             </select>
           </label> -->
 
+          <div class="lg:hidden mb-3 flex justify-start">
+            <button
+              type="button"
+              class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow"
+              @click="prevMobileStep"
+            >
+              ขั้นก่อนหน้า
+            </button>
+          </div>
+
           <div>
             <canvas ref="step3Canvas" class="hidden"></canvas>
             <div class="preview-square border border-emerald-200 mb-4">
@@ -661,16 +702,51 @@
         </div>
 
         <div class="grid gap-4 px-5 py-4 lg:grid-cols-[2fr,1fr]">
+          <div class="lg:hidden sticky top-0 z-10 -mx-5 -mt-4 mb-2 px-5 py-3 bg-white/95 backdrop-blur border-b border-slate-200">
+            <div class="flex flex-wrap items-center gap-2">
+              <button
+                v-for="tool in paintToolOptions"
+                :key="`mobile-${tool.value}`"
+                :class="[
+                  'flex-1 min-w-[96px] inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold shadow-sm',
+                  selectedPaintTool === tool.value
+                    ? 'bg-indigo-600 text-white border-indigo-600'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                ]"
+                type="button"
+                @click="selectPaintTool(tool.value)"
+              >
+                <component :is="tool.icon" class="h-4 w-4" />
+                <span>{{ tool.label }}</span>
+              </button>
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm"
+                @click="isColorDropdownOpen = !isColorDropdownOpen"
+              >
+                <span
+                  class="h-4 w-4 rounded-full border border-slate-200"
+                  :style="{ backgroundColor: paintColorHex }"
+                ></span>
+                <span class="truncate max-w-[120px]">{{ paintColorLabel }}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.25 8.29a.75.75 0 01-.02-1.08z" clip-rule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
           <div class="border border-slate-200 rounded-xl bg-slate-50/60 p-3">
             <canvas
               ref="modalUpscaledCanvas"
               class="w-full rounded-lg border border-slate-200 bg-white"
-              style="image-rendering: pixelated; width: 100%; height: auto; min-height: 280px"
-              :style="{ imageRendering: 'pixelated', width: '100%', height: 'auto', minHeight: '280px', cursor: paintCursor }"
+              style="image-rendering: pixelated; width: 100%; height: auto; min-height: 280px; touch-action: none"
+              :style="{ imageRendering: 'pixelated', width: '100%', height: 'auto', minHeight: '280px', cursor: paintCursor, touchAction: 'none' }"
               @pointerdown.prevent="handleModalPaintPointerDown"
               @pointermove.prevent="handleModalPaintPointerMove"
               @pointerup="handleModalPaintPointerUp"
               @pointerleave="handleModalPaintPointerUp"
+              @pointercancel="handleModalPaintPointerUp"
             ></canvas>
             <p class="mt-2 text-[11px] text-slate-500">
               คลิก/ลากเพื่อ remap สี, ใช้ Dropper เพื่อเลือกสีจากภาพ แล้วกด
@@ -1000,6 +1076,16 @@ const showStepCard = (step: number) => !isMobile.value || mobileStep.value === s
 let stepMediaQuery: MediaQueryList | null = null;
 const handleStepMediaChange = (event: { matches: boolean }) => {
   isMobile.value = event.matches;
+};
+const nextMobileStep = () => {
+  if (mobileStep.value < 3) {
+    mobileStep.value = (mobileStep.value + 1) as 1 | 2 | 3;
+  }
+};
+const prevMobileStep = () => {
+  if (mobileStep.value > 1) {
+    mobileStep.value = (mobileStep.value - 1) as 1 | 2 | 3;
+  }
 };
 
 onMounted(() => {
@@ -2007,6 +2093,7 @@ const beginCropInteraction = (event: PointerEvent, type: CropInteractionType) =>
   cropInteraction.rectSnapshot = { ...cropRect };
   window.addEventListener('pointermove', handleCropPointerMove);
   window.addEventListener('pointerup', endCropInteraction);
+  lockBodyScroll(true);
 
   console.log("cropInteraction", cropInteraction);
 };
@@ -2087,6 +2174,9 @@ const endCropInteraction = () => {
   }
   window.removeEventListener('pointermove', handleCropPointerMove);
   window.removeEventListener('pointerup', endCropInteraction);
+  lockBodyScroll(false);
+  // เมื่อขยับครอป ให้คำนวณใหม่จากภาพต้นฉบับ ไม่ reuse พรีวิวเดิม
+  useStep2PixelsAsSource.value = false;
   markApiPreviewDirty();
   scheduleStep2Processing(80);
 };
@@ -3023,6 +3113,7 @@ const handleModalPaintPointerDown = (event: PointerEvent) => {
   if (!isEditModalOpen.value || !modalBaseStep2Pixels.value) {
     return;
   }
+  modalUpscaledCanvas.value?.setPointerCapture?.(event.pointerId);
   modalPaintInProgress.value = true;
   applyPixelRemapAtPointer(event);
 };
@@ -3031,12 +3122,16 @@ const handleModalPaintPointerMove = (event: PointerEvent) => {
   if (!modalPaintInProgress.value) {
     return;
   }
+  modalUpscaledCanvas.value?.setPointerCapture?.(event.pointerId);
   applyPixelRemapAtPointer(event);
 };
 
-const handleModalPaintPointerUp = () => {
+const handleModalPaintPointerUp = (event?: PointerEvent) => {
   if (!modalPaintInProgress.value) {
     return;
+  }
+  if (event?.pointerId != null) {
+    modalUpscaledCanvas.value?.releasePointerCapture?.(event.pointerId);
   }
   modalPaintInProgress.value = false;
 };
