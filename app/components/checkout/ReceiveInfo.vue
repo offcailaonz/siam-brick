@@ -49,7 +49,7 @@
         <span class="font-semibold">{{ breakdown.sideLong }} ชิ้น</span>
       </div>
       <div
-        class="sm:col-span-2 rounded-lg border border-amber-100 bg-white px-3 py-2 flex items-center justify-between"
+        class="sm:col-span-2 rounded-lg border border-amber-100 bg-white px-3 py-2 lg:flex items-center justify-between"
       >
         <span class="text-amber-800 font-semibold">จำนวนตัวต่อสำหรับประกอบภาพรวมทุกสี</span>
         <span class="font-semibold text-amber-800">

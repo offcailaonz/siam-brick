@@ -266,6 +266,9 @@ watch(
 );
 
 const handleSaveEdits = async (): Promise<boolean> => {
+  if (savingEdits.value) {
+    return false;
+  }
   saveMessage.value = null;
   if (!orderId.value) return false;
   if (!user.value) {

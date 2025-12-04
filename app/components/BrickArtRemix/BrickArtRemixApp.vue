@@ -3046,6 +3046,9 @@ const goToCheckout = async () => {
   if (isCreatingCheckoutOrder.value) {
     return;
   }
+  const resetCheckoutState = () => {
+    isCreatingCheckoutOrder.value = false;
+  };
   if (!user.value) {
     requireAuth(() => goToCheckout());
     return;
@@ -3058,11 +3061,13 @@ const goToCheckout = async () => {
     checkoutOrderError.value = 'ยังไม่มีภาพจาก Step 2 กรุณาสร้างและบันทึกก่อน';
     return;
   }
+  isCreatingCheckoutOrder.value = true;
   if (props.enablePriceFetch) {
     try {
       const latestPrice = await lookupFormatPrice();
       if (!latestPrice || latestPrice.notFound || latestPrice.price == null) {
         checkoutOrderError.value = 'ไม่พบราคาสำหรับขนาดนี้ กรุณาปรับขนาดหรือกรอกข้อมูลราคา';
+        resetCheckoutState();
         return;
       }
       formatPrice.value = latestPrice.price;
@@ -3074,6 +3079,7 @@ const goToCheckout = async () => {
       );
     } catch (error: any) {
       checkoutOrderError.value = error?.message ?? 'ไม่สามารถตรวจสอบราคาได้';
+      resetCheckoutState();
       return;
     }
   }
@@ -3083,6 +3089,7 @@ const goToCheckout = async () => {
 
   if (typeof window === 'undefined') {
     checkoutOrderError.value = 'ต้องเปิดหน้านี้ผ่านเบราว์เซอร์เพื่อสร้างออเดอร์';
+    resetCheckoutState();
     return;
   }
 
