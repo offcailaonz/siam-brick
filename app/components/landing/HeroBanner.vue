@@ -47,7 +47,7 @@
       </div>
       <div class="flex-1 text-center shadow-2xl">
         <div
-          class="rounded-[2rem] border border-white/60 bg-white/70 p-2 text-slate-600 shadow-inner"
+          class="rounded-[2rem] border border-yellow bg-yellow p-2 text-slate-600 shadow-inner"
         >
           <img
             :src="data.previewImage"

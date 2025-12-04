@@ -114,7 +114,7 @@
                 <div class="flex items-center gap-2">
                   <button
                     type="button"
-                    class="rounded-full border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                    class="hidden sm:inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                     :disabled="addressesLoading"
                     @click="loadAddresses"
                   >
@@ -122,11 +122,54 @@
                   </button>
                   <button
                     type="button"
-                    class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-3 py-1 text-sm font-semibold text-white shadow hover:bg-indigo-700 disabled:opacity-60"
+                    class="hidden sm:inline-flex items-center gap-2 rounded-full bg-indigo-600 px-3 py-1 text-sm font-semibold text-white shadow hover:bg-indigo-700 disabled:opacity-60"
                     :disabled="addressSaving"
                     @click="openAddressForm"
                   >
                     เพิ่มที่อยู่ใหม่
+                  </button>
+                  <button
+                    type="button"
+                    class="sm:hidden inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm disabled:opacity-60"
+                    :disabled="addressesLoading"
+                    @click="loadAddresses"
+                    aria-label="รีเฟรชที่อยู่"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-4 w-4"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M3.172 7.172a4 4 0 015.656 0l.879.879a1 1 0 01-1.414 1.414l-.879-.879a2 2 0 00-2.828 2.828l1.172 1.172a1 1 0 01-1.414 1.414L3.172 13.12a4 4 0 010-5.657z"
+                        clip-rule="evenodd"
+                      />
+                      <path
+                        fill-rule="evenodd"
+                        d="M16.828 12.828a4 4 0 01-5.656 0l-.879-.879a1 1 0 111.414-1.414l.879.879a2 2 0 002.828-2.828l-1.172-1.172a1 1 0 111.414-1.414l1.172 1.172a4 4 0 010 5.656z"
+                        clip-rule="evenodd"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    class="sm:hidden inline-flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-white shadow disabled:opacity-60"
+                    :disabled="addressSaving"
+                    @click="openAddressForm"
+                    aria-label="เพิ่มที่อยู่ใหม่"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-4 w-4"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                      />
+                    </svg>
                   </button>
                 </div>
               </div>
@@ -255,98 +298,104 @@
                   :key="order.id"
                   class="rounded-lg border border-slate-100 bg-slate-50 px-3 py-3"
                 >
-                  <div class="flex items-start gap-3">
-                    <div
-                      v-if="orderPreview(order)"
-                      class="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white"
-                    >
-                      <img
-                        :src="orderPreview(order)"
-                        alt="order preview"
-                        class="h-full w-full object-contain"
-                      />
-                    </div>
-                    <div class="flex-1">
-                      <p class="text-sm font-semibold text-slate-900">
-                        ออเดอร์ #{{ order.id }}
-                      </p>
-                      <p class="text-xs text-slate-500">
-                        อัปเดต
-                        {{ formatDateTime(order.updated_at || order.created_at) }}
-                      </p>
-                      <div class="mt-1 flex flex-wrap items-center gap-2">
-                        <span
-                          class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold"
-                          :class="statusBadge(order).color"
+                  <div class="lg:flex lg:justify-between items-start gap-3">
+                    <div class="flex">
+                      <div
+                        v-if="orderPreview(order)"
+                        class="me-4 h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white"
+                      >
+                        <img
+                          :src="orderPreview(order)"
+                          alt="order preview"
+                          class="h-full w-full object-contain"
+                        />
+                      </div>
+                      <div class="flex-1 text-end lg:text-start">
+                        <p class="text-sm font-semibold text-slate-900">
+                          ออเดอร์ #{{ order.id }}
+                        </p>
+                        <p class="text-xs text-slate-500">
+                          อัปเดต
+                          {{ formatDateTime(order.updated_at || order.created_at) }}
+                        </p>
+                        <div
+                          class="mt-1 flex flex-wrap justify-end lg:justify-start items-center gap-2"
                         >
-                          {{ statusBadge(order).text }}
-                        </span>
-                        <span
-                          v-if="isReadyKitOrder(order)"
-                          class="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700 border border-amber-100"
-                        >
-                          Ready Kit
-                        </span>
-                        <span
-                          v-if="order.is_locked_for_edits"
-                          class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-700 border border-slate-200"
-                        >
-                          ล็อกแก้ไข
-                        </span>
+                          <span
+                            class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold"
+                            :class="statusBadge(order).color"
+                          >
+                            {{ statusBadge(order).text }}
+                          </span>
+                          <span
+                            v-if="isReadyKitOrder(order)"
+                            class="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700 border border-amber-100"
+                          >
+                            Ready Kit
+                          </span>
+                          <span
+                            v-if="order.is_locked_for_edits"
+                            class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-700 border border-slate-200"
+                          >
+                            ล็อกแก้ไข
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <div class="text-end text-xl text-slate-600">
+                    <div class="text-end text-xl text-slate-600 flex justify-between lg:block ">
                       <span
-                        class="font-semibold text-slate-900"
+                        class="font-semibold text-slate-900 mt-auto"
                         >{{ formatCurrency(order.total_amount) }}</span
                       >
-                      <div
-                        v-if="isPending(order)"
-                        class="mt-3 flex flex-wrap items-center gap-2"
-                      >
-                        <template v-if="paymentLink(order)">
-                          <a
-                            :href="paymentLink(order)"
-                            target="_blank"
-                            rel="noopener"
-                            class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
-                          >
-                            ไปชำระเงิน
-                          </a>
-                          <p class="text-xs text-slate-500">
-                            เปิดลิงก์จ่ายในหน้าต่างใหม่
-                          </p>
-                        </template>
-                        <template v-else>
-                          <div
-                            class="flex flex-wrap items-center gap-2 items-center"
-                          >
-                            <NuxtLink
-                              v-if="canEditOrder(order)"
-                              :to="`/brick?id=${order.id}`"
-                              class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-                            >
-                              แก้ไขรูปภาพ
-                            </NuxtLink>
-                            <NuxtLink
-                              :to="`/checkout?id=${order.id}`"
+                      <div class="flex justify-end">
+                        <div
+                          v-if="isPending(order)"
+                          class="mt-3 flex flex-wrap items-center gap-2"
+                        >
+                          <template v-if="paymentLink(order)">
+                            <a
+                              :href="paymentLink(order)"
+                              target="_blank"
+                              rel="noopener"
                               class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
                             >
-                              ชำระเงิน
-                            </NuxtLink>
-                          </div>
-                        </template>
-                      </div>
-                      <div
-                        v-else-if="isPaid(order)"
-                        class="mt-3 flex flex-wrap items-start gap-2 text-sm"
-                      >
-                        <NuxtLink
-                          :to="`/checkout?id=${order.id}`"
-                          class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                              ไปชำระเงิน
+                            </a>
+                            <p class="text-xs text-slate-500">
+                              เปิดลิงก์จ่ายในหน้าต่างใหม่
+                            </p>
+                          </template>
+                          <template v-else>
+                            <div
+                              class="flex flex-wrap items-center gap-2 items-center"
+                            >
+                              <NuxtLink
+                                v-if="canEditOrder(order)"
+                                :to="`/brick?id=${order.id}`"
+                                class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                              >
+                                แก้ไขรูปภาพ
+                              </NuxtLink>
+                              <NuxtLink
+                                :to="`/checkout?id=${order.id}`"
+                                class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
+                              >
+                                ชำระเงิน
+                              </NuxtLink>
+                            </div>
+                          </template>
+                        </div>
+                        <div
+                          v-else-if="isPaid(order)"
+                          class="mt-3 flex flex-wrap items-start gap-2 text-sm"
                         >
-                          ดูรายละเอียด
-                        </NuxtLink>
+                          <NuxtLink
+                            :to="`/checkout?id=${order.id}`"
+                            class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                          >
+                            ดูรายละเอียด
+                          </NuxtLink>
+                        </div>
                       </div>
                     </div>
                   </div>

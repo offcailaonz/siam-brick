@@ -1,9 +1,9 @@
 <template>
   <section>
     <section
-      class="rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm"
+      class="rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm flex flex-col gap-4"
     >
-      <div class="text-end">
+      <div class="text-end order-1">
         <button
           v-if="props.showGenerateAction && step3Ready"
           type="button"
@@ -15,9 +15,11 @@
       </div>
       <article
         v-if="props.showStep4"
-        class="rounded-xl border border-amber-100 bg-amber-50/70 p-4 lg:col-span-3"
+        class="rounded-xl border border-amber-100 bg-amber-50/70 p-4 lg:col-span-3 order-4 lg:order-2"
       >
-        <div class="flex items-center justify-between flex-wrap gap-3">
+        <div
+          class="lg:flex items-center lg:justify-between lg:flex-wrap gap-3 w-100"
+        >
           <div>
             <h3 class="text-lg font-semibold text-slate-900">
               ชำระเงินเพื่อรับอุปกรณ์ครบเซต
@@ -27,8 +29,8 @@
               {{ targetResolution.height }} pixel
             </p>
           </div>
-          <div class="flex flex-wrap gap-3">
-            <div class="my-auto ml-auto text-right">
+          <div class="flex flex-wrap gap-3 justify-end">
+            <div class="my-auto ml-auto text-right w-full sm:w-auto">
               <p
                 v-if="formatPriceLoading"
                 class="text-sm font-semibold text-amber-700 inline-flex items-center gap-2"
@@ -52,32 +54,57 @@
               </p>
               <p v-else class="text-sm font-semibold text-slate-600"></p>
             </div>
-            <button
-              class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
-              type="button"
-              :disabled="!step3Ready || isStep2Processing || isCreatingCheckoutOrder"
-              @click="goToCheckout"
-            >
-              <span v-if="isCreatingCheckoutOrder">กำลังสร้างออเดอร์...</span>
-              <span v-else>ชำระเงิน เพื่อรับชุดเต็ม</span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                fill="currentColor"
-                viewBox="0 0 16 16"
+            <div class="w-full sm:w-auto flex justify-end sm:justify-start">
+              <button
+                class="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
+                type="button"
+                :disabled="!step3Ready || isStep2Processing || isCreatingCheckoutOrder"
+                @click="goToCheckout"
               >
-                <path
-                  fill-rule="evenodd"
-                  d="M1 8a.75.75 0 0 1 .75-.75h10.638L9.23 4.09a.75.75 0 1 1 1.04-1.08l4.25 4.1a.75.75 0 0 1 0 1.08l-4.25 4.1a.75.75 0 0 1-1.04-1.08l3.158-3.16H1.75A.75.75 0 0 1 1 8"
-                />
-              </svg>
-            </button>
+                <span v-if="isCreatingCheckoutOrder">กำลังสร้างออเดอร์...</span>
+                <span v-else>ชำระเงิน เพื่อรับชุดเต็ม</span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M1 8a.75.75 0 0 1 .75-.75h10.638L9.23 4.09a.75.75 0 1 1 1.04-1.08l4.25 4.1a.75.75 0 0 1 0 1.08l-4.25 4.1a.75.75 0 0 1-1.04-1.08l3.158-3.16H1.75A.75.75 0 0 1 1 8"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </article>
-      <div class="grid gap-6 lg:grid-cols-3 mt-3">
-        <article class=" rounded-xl border border-slate-100 bg-white/80 p-4">
+      <div class="lg:hidden order-2">
+        <div class="flex items-center justify-center gap-2">
+          <button
+            v-for="step in [1, 2, 3]"
+            :key="step"
+            type="button"
+            class="flex flex-1 items-center justify-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold shadow-sm transition"
+            :class="mobileStep === step ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'"
+            @click="mobileStep = step"
+          >
+            <span>Step</span>
+            <span
+              class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs font-bold ring-1 ring-white/40"
+              :class="mobileStep === step ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700 ring-slate-200'"
+            >
+              {{ step }}
+            </span>
+          </button>
+        </div>
+      </div>
+      <div class="grid gap-6 lg:grid-cols-3 mt-3 order-3">
+        <article
+          v-show="showStepCard(1)"
+          class=" rounded-xl border border-slate-100 bg-white/80 p-4"
+        >
           <div class="text-sm text-slate-600 mb-4">
             <div class="preview-square border border-slate-200 bg-black">
               <div ref="cropPreviewContainer" class="preview-media-container">
@@ -111,7 +138,7 @@
           <div class="flex items-center justify-between">
             <div>
               <h3 class="text-lg font-semibold text-slate-900">
-                Step 1 – เตรียมและครอปภาพ
+                Step 1 – ครอปภาพ
               </h3>
             </div>
             <span
@@ -188,6 +215,7 @@
         </article>
 
         <article
+          v-show="showStepCard(2)"
           class="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4"
         >
           <!-- <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500">
@@ -251,115 +279,194 @@
             >
               ล้างการ remap สี
             </button>
-            <button
+            <!-- <button
               v-if="hasStep2Edits"
               type="button"
               class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
               @click="resetStep2Edits"
             >
               ล้างการแก้ไขกลับต้นฉบับ
-            </button>
+            </button> -->
           </div>
           <p v-if="hasPixelRemap" class="text-xs text-indigo-700 mt-1">
             กำลังใช้การ remap สีหลังจากปรับโทน/แก้สีพิกเซล
           </p>
 
           <div class="mt-3">
-            <div class="grid gap-3 md:grid-cols-3">
-              <label class="text-sm text-slate-600"
-                >Hue (°)
-                <input
-                  type="range"
-                  min="-180"
-                  max="180"
-                  :value="hsvControls.hue"
-                  class="mt-1 w-full"
-                  @pointerdown="handleControlPointerDown"
-                  @pointerup="handleControlPointerUp"
-                  @pointercancel="handleControlPointerUp"
-                  @input="handleHsvInput('hue', $event)"
-                />
-                <span class="text-xs text-slate-500"
-                  >{{ hsvControls.hue }}°</span
-                >
+            <div class="grid gap-3 md:grid-cols-2">
+              <label class="text-sm text-slate-600">
+                <div class="flex justify-between">
+                  <div>Hue (°)</div>
+                  <div>{{ hsvControls.hue }}</div>
+                </div>
+                <div class="mt-1 flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                    @click="adjustHsv('hue', -1)"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="range"
+                    min="-180"
+                    max="180"
+                    :value="hsvControls.hue"
+                    class="w-full"
+                    @pointerdown="handleControlPointerDown"
+                    @pointerup="handleControlPointerUp"
+                    @pointercancel="handleControlPointerUp"
+                    @input="handleHsvInput('hue', $event)"
+                  />
+                  <button
+                    type="button"
+                    class="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                    @click="adjustHsv('hue', 1)"
+                  >
+                    +
+                  </button>
+                </div>
               </label>
-              <label class="text-sm text-slate-600"
-                >Saturation (%)
-                <input
-                  type="range"
-                  min="-100"
-                  max="100"
-                  :value="hsvControls.saturation"
-                  class="mt-1 w-full"
-                  @pointerdown="handleControlPointerDown"
-                  @pointerup="handleControlPointerUp"
-                  @pointercancel="handleControlPointerUp"
-                  @input="handleHsvInput('saturation', $event)"
-                />
-                <span class="text-xs text-slate-500"
-                  >{{ hsvControls.saturation }}%</span
-                >
-              </label>
-              <label class="text-sm text-slate-600"
-                >Value (%)
-                <input
-                  type="range"
-                  min="-100"
-                  max="100"
-                  :value="hsvControls.value"
-                  class="mt-1 w-full"
-                  @pointerdown="handleControlPointerDown"
-                  @pointerup="handleControlPointerUp"
-                  @pointercancel="handleControlPointerUp"
-                  @input="handleHsvInput('value', $event)"
-                />
-                <span class="text-xs text-slate-500"
-                  >{{ hsvControls.value }}%</span
-                >
+              <label class="text-sm text-slate-600">
+                <div class="flex justify-between">
+                  <div>Saturation (%)</div>
+                  <div>{{ hsvControls.saturation }}%</div>
+                </div>
+                <div class="mt-1 flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                    @click="adjustHsv('saturation', -1)"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="range"
+                    min="-100"
+                    max="100"
+                    :value="hsvControls.saturation"
+                    class="w-full"
+                    @pointerdown="handleControlPointerDown"
+                    @pointerup="handleControlPointerUp"
+                    @pointercancel="handleControlPointerUp"
+                    @input="handleHsvInput('saturation', $event)"
+                  />
+                  <button
+                    type="button"
+                    class="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                    @click="adjustHsv('saturation', 1)"
+                  >
+                    +
+                  </button>
+                </div>
               </label>
             </div>
             <div class="grid gap-3 md:grid-cols-2">
-              <label class="text-sm text-slate-600"
-                >Brightness
-                <input
-                  type="range"
-                  min="-128"
-                  max="128"
-                  :value="hsvControls.brightness"
-                  class="mt-1 w-full"
-                  @pointerdown="handleControlPointerDown"
-                  @pointerup="handleControlPointerUp"
-                  @pointercancel="handleControlPointerUp"
-                  @input="handleHsvInput('brightness', $event)"
-                />
-                <span
-                  class="text-xs text-slate-500"
-                  >{{ hsvControls.brightness }}</span
-                >
+              <label class="text-sm text-slate-600">
+                <div class="flex justify-between">
+                  <div>Value (%)</div>
+                  <div>{{ hsvControls.value }}%</div>
+                </div>
+                <div class="mt-1 flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                    @click="adjustHsv('value', -1)"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="range"
+                    min="-100"
+                    max="100"
+                    :value="hsvControls.value"
+                    class="w-full"
+                    @pointerdown="handleControlPointerDown"
+                    @pointerup="handleControlPointerUp"
+                    @pointercancel="handleControlPointerUp"
+                    @input="handleHsvInput('value', $event)"
+                  />
+                  <button
+                    type="button"
+                    class="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                    @click="adjustHsv('value', 1)"
+                  >
+                    +
+                  </button>
+                </div>
               </label>
-              <label class="text-sm text-slate-600"
-                >Contrast
-                <input
-                  type="range"
-                  min="-128"
-                  max="128"
-                  :value="hsvControls.contrast"
-                  class="mt-1 w-full"
-                  @pointerdown="handleControlPointerDown"
-                  @pointerup="handleControlPointerUp"
-                  @pointercancel="handleControlPointerUp"
-                  @input="handleHsvInput('contrast', $event)"
-                />
-                <span
-                  class="text-xs text-slate-500"
-                  >{{ hsvControls.contrast }}</span
-                >
+              <label class="text-sm text-slate-600">
+                <div class="flex justify-between">
+                  <div>Brightness</div>
+                  <div>{{ hsvControls.brightness }}</div>
+                </div>
+                <div class="mt-1 flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                    @click="adjustHsv('brightness', -1)"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="range"
+                    min="-128"
+                    max="128"
+                    :value="hsvControls.brightness"
+                    class="w-full"
+                    @pointerdown="handleControlPointerDown"
+                    @pointerup="handleControlPointerUp"
+                    @pointercancel="handleControlPointerUp"
+                    @input="handleHsvInput('brightness', $event)"
+                  />
+                  <button
+                    type="button"
+                    class="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                    @click="adjustHsv('brightness', 1)"
+                  >
+                    +
+                  </button>
+                </div>
+              </label>
+              <label class="text-sm text-slate-600">
+                <div class="flex justify-between">
+                  <div>Contrast</div>
+                  <div>{{ hsvControls.contrast }}</div>
+                </div>
+                <div class="mt-1 flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                    @click="adjustHsv('contrast', -1)"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="range"
+                    min="-128"
+                    max="128"
+                    :value="hsvControls.contrast"
+                    class="w-full"
+                    @pointerdown="handleControlPointerDown"
+                    @pointerup="handleControlPointerUp"
+                    @pointercancel="handleControlPointerUp"
+                    @input="handleHsvInput('contrast', $event)"
+                  />
+                  <button
+                    type="button"
+                    class="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                    @click="adjustHsv('contrast', 1)"
+                  >
+                    +
+                  </button>
+                </div>
               </label>
             </div>
           </div>
         </article>
 
         <article
+          v-show="showStepCard(3)"
           class="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4"
         >
           <!-- <label class="text-sm text-slate-600"
@@ -400,7 +507,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <h3 class="text-lg font-semibold text-slate-900">
-                  Step 3 – ตัวอย่างภาพตัวต่อ
+                  Step 3 – ภาพตัวต่อ
                 </h3>
               </div>
               <div class="flex items-center gap-2">
@@ -410,12 +517,13 @@
                 >
               </div>
             </div>
+            <!-- ความละเอียด {{ targetResolution.width }} ×
+              {{ targetResolution.height }} Pixel |  -->
             <p
               class="text-xs text-slate-500"
               v-if="step3Ready && !isStep2Processing"
             >
-              ความละเอียด {{ targetResolution.width }} ×
-              {{ targetResolution.height }} Pixel | Quantization error:
+              Quantization error:
               {{ step3QuantizationError?.toFixed(3) ?? '0.000' }}
             </p>
             <p
@@ -479,12 +587,16 @@
           </p>
         </article>
       </div>
-      <div v-if="isPreviewFrameLoading" class="loading-bar" aria-live="polite">
+      <div
+        v-if="isPreviewFrameLoading"
+        class="loading-bar order-5"
+        aria-live="polite"
+      >
         <div class="loading-bar__track">
           <div class="loading-bar__fill"></div>
         </div>
       </div>
-      <div v-else style="height: 14px;">
+      <div v-else style="height: 14px;" class="order-5">
         <div v-if="isGeneratingPdf">
           <div class="h-2 w-full rounded-full bg-white/60">
             <div
@@ -661,7 +773,7 @@
               </button>
             </div>
 
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap justify-between gap-2">
               <button
                 class="inline-flex items-center justify-center gap-2 rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-300"
                 type="button"
@@ -882,6 +994,32 @@ const lastGeneratedStep3BaseHash = ref<string | null>(null);
 const lastGeneratedStep3SourceHash = ref<string | null>(null);
 const suspendStep3Persistence = ref(false);
 const shouldSkipInitialStep2Run = ref(false);
+const isMobile = ref(false);
+const mobileStep = ref<1 | 2 | 3>(1);
+const showStepCard = (step: number) => !isMobile.value || mobileStep.value === step;
+let stepMediaQuery: MediaQueryList | null = null;
+const handleStepMediaChange = (event: { matches: boolean }) => {
+  isMobile.value = event.matches;
+};
+
+onMounted(() => {
+  if (typeof window === 'undefined') return;
+  stepMediaQuery = window.matchMedia('(max-width: 1023px)');
+  handleStepMediaChange(stepMediaQuery);
+  if (stepMediaQuery.addEventListener) {
+    stepMediaQuery.addEventListener('change', handleStepMediaChange);
+  } else if (stepMediaQuery.addListener) {
+    stepMediaQuery.addListener(handleStepMediaChange);
+  }
+});
+
+onBeforeUnmount(() => {
+  if (stepMediaQuery?.removeEventListener) {
+    stepMediaQuery.removeEventListener('change', handleStepMediaChange);
+  } else {
+    stepMediaQuery?.removeListener?.(handleStepMediaChange);
+  }
+});
 const hashString = (value: string) => {
   let hash = 0;
   for (let i = 0; i < value.length; i++) {
@@ -1461,6 +1599,19 @@ const hsvControls = reactive({
   contrast: 0
 });
 const defaultHsv = { hue: 0, saturation: 0, value: 0, brightness: 0, contrast: 0 };
+const HSV_DEBOUNCE_MS = 3000;
+const HSV_LIMITS: Record<keyof HsvState, { min: number; max: number }> = {
+  hue: { min: -180, max: 180 },
+  saturation: { min: -100, max: 100 },
+  value: { min: -100, max: 100 },
+  brightness: { min: -128, max: 128 },
+  contrast: { min: -128, max: 128 }
+};
+const adjustHsv = (key: keyof HsvState, delta: number) => {
+  const limits = HSV_LIMITS[key];
+  const next = Math.max(limits.min, Math.min(limits.max, hsvControls[key] + delta));
+  hsvControls[key] = Math.round(next);
+};
 const selectedPixelType = ref(PIXEL_TYPE_OPTIONS[0].number);
 const isPreviewFrameLoading = computed(
   () =>
@@ -3472,7 +3623,7 @@ watch(
   () => [hsvControls.hue, hsvControls.saturation, hsvControls.value, hsvControls.brightness, hsvControls.contrast],
   () => {
     markApiPreviewDirty();
-    requestStep2Processing();
+    requestStep2Processing(HSV_DEBOUNCE_MS);
   }
 );
 

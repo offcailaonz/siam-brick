@@ -7,7 +7,7 @@
         class="rounded-2xl border border-slate-200 bg-white/90 shadow-sm overflow-hidden"
       >
         <div
-          class="flex justify-between border-b border-slate-200 bg-slate-50/80 px-5 py-4"
+          class="lg:flex lg:justify-between border-b border-slate-200 bg-slate-50/80 px-5 py-4"
         >
           <div class="">
             <p
@@ -23,7 +23,7 @@
               ได้ไฟล์/ชุดตัวต่อเร็วขึ้น
             </p>
           </div>
-          <div class="flex flex-wrap gap-3 py-4" v-if="!isPaymentCompleted">
+          <div class="hidden lg:flex flex-wrap gap-3 py-4" v-if="!isPaymentCompleted">
             <NuxtLink
               v-if="!isProductMode && !isPaymentCompleted && !isSummaryLoading"
               :to="brickLink"
@@ -365,6 +365,35 @@
           :breakdown="kitBreakdown"
           :resolution="previewResolution"
         />
+
+        <div
+          v-if="!isPaymentCompleted"
+          class="lg:hidden border-t border-slate-200 bg-white/90 px-5 py-4 space-y-3"
+        >
+          <div class="flex flex-col gap-3">
+            <NuxtLink
+              v-if="!isProductMode && !isSummaryLoading"
+              :to="brickLink"
+              class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+              :aria-disabled="isPaymentCompleted"
+              tabindex="0"
+              @click.prevent="isPaymentCompleted ? null : $router.push(brickLink)"
+            >
+              กลับไปแก้ภาพ
+            </NuxtLink>
+            <button
+              type="button"
+              class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow disabled:opacity-60 disabled:cursor-not-allowed"
+              :disabled="payButtonDisabled"
+              @click="handleCreateOrder"
+            >
+              <span>{{ payButtonText }}</span>
+            </button>
+          </div>
+          <p v-if="showShippingWarning" class="text-[11px] text-rose-600 text-center">
+            กรุณาเลือกหรือเพิ่มที่อยู่ให้ครบก่อนชำระเงิน
+          </p>
+        </div>
       </section>
     </main>
     <BaseModal

@@ -5,7 +5,7 @@
     >
       <div
         v-if="orderId"
-        class="rounded-xl border border-slate-200 bg-white/90 px-4 py-3 shadow-sm flex flex-wrap items-center justify-between gap-3"
+        class="rounded-xl border border-slate-200 bg-white/90 px-4 py-3 shadow-sm lg:flex lg:flex-wrap lg:justify-between items-center  gap-3"
       >
         <div>
           <p class="text-sm font-semibold text-slate-900">
@@ -16,7 +16,7 @@
             เพื่อแก้ไขต่อได้ทันที
           </p>
         </div>
-        <div class="flex flex-wrap gap-2 items-center">
+        <div class="flex flex-wrap gap-2 items-center justify-end">
           <button
             v-if="orderError"
             type="button"

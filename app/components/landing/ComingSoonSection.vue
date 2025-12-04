@@ -3,7 +3,7 @@
     <div
       class="mx-auto flex max-w-6xl flex-col gap-10 px-6 lg:flex-row lg:items-center"
     >
-      <div class="flex-1 space-y-4">
+      <div class="flex-1 space-y-4" style="min-width: 350px;">
         <p class="text-5xl font-bold uppercase tracking-[0.3em] text-amber-400">
           Coming Soon
         </p>
@@ -26,35 +26,21 @@
           </button>
         </div>
       </div>
-      <div class="h-64 rounded-2xl bg-white/60 p-3">
-        <div class="flex h-full gap-3">
+      <div class="h-50 rounded-2xl bg-white/60 p-3">
+        <div class="flex h-full gap-3 justify-around">
           <!-- รูปต้นฉบับ -->
-          <figure
-            class="flex-1 overflow-hidden rounded-xl border border-slate-200/70 bg-white/80"
-          >
-            <img
-              :src="`/mockup-api-data/images/3d/before.png`"
-              alt="ภาพต้นฉบับ"
-              class="h-full w-full object-cover"
-            />
-            <figcaption class="px-2 py-1 text-xs font-medium text-slate-700">
-              ภาพต้นฉบับ
-            </figcaption>
-          </figure>
+          <img
+            :src="`/mockup-api-data/images/3d/before.png`"
+            alt="ภาพต้นฉบับ"
+            class="object-contain flex overflow-hidden rounded-xl border border-slate-200/70 bg-white/80"
+          />
 
           <!-- รูปโมเดล brick 3 มิติ -->
-          <figure
-            class="flex-1 overflow-hidden rounded-xl border border-slate-200/70 bg-white/80"
-          >
-            <img
-              :src="`/mockup-api-data/images/3d/after.png`"
-              alt="ภาพโมเดล brick 3 มิติ"
-              class="h-full w-full object-cover"
-            />
-            <figcaption class="px-2 py-1 text-xs font-medium text-slate-700">
-              โมเดล Brick 3 มิติ
-            </figcaption>
-          </figure>
+          <img
+            :src="`/mockup-api-data/images/3d/after.png`"
+            alt="ภาพโมเดล brick 3 มิติ"
+            class="object-contain flex overflow-hidden rounded-xl border border-slate-200/70 bg-white/80"
+          />
         </div>
       </div>
     </div>
